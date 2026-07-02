@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import DeskScene from './desk/DeskScene'
-import ContentOverlay from './ui/ContentOverlay'
 import HudHints from './ui/HudHints'
+import KeyControls from './ui/KeyControls'
 import Loader from './ui/Loader'
 import { useSceneStore } from './store/useSceneStore'
 
@@ -27,8 +27,8 @@ export default function App() {
   return (
     <div className="app-root">
       <DeskScene />
-      <ContentOverlay />
       <HudHints />
+      <KeyControls />
       <Loader />
     </div>
   )

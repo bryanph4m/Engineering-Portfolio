@@ -102,6 +102,97 @@ export function paperTexture(bright = false) {
   return cache[key]
 }
 
+/** Soldermask + traces + pads for the stray circuit boards. */
+export function pcbTexture(mask = 'green') {
+  const key = `pcb-${mask}`
+  if (cache[key]) return cache[key]
+  const c = canvas(512, 336)
+  const ctx = c.getContext('2d')
+  const base = mask === 'blue' ? '#14395f' : '#12572f'
+  const trace = mask === 'blue' ? 'rgba(90,140,200,0.55)' : 'rgba(60,170,105,0.55)'
+  const pad = '#c9a227'
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, 512, 336)
+
+  // manhattan-routed traces with gold pads at the ends
+  ctx.strokeStyle = trace
+  ctx.lineWidth = 4
+  ctx.lineCap = 'round'
+  const ends = []
+  for (let i = 0; i < 30; i++) {
+    let x = 20 + Math.random() * 472
+    let y = 20 + Math.random() * 296
+    ends.push([x, y])
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    const segs = 2 + Math.floor(Math.random() * 3)
+    for (let s = 0; s < segs; s++) {
+      if (s % 2 === 0) x = Math.max(14, Math.min(498, x + (Math.random() - 0.5) * 220))
+      else y = Math.max(14, Math.min(322, y + (Math.random() - 0.5) * 160))
+      ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+    ends.push([x, y])
+  }
+  ctx.fillStyle = pad
+  for (const [x, y] of ends) {
+    ctx.beginPath()
+    ctx.arc(x, y, 6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = base
+    ctx.beginPath()
+    ctx.arc(x, y, 2.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = pad
+  }
+  // silkscreen: component outlines + a board label
+  ctx.strokeStyle = 'rgba(240,240,235,0.8)'
+  ctx.lineWidth = 2
+  for (let i = 0; i < 7; i++) {
+    ctx.strokeRect(30 + Math.random() * 400, 30 + Math.random() * 250, 26 + Math.random() * 50, 18 + Math.random() * 34)
+  }
+  ctx.fillStyle = 'rgba(240,240,235,0.85)'
+  ctx.font = '22px "Cutive Mono", monospace'
+  ctx.fillText('MLR-01 REV B', 26, 320)
+  cache[key] = finish(c)
+  return cache[key]
+}
+
+/** Sepia stand-in portrait for the picture frame until the real photo lands
+ *  at /public/assets/profile-photo.jpg. */
+export function photoPlaceholderTexture() {
+  if (cache.photoPh) return cache.photoPh
+  const c = canvas(512, 640)
+  const ctx = c.getContext('2d')
+  const g = ctx.createLinearGradient(0, 0, 0, 640)
+  g.addColorStop(0, '#d9c9a6')
+  g.addColorStop(1, '#b4a07c')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 512, 640)
+  // vignette
+  const vg = ctx.createRadialGradient(256, 300, 120, 256, 320, 460)
+  vg.addColorStop(0, 'rgba(0,0,0,0)')
+  vg.addColorStop(1, 'rgba(60,40,15,0.35)')
+  ctx.fillStyle = vg
+  ctx.fillRect(0, 0, 512, 640)
+  // head-and-shoulders silhouette
+  ctx.fillStyle = 'rgba(122,96,60,0.75)'
+  ctx.beginPath()
+  ctx.ellipse(256, 250, 105, 125, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(256, 610, 200, 190, 0, Math.PI, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(50,38,22,0.85)'
+  ctx.font = '30px "Architects Daughter", cursive'
+  ctx.textAlign = 'center'
+  ctx.fillText('photo goes here', 256, 500)
+  ctx.font = '20px "Cutive Mono", monospace'
+  ctx.fillText('/assets/profile-photo.jpg', 256, 540)
+  cache.photoPh = finish(c)
+  return cache.photoPh
+}
+
 /** Pale green engineering-pad ruling — hinted on interactive sheets. */
 export function gridPaperTexture() {
   if (cache.grid) return cache.grid

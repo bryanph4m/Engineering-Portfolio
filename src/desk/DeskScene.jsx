@@ -7,6 +7,7 @@ import Desk from './Desk'
 import DeskLamp from './DeskLamp'
 import Clutter from './Clutter'
 import Documents from './Documents'
+import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
 import DevLayoutAudit from './DevLayoutAudit'
 
@@ -44,6 +45,7 @@ export default function DeskScene() {
         <Desk />
         <Clutter />
         <Documents />
+        <FocusScrim />
         <Preload all />
       </Suspense>
 

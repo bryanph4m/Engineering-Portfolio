@@ -3,27 +3,36 @@ import { useFrame } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
+import { docLinks } from '../lib/docTextures'
 import { DocProp } from './props'
 import { FOCUS_POSE, HOVER_LIFT } from './constants'
 
 const _v = new THREE.Vector3()
 const _q = new THREE.Quaternion()
 
+// Fraction of the sheet, measured from each bottom corner, that acts as the
+// page-turn hotspot on a focused multi-page document. Matches the dog-eared
+// corners painted by pageChrome in docTextures.js.
+const PAGE_CORNER = 0.16
+
 /**
  * One interactive document. It interpolates between its resting pose on the
  * desk and a "picked up, read me" pose in front of the camera via a single
  * scalar spring (`open`), slerping quaternions so the two very different
- * orientations blend cleanly. The readable content and the page-turn are then
- * handled as crisp DOM in ContentOverlay; this mesh is the physical object you
- * pick up and the sheet that frames the text.
+ * orientations blend cleanly. The paper itself carries all content; while
+ * focused, clicks are raycast against the painted sheet's UVs for links and
+ * page-turn corners. Clicking the dimmed desk (FocusScrim) sets it back down.
  */
 export default function Document({ doc }) {
   const groupRef = useRef()
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const hoveredId = useSceneStore((s) => s.hoveredId)
+  const pageIndex = useSceneStore((s) => s.pageIndex)
   const focus = useSceneStore((s) => s.focus)
   const setHovered = useSceneStore((s) => s.setHovered)
+  const nextPage = useSceneStore((s) => s.nextPage)
+  const prevPage = useSceneStore((s) => s.prevPage)
 
   const isFocused = focusedId === doc.id
   const anyFocused = focusedId != null
@@ -86,18 +95,59 @@ export default function Document({ doc }) {
     g.scale.setScalar(s)
   })
 
+  /** What a pointer event on the focused sheet is aimed at, if anything. */
+  const hotspotAt = (e) => {
+    if (e.object?.name !== 'page-face' || !e.uv) return null
+    const u = e.uv.x
+    const v = 1 - e.uv.y // canvas space: v runs top -> bottom
+    for (const l of docLinks(doc, pageIndex)) {
+      if (u >= l.u0 && u <= l.u1 && v >= l.v0 && v <= l.v1) {
+        return { type: 'link', href: l.href }
+      }
+    }
+    const count = doc.pages.length
+    if (count > 1 && v > 1 - PAGE_CORNER) {
+      if (u > 1 - PAGE_CORNER && pageIndex < count - 1) return { type: 'next' }
+      if (u < PAGE_CORNER && pageIndex > 0) return { type: 'prev' }
+    }
+    return null
+  }
+
+  const openLink = (href) => {
+    if (href.startsWith('mailto:')) window.location.href = href
+    else window.open(href, '_blank', 'noopener,noreferrer')
+  }
+
   const onOver = (e) => {
     if (anyFocused) return
     e.stopPropagation()
     setHovered(doc.id)
     document.body.style.cursor = 'pointer'
   }
+  const onMove = (e) => {
+    if (!isFocused) return
+    document.body.style.cursor = hotspotAt(e) ? 'pointer' : 'auto'
+  }
   const onOut = (e) => {
     e.stopPropagation()
+    if (isFocused) {
+      document.body.style.cursor = 'auto'
+      return
+    }
     if (hoveredId === doc.id) setHovered(null)
     document.body.style.cursor = 'auto'
   }
   const onClick = (e) => {
+    if (isFocused) {
+      // never let a click on the sheet fall through to the scrim behind it
+      e.stopPropagation()
+      const hit = hotspotAt(e)
+      if (!hit) return
+      if (hit.type === 'link') openLink(hit.href)
+      else if (hit.type === 'next') nextPage(doc.pages.length)
+      else prevPage()
+      return
+    }
     if (anyFocused) return
     e.stopPropagation()
     document.body.style.cursor = 'auto'
@@ -109,6 +159,7 @@ export default function Document({ doc }) {
       ref={groupRef}
       name={`doc-${doc.id}`}
       onPointerOver={onOver}
+      onPointerMove={onMove}
       onPointerOut={onOut}
       onClick={onClick}
     >
