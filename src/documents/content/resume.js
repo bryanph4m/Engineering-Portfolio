@@ -36,14 +36,14 @@ function paintResume(ctx, W, H, rnd, link) {
   }
 
   section('EDUCATION', 350)
-  entry('UCLA — B.S. Mechanical Engineering', 'controls · aero structures · in progress', 415)
+  entry('UCLA — B.S. Mechanical Engineering', 'design · embedded systems · in progress', 415)
 
   section('EXPERIENCE', 570)
-  entry('Aria AI — Founding Engineer', 'building the product & systems from zero', 635)
-  entry('Mission Launch Rocketry — Founder / President', 'active-control rocket program: CAD → CFD → flight', 760)
+  entry('Aria AI — Founding Engineer', 'part of the Deepgram (YC W16) startup program', 635)
+  entry('Mission College — Engineering Research Intern', 'tilt/roll-control rocket program: CAD → CFD → flight', 760)
 
   section('PROJECTS', 915)
-  entry('Autonomous drone · AsideAI · Recco', 'STM32H7 + ArduPilot · CalHacks 1st place · YC hackathon', 980)
+  entry('AsideAI · Recco', 'CalHacks 1st place · YC hackathon', 980)
 
   // hand-boxed download link — clickable on the sheet itself
   ctx.strokeStyle = 'rgba(58,75,47,0.9)'

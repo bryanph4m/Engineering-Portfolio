@@ -54,8 +54,8 @@ function paintContact(ctx, W, H, rnd, link) {
   const lines = [
     ['Bryan Pham', 62, INK, null],
     ['bryanpham2024@gmail.com', 52, '#2f5d86', 'mailto:bryanpham2024@gmail.com'],
-    ['github.com/bryanph4m', 52, '#2f5d86', 'https://github.com/bryanph4m'],
     ['linkedin.com/in/bryanph4m', 52, '#2f5d86', 'https://www.linkedin.com/in/bryanph4m'],
+    ['github.com/bryanph4m', 52, '#2f5d86', 'https://github.com/bryanph4m'],
   ]
   let y = H * 0.5 + 40
   for (const [str, size, color, href] of lines) {

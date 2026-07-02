@@ -30,9 +30,9 @@ function paintAbout(ctx, W, H, rnd) {
   handLine(ctx, 100, 308, 540, 302, rnd, 4)
 
   const lines = [
-    ['Mechanical engineering student @ ', 'UCLA'],
-    ['Founding engineer — ', 'Aria AI'],
-    ['Founder & president — ', 'Mission Launch Rocketry'],
+    ['Mechanical Engineering Student @ ', 'UCLA'],
+    ['Founding Engineer — ', 'Aria AI'],
+    ['Co-founder & President — ', 'Mission Launch Rocketry'],
   ]
   let y = 445
   for (const [head, tail] of lines) {
