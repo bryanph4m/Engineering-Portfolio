@@ -3,10 +3,11 @@ import {
   paperBase, handLine, text,
 } from '../../lib/docTextures'
 
-// Folded formal document. The boxed note at the bottom is a live link to the
-// printable PDF (drop the real file at /public/assets/Bryan-Pham-Resume.pdf).
+// Folded formal document. The fold creases run edge to edge, so they're
+// decor; the boxed note at the bottom is a live link to the printable PDF
+// (drop the real file at /public/assets/Bryan-Pham-Resume.pdf).
 
-function paintResume(ctx, W, H, rnd, link) {
+function decorResume(ctx, W, H, rnd) {
   paperBase(ctx, W, H, rnd)
 
   // fold creases (match the two thirds of the folded prop)
@@ -14,7 +15,9 @@ function paintResume(ctx, W, H, rnd, link) {
   ctx.lineWidth = 2
   ctx.beginPath(); ctx.moveTo(0, Math.round(H / 3)); ctx.lineTo(W, Math.round(H / 3)); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(0, Math.round((2 * H) / 3)); ctx.lineTo(W, Math.round((2 * H) / 3)); ctx.stroke()
+}
 
+function paintResume(ctx, W, H, rnd, link) {
   text(ctx, 'BRYAN PHAM', 96, 165, { font: TYPE, size: 72 })
   text(ctx, 'RESUME — MECHANICAL ENGINEERING', 98, 220, { size: 28, color: FAINT, spacing: 3 })
   ctx.strokeStyle = INK
@@ -53,4 +56,4 @@ function paintResume(ctx, W, H, rnd, link) {
   link(96, 1116, 528, 98, '/assets/Bryan-Pham-Resume.pdf')
 }
 
-export const resumePages = [paintResume]
+export const resumePages = [{ decor: decorResume, draw: paintResume }]

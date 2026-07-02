@@ -7,7 +7,8 @@ import { paperTexture, pcbTexture, photoPlaceholderTexture } from '../lib/textur
  * Static desk dressing that sells the "older engineer, manual drafting,
  * mid-project" read: T-square, a drafting compass, mechanical pencils,
  * kneaded eraser, slide rule, a vellum roll, a coffee mug, a drafting
- * triangle, a pin dish, stray circuit boards with loose components, and a
+ * triangle, a pin dish, stray circuit boards with loose components, a
+ * vintage calculator and loose gears filling the middle of the desk, and a
  * small framed photo leaning at the back of the desk.
  *
  * Layout rules (enforced by DevLayoutAudit in dev builds):
@@ -100,6 +101,93 @@ function DraftingCompass({ position, yaw = 0 }) {
       <mesh castShadow position={[0, 0.036, 0.333]}>
         <boxGeometry args={[0.3, 0.016, 0.016]} />
         <meshStandardMaterial {...steel} />
+      </mesh>
+    </group>
+  )
+}
+
+/**
+ * Boxy vintage desk calculator — beige shell, dark display bezel with a dim
+ * green LED readout, cream keys with a terracotta operator column. Sits at a
+ * slight angle like it was pushed aside mid-use.
+ */
+function Calculator({ position, yaw = 0 }) {
+  const keyRows = [-0.05, 0.06, 0.17, 0.28]
+  const keyCols = [-0.195, -0.065, 0.065, 0.195]
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      {/* shell */}
+      <mesh castShadow position={[0, 0.08, 0]}>
+        <boxGeometry args={[0.62, 0.16, 0.9]} />
+        <meshStandardMaterial color="#cfc5ae" roughness={0.55} metalness={0.05} />
+      </mesh>
+      {/* display bezel + glass + a faint green LED readout */}
+      <mesh castShadow position={[0, 0.172, -0.29]}>
+        <boxGeometry args={[0.5, 0.028, 0.2]} />
+        <meshStandardMaterial color="#3a362f" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.188, -0.29]}>
+        <boxGeometry args={[0.44, 0.006, 0.14]} />
+        <meshStandardMaterial color="#10150f" roughness={0.25} />
+      </mesh>
+      {[0.14, 0.06, -0.02, -0.1].map((dx, i) => (
+        <mesh key={i} position={[dx, 0.193, -0.29]}>
+          <boxGeometry args={[0.05, 0.004, 0.08]} />
+          <meshStandardMaterial
+            color="#7fd694"
+            emissive="#3f7a4c"
+            emissiveIntensity={0.55}
+            roughness={0.4}
+          />
+        </mesh>
+      ))}
+      {/* key grid; right column is the operator column */}
+      {keyRows.map((kz, r) =>
+        keyCols.map((kx, c) => (
+          <mesh key={`${r}-${c}`} castShadow position={[kx, 0.185, kz]}>
+            <boxGeometry args={[0.1, 0.05, 0.09]} />
+            <meshStandardMaterial
+              color={c === 3 ? '#b3563f' : r === 3 && c === 0 ? '#3f3b36' : '#efe6d0'}
+              roughness={0.5}
+            />
+          </mesh>
+        ))
+      )}
+    </group>
+  )
+}
+
+/** A loose steel gear lying flat — hub, bore, and box teeth around the rim. */
+function Gear({ position, yaw = 0, r = 0.24, teeth = 12, thickness = 0.05 }) {
+  const toothW = ((2 * Math.PI * r) / teeth) * 0.45
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      <mesh castShadow position={[0, thickness / 2, 0]}>
+        <cylinderGeometry args={[r, r, thickness, 28]} />
+        <meshStandardMaterial {...steel} />
+      </mesh>
+      {Array.from({ length: teeth }).map((_, i) => {
+        const a = (i / teeth) * Math.PI * 2
+        return (
+          <mesh
+            key={i}
+            castShadow
+            position={[Math.cos(a) * (r + 0.03), thickness / 2, Math.sin(a) * (r + 0.03)]}
+            rotation={[0, -a, 0]}
+          >
+            <boxGeometry args={[0.06, thickness, toothW]} />
+            <meshStandardMaterial {...steel} />
+          </mesh>
+        )
+      })}
+      {/* raised hub with a dark axle bore */}
+      <mesh castShadow position={[0, thickness / 2 + 0.012, 0]}>
+        <cylinderGeometry args={[r * 0.32, r * 0.32, thickness, 20]} />
+        <meshStandardMaterial {...brass} />
+      </mesh>
+      <mesh position={[0, thickness / 2 + 0.026, 0]}>
+        <cylinderGeometry args={[r * 0.13, r * 0.13, thickness, 12]} />
+        <meshStandardMaterial color="#1d1d20" roughness={0.6} />
       </mesh>
     </group>
   )
@@ -236,6 +324,14 @@ export default function Clutter() {
 
       {/* ---- The drafting compass, set down by the pencils mid-layout ---- */}
       <DraftingCompass position={[0.15, 0, 2.95]} yaw={1.25} />
+
+      {/* ---- Middle-of-desk fillers: calculator pushed aside mid-use, and a
+           pair of loose gears between the papers. Both sit in the open pocket
+           bounded by the about card, resume, blueprint and project stack —
+           re-run window.__deskLayoutAudit() after moving either. ---- */}
+      <Calculator position={[-0.62, 0, 1.25]} yaw={-0.38} />
+      <Gear position={[-0.12, 0, -0.1]} yaw={0.4} r={0.24} teeth={12} />
+      <Gear position={[-0.56, 0, -0.3]} yaw={-0.2} r={0.11} teeth={9} thickness={0.04} />
 
       {/* ---- Mechanical pencils + kneaded eraser, front-centre-left ---- */}
       <Pencil position={[-1.8, 0.048, 2.98]} rotation={[Math.PI / 2, 0, 0.9]} color="#7a1f24" />

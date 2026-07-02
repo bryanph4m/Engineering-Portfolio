@@ -3,9 +3,11 @@ import {
   paperBase, handLine, handEllipse, text,
 } from '../../lib/docTextures'
 
-// Addressed envelope — the address block doubles as the live links.
+// Addressed envelope — the address block doubles as the live links. The
+// flap, stamp and postmark hug the paper edge, so they're decor; the
+// addressee block is measured content.
 
-function paintContact(ctx, W, H, rnd, link) {
+function decorContact(ctx, W, H, rnd) {
   paperBase(ctx, W, H, rnd, '#f0e7d2')
 
   // painted envelope flap: darker triangle folded down from the top edge
@@ -43,7 +45,9 @@ function paintContact(ctx, W, H, rnd, link) {
   for (let i = 0; i < 3; i++) {
     handLine(ctx, sx - 190, 140 + i * 34, sx + 30, 132 + i * 34, rnd, 3)
   }
+}
 
+function paintContact(ctx, W, H, rnd, link) {
   text(ctx, 'CORRESPONDENCE', 110, 130, { size: 30, color: FAINT, spacing: 7 })
 
   // addressee block, written by hand — the last three lines are live links
@@ -67,4 +71,4 @@ function paintContact(ctx, W, H, rnd, link) {
   text(ctx, '— Bryan', W - 130, H - 78, { font: HAND, size: 46, color: '#7a5a2f', align: 'right' })
 }
 
-export const contactPages = [paintContact]
+export const contactPages = [{ decor: decorContact, draw: paintContact }]

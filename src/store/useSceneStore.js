@@ -34,3 +34,10 @@ export const useSceneStore = create((set) => ({
       return { pageIndex: s.pageIndex - 1, flipDir: -1, flipNonce: s.flipNonce + 1 }
     }),
 }))
+
+// Dev-only: let QA tooling and the console drive the scene directly
+// (e.g. __sceneStore.getState().focus('projects')) instead of having to
+// synthesize clicks against the WebGL canvas.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  window.__sceneStore = useSceneStore
+}

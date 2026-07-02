@@ -3,9 +3,11 @@ import {
   paperBase, handLine, handEllipse, handArrow, text,
 } from '../../lib/docTextures'
 
-// Index card — the whole story fits on one card.
+// Index card — the whole story fits on one card. The card ruling is decor
+// (it runs to the paper edge); everything else is measured content that
+// shrinks to fit the box if it ever outgrows the card.
 
-function paintAbout(ctx, W, H, rnd) {
+function decorAbout(ctx, W, H, rnd) {
   paperBase(ctx, W, H, rnd, '#f8f2e4')
 
   // index-card ruling: one red line up top, faint blue below
@@ -17,7 +19,9 @@ function paintAbout(ctx, W, H, rnd) {
   for (let y = 460; y < H - 130; y += 130) {
     ctx.beginPath(); ctx.moveTo(70, y); ctx.lineTo(W - 70, y); ctx.stroke()
   }
+}
 
+function paintAbout(ctx, W, H, rnd) {
   text(ctx, 'INDEX CARD · NO. 01', 100, 140, { size: 34, color: FAINT, spacing: 8 })
   text(ctx, 'Bryan Pham · Los Angeles, CA', W - 100, 140, { size: 36, color: '#5c5340', align: 'right' })
   text(ctx, 'ABOUT', 96, 285, { font: TYPE, size: 128 })
@@ -47,14 +51,15 @@ function paintAbout(ctx, W, H, rnd) {
     font: HAND, size: 44, color: '#7a5a2f',
   })
 
+  text(ctx, 'the short version', 110, H - 100, { size: 30, color: FAINT, spacing: 4 })
+
   // margin doodle: arrow to the current-work note
   ctx.strokeStyle = 'rgba(122,90,47,0.9)'
   ctx.lineWidth = 4
-  handArrow(ctx, W - 620, H - 165, W - 520, H - 118, rnd)
-  text(ctx, 'now: canard rockets · drones · AI tooling', W - 490, H - 100, {
+  handArrow(ctx, 470, H - 165, 545, H - 118, rnd)
+  text(ctx, 'now: canard rockets · drones · AI tooling', 565, H - 100, {
     font: HAND, size: 42, color: '#7a5a2f',
   })
-  text(ctx, 'the short version', 110, H - 100, { size: 30, color: FAINT, spacing: 4 })
 }
 
-export const aboutPages = [paintAbout]
+export const aboutPages = [{ decor: decorAbout, draw: paintAbout }]

@@ -84,10 +84,14 @@ html, body, #root {
 }
 .hud__title h1 { margin: 0; font-size: 19px; letter-spacing: 1px; }
 .hud__title p { margin: 2px 0 0; font-size: 12px; opacity: 0.7; }
+/* Lives in the bottom ~12% of the viewport that FOCUS_POSE (constants.js)
+   keeps clear of the focused sheet — never let it grow past that band. */
 .hud__hint {
-  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: max(20px, env(safe-area-inset-bottom));
+  max-width: min(92vw, 640px);
   font-family: 'Architects Daughter', cursive;
-  color: #efe3c8; font-size: 15px; opacity: 0.85;
+  color: #efe3c8; font-size: 15px; line-height: 1.35; opacity: 0.85;
   text-shadow: 0 1px 5px rgba(0,0,0,0.7);
   text-align: center; transition: opacity 0.4s ease;
 }
@@ -97,6 +101,8 @@ html, body, #root {
 
 @media (max-width: 480px) {
   .hud__title h1 { font-size: 16px; }
+  /* keep the (wrapping) hint inside the reserved bottom band on phones */
+  .hud__hint { font-size: 13px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,16 +3,38 @@ import * as THREE from 'three'
 /**
  * Paints every page of every document onto high-resolution canvases and hands
  * them to Three as CanvasTextures. The paper mesh is the only place content
- * renders — there is no DOM overlay. Painters live in
- * src/documents/content/*, one module per document, each exporting an array
- * of page painters (the registry wires them up).
+ * renders — there is no DOM overlay. Page painters live in
+ * src/documents/content/*, one module per document (the registry wires them
+ * up). Each page is `{ decor?, draw }`:
+ *
+ *  - `decor(ctx, W, H, rnd, page, count)` paints full-bleed dressing that is
+ *    allowed to touch the paper edge (backgrounds, ruled lines, envelope
+ *    flaps, drafting title blocks). It is never measured or clipped.
+ *  - `draw(ctx, W, H, rnd, link)` paints the actual content. It runs on an
+ *    offscreen layer, is measured against the page's safe content box, and is
+ *    hard-clipped to that box when composited — nothing it paints can escape
+ *    the box no matter how long the content grows.
+ *
+ * Fitting rules, applied automatically (never hand-tuned per page):
+ *  - every `text()` call measures itself against the content box first and
+ *    steps its font size down (0.5px at a time, to a minimum scale) so a
+ *    single line never runs off the right edge;
+ *  - if a single-page document's painted content still exceeds the box, the
+ *    whole content layer is rescaled in small steps down to MIN_PAGE_SCALE.
+ *    Below that the content is clipped and a dev warning says to trim it;
+ *  - multi-page documents are never shrunk — their content is paginated up
+ *    front by src/lib/pageFlow.js, which pushes overflow onto new sheets at
+ *    block boundaries. If a flowed sheet still overflows, that's a bug in a
+ *    block's declared height and a dev warning calls it out.
  *
  * Painters may register clickable regions through the `link` callback; those
- * regions are raycast against the focused sheet's UVs in Document.jsx.
+ * regions are raycast against the focused sheet's UVs in Document.jsx (they
+ * are re-mapped automatically when the content layer is rescaled).
  *
  * Textures are 1280px tall regardless of paper size, because the pickup
  * animation scales every sheet to the same world height: at the focused
- * camera distance a sheet covers ~940 screen px, so 1280 texels stay sharp.
+ * camera distance a sheet covers ~850 screen px on a 1080p viewport, so 1280
+ * texels stay sharp.
  */
 
 export const HAND = '"Architects Daughter", "Segoe Script", cursive'
@@ -26,6 +48,34 @@ export const RED = '#b3563f'
 const TEX_H = 1280
 const MAX_W = 2048
 
+// Safe content areas, inset from the paper edge. Multi-page documents keep a
+// deeper bottom margin so content never collides with the page chrome (tally
+// marks, dog-eared corners) painted there.
+const MARGIN_SINGLE = { side: 60, top: 60, bottom: 60 }
+const MARGIN_MULTI = { side: 96, top: 96, bottom: 120 }
+
+const MIN_TEXT_SCALE = 0.7 // per-line auto-fit floor (fraction of asked size)
+const PAGE_FIT_STEP = 0.0125 // whole-page shrink quantum (~0.5px on a 40px face)
+const MIN_PAGE_SCALE = 0.75 // whole-page shrink floor — below this, trim content
+const FIT_TOL = 4 // px of measured-ink slack before the fit pass reacts
+
+/** Texture pixel dimensions for a paper size (world metres). */
+export function texDims(paper) {
+  return { W: Math.min(MAX_W, Math.round((paper.w / paper.h) * TEX_H)), H: TEX_H }
+}
+
+/** The hard content bounding box for a paper, in texture px. */
+export function contentBoxFor(paper, multi) {
+  const { W, H } = texDims(paper)
+  const m = multi ? MARGIN_MULTI : MARGIN_SINGLE
+  return { x: m.side, y: m.top, w: W - 2 * m.side, h: H - m.top - m.bottom }
+}
+
+/** Everything a content builder needs to lay pages out ahead of painting. */
+export function pageGeom(paper, multi) {
+  return { ...texDims(paper), box: contentBoxFor(paper, multi) }
+}
+
 const texCache = new Map()
 const linkCache = new Map()
 
@@ -35,10 +85,10 @@ export function docTexture(doc, page = 0) {
   const key = keyFor(doc, page)
   if (texCache.has(key)) return texCache.get(key)
 
-  const { w, h } = doc.paper
+  const { W, H } = texDims(doc.paper)
   const c = document.createElement('canvas')
-  c.width = Math.min(MAX_W, Math.round((w / h) * TEX_H))
-  c.height = TEX_H
+  c.width = W
+  c.height = H
 
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
@@ -69,24 +119,147 @@ export function docLinks(doc, page = 0) {
   return linkCache.get(keyFor(doc, page)) ?? []
 }
 
+// Shared offscreen canvases: `layer` catches the content pass so it can be
+// measured and (re)composited; `meas` is a half-scale alpha readback target.
+const scratch = { layer: null, meas: null }
+
+function scratchCanvas(name, w, h) {
+  let c = scratch[name]
+  if (!c) c = scratch[name] = document.createElement('canvas')
+  if (c.width !== w) c.width = w
+  if (c.height !== h) c.height = h
+  return c
+}
+
+/** Axis-aligned bounds of everything painted on `layer`, or null if blank. */
+function inkBounds(layer, W, H) {
+  const mw = Math.ceil(W / 2)
+  const mh = Math.ceil(H / 2)
+  const meas = scratchCanvas('meas', mw, mh)
+  const mctx = meas.getContext('2d', { willReadFrequently: true })
+  mctx.clearRect(0, 0, mw, mh)
+  mctx.drawImage(layer, 0, 0, mw, mh)
+  const px = mctx.getImageData(0, 0, mw, mh).data
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (let y = 0; y < mh; y++) {
+    for (let x = 0; x < mw; x++) {
+      if (px[(y * mw + x) * 4 + 3] > 16) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  if (maxX < minX) return null
+  // back to full-res px, padded a texel outward for the downsample blur
+  return { x: minX * 2 - 2, y: minY * 2 - 2, x2: (maxX + 1) * 2 + 2, y2: (maxY + 1) * 2 + 2 }
+}
+
 function paint(c, doc, page, links) {
   const ctx = c.getContext('2d')
-  const painter = doc.pages[page]
-  if (!painter) throw new Error(`No page painter for "${doc.id}" page ${page}`)
+  const spec = doc.pages[page]
+  if (!spec) throw new Error(`No page painter for "${doc.id}" page ${page}`)
+  const decor = typeof spec === 'function' ? null : spec.decor
+  const draw = typeof spec === 'function' ? spec : spec.draw
   const W = c.width
   const H = c.height
+  const key = keyFor(doc, page)
+  const count = doc.pages.length
+  const multi = count > 1
+  const box = contentBoxFor(doc.paper, multi)
+
+  // 1. full-bleed dressing straight onto the sheet
+  ctx.clearRect(0, 0, W, H)
+  decor?.(ctx, W, H, mulberry32(hashCode(key + ':decor')), page, count)
+
+  // 2. content on its own layer so it can be measured before it lands
+  const layer = scratchCanvas('layer', W, H)
+  const lctx = layer.getContext('2d')
+  const raw = [] // link rects in the painter's coordinate space
+  const runContent = (s = 1, tx = 0, ty = 0) => {
+    lctx.setTransform(1, 0, 0, 1, 0, 0)
+    lctx.clearRect(0, 0, W, H)
+    lctx.setTransform(s, 0, 0, s, tx, ty)
+    lctx._contentBox = box
+    lctx._paperKey = key
+    raw.length = 0
+    draw(lctx, W, H, mulberry32(hashCode(key)), (x, y, w, h, href) => raw.push({ x, y, w, h, href }))
+    lctx._contentBox = null
+    lctx.setTransform(1, 0, 0, 1, 0, 0)
+  }
+  runContent()
+
+  // 3. measure against the box; shrink single-page docs, warn on the rest
+  const fit = { s: 1, tx: 0, ty: 0 }
+  const ink = inkBounds(layer, W, H)
+  if (ink) {
+    const over = Math.max(
+      box.x - ink.x,
+      ink.x2 - (box.x + box.w),
+      box.y - ink.y,
+      ink.y2 - (box.y + box.h)
+    )
+    if (over > FIT_TOL) {
+      if (!multi) {
+        const iw = ink.x2 - ink.x
+        const ih = ink.y2 - ink.y
+        let s = Math.min(1, box.w / iw, box.h / ih)
+        s = Math.floor(s / PAGE_FIT_STEP) * PAGE_FIT_STEP // step down, not jump
+        const clamped = s < MIN_PAGE_SCALE
+        fit.s = Math.max(s, MIN_PAGE_SCALE)
+        // slide the scaled ink inside the box, moving it as little as possible
+        const targetX = Math.min(Math.max(ink.x, box.x), Math.max(box.x, box.x + box.w - iw * fit.s))
+        const targetY = Math.min(Math.max(ink.y, box.y), Math.max(box.y, box.y + box.h - ih * fit.s))
+        fit.tx = targetX - ink.x * fit.s
+        fit.ty = targetY - ink.y * fit.s
+        runContent(fit.s, fit.tx, fit.ty)
+        if (clamped && import.meta.env.DEV) {
+          console.warn(
+            `[paper:${key}] content still overflows its box at minimum scale ` +
+              `(${MIN_PAGE_SCALE}) — it is clipped; trim the content`
+          )
+        }
+      } else if (import.meta.env.DEV) {
+        console.warn(
+          `[paper:${key}] flowed sheet overflows its content box by ${Math.round(over)}px — ` +
+            `a block's declared height is too small (see pageFlow.js); overflow is clipped`
+        )
+      }
+    }
+  }
+
+  // 4. composite through the hard clip — the box is the law
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(box.x, box.y, box.w, box.h)
+  ctx.clip()
+  ctx.drawImage(layer, 0, 0)
+  ctx.restore()
+
+  // 5. hotspots, re-mapped through whatever fit transform actually applied
   links.length = 0
-  const link = (x, y, w, h, href) =>
-    links.push({ u0: x / W, v0: y / H, u1: (x + w) / W, v1: (y + h) / H, href })
-  const rnd = mulberry32(hashCode(keyFor(doc, page)))
-  painter(ctx, W, H, rnd, link)
-  if (doc.pages.length > 1) pageChrome(ctx, W, H, rnd, page, doc.pages.length, doc.kind)
+  for (const r of raw) {
+    links.push({
+      u0: (r.x * fit.s + fit.tx) / W,
+      v0: (r.y * fit.s + fit.ty) / H,
+      u1: ((r.x + r.w) * fit.s + fit.tx) / W,
+      v1: ((r.y + r.h) * fit.s + fit.ty) / H,
+      href: r.href,
+    })
+  }
+
+  if (multi) pageChrome(ctx, W, H, mulberry32(hashCode(key + ':chrome')), page, count, doc.kind)
 }
 
 /**
  * Shared multi-page dressing: hand-drawn tally marks for progress, a corner
  * numeral, and dog-eared "turn me" corners that line up with the UV hotspots
- * in Document.jsx (PAGE_CORNER).
+ * in Document.jsx (PAGE_CORNER). It lives in the reserved bottom margin,
+ * below the content box.
  */
 function pageChrome(ctx, W, H, rnd, page, count, kind) {
   const light = kind === 'blueprint'
@@ -220,15 +393,50 @@ export function handArrow(ctx, x1, y1, x2, y2, rnd) {
   handLine(ctx, x2, y2, x2 - s * Math.cos(a + 0.45), y2 - s * Math.sin(a + 0.45), rnd, 1, 3)
 }
 
-export function text(ctx, str, x, y, { font = MONO, size = 32, color = INK, align = 'left', spacing = 0, weight = '' } = {}) {
+/**
+ * Draw one line of text. When a content box is active (i.e. inside a page's
+ * `draw` pass) the line is measured first and its size stepped down 0.5px at
+ * a time until it fits the box's remaining run — so no single line can cross
+ * the paper's safe margin, whatever the copy grows into. Returns the painted
+ * width.
+ */
+export function text(ctx, str, x, y, { font = MONO, size = 32, color = INK, align = 'left', spacing = 0, weight = '', maxW } = {}) {
   ctx.save()
-  ctx.font = `${weight ? weight + ' ' : ''}${size}px ${font}`
   ctx.fillStyle = color
   ctx.textAlign = align
   ctx.textBaseline = 'alphabetic'
-  if (spacing && 'letterSpacing' in ctx) ctx.letterSpacing = `${spacing}px`
+  const setFace = (s) => {
+    ctx.font = `${weight ? weight + ' ' : ''}${s}px ${font}`
+    if ('letterSpacing' in ctx) ctx.letterSpacing = `${(spacing * s) / size}px`
+  }
+  // available run to the box edge, in the direction the text grows
+  const box = ctx._contentBox
+  let avail = maxW ?? Infinity
+  if (box) {
+    const run =
+      align === 'right' ? x - box.x
+      : align === 'center' ? 2 * Math.min(x - box.x, box.x + box.w - x)
+      : box.x + box.w - x
+    avail = Math.min(avail, run)
+  }
+  let s = size
+  setFace(s)
+  let w = ctx.measureText(str).width
+  if (w > avail) {
+    const min = Math.max(14, size * MIN_TEXT_SCALE)
+    while (w > avail && s - 0.5 >= min) {
+      s -= 0.5
+      setFace(s)
+      w = ctx.measureText(str).width
+    }
+    if (w > avail && import.meta.env.DEV) {
+      console.warn(
+        `[paper:${ctx._paperKey ?? '?'}] line "${str.slice(0, 40)}…" doesn't fit its run ` +
+          `even at minimum size (${min}px) — it will be clipped; shorten the copy`
+      )
+    }
+  }
   ctx.fillText(str, x, y)
-  const w = ctx.measureText(str).width
   ctx.restore()
   return w
 }

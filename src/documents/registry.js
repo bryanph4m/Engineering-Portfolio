@@ -1,14 +1,18 @@
 import { restHeightFor } from '../desk/layout'
 import { aboutPages } from './content/about'
-import { projectPages } from './content/projects'
-import { researchPages } from './content/research'
+import { projectPages, PROJECTS_PAPER } from './content/projects'
+import { researchPages, RESEARCH_PAPER } from './content/research'
 import { resumePages } from './content/resume'
 import { contactPages } from './content/contact'
 
 // Every top-level "page" of the site is one physical document on the desk.
-// `pages` is an array of canvas painters (src/documents/content/*) — one per
-// physical sheet. Documents with more than one entry get the page-flip
-// treatment in props.jsx; the paper itself is the only UI.
+// `pages` is an array of page painters (src/documents/content/*) — one
+// `{ decor, draw }` pair per physical sheet, all rendered through the
+// measured/clipped fit pipeline in src/lib/docTextures.js. Documents with
+// more than one entry get the page-flip treatment in props.jsx; the paper
+// itself is the only UI. Projects and Research author their content as
+// blocks and are paginated by src/lib/pageFlow.js, so their paper dims live
+// with their content (the flow needs the content box at build time).
 //
 // Positions are world coordinates on the desktop (top surface at y = 0).
 // The Y component is always computed from the paper's real thickness in
@@ -35,7 +39,7 @@ export const DOCUMENTS = [
     title: 'Projects',
     kind: 'stack',
     pages: projectPages,
-    paper: { w: 2.2, h: 2.9 },
+    paper: PROJECTS_PAPER,
     rest: rest('stack', 1.8, 1.05, -0.12),
   },
   {
@@ -43,7 +47,7 @@ export const DOCUMENTS = [
     title: 'Rocketry',
     kind: 'blueprint',
     pages: researchPages,
-    paper: { w: 3.2, h: 2.0 },
+    paper: RESEARCH_PAPER,
     rest: rest('blueprint', 0.75, -1.7, 0.05),
   },
   {

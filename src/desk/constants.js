@@ -17,8 +17,16 @@ export const PARALLAX = {
 // Resting pose of a picked-up document: floated in front of the camera,
 // tilted back so it reads flat-on. `targetHeight` is the world height each
 // paper is scaled to so large and small documents fill the view evenly.
+//
+// Framing contract: the bottom ~12% of the viewport is reserved for the HUD
+// hint (.hud__hint in index.css). This pose puts the focused sheet ~75% of
+// the viewport tall with its bottom edge ~13% above the viewport bottom, so
+// paper content never sits under the flip instructions. The camera fov is
+// vertical, so that clearance holds on every aspect ratio — verify against
+// this contract if you retune the pose, at the focused zoom, on both a wide
+// desktop and a short mobile viewport.
 export const FOCUS_POSE = {
-  position: [0, 3.25, 4.5],
+  position: [0, 3.05, 3.77],
   rotation: [-0.82, 0, 0], // tilts the sheet to face the fixed camera
   targetHeight: 2.2,
 }

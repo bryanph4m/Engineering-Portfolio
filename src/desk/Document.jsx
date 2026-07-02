@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docLinks } from '../lib/docTextures'
 import { DocProp } from './props'
-import { FOCUS_POSE, HOVER_LIFT } from './constants'
+import { CAMERA, FOCUS_POSE, HOVER_LIFT } from './constants'
+
+// Camera-to-sheet distance at the focused pose; fixed because both poses are.
+const FOCUS_DIST = new THREE.Vector3(...FOCUS_POSE.position).distanceTo(
+  new THREE.Vector3(...CAMERA.position)
+)
 
 const _v = new THREE.Vector3()
 const _q = new THREE.Quaternion()
@@ -38,7 +43,16 @@ export default function Document({ doc }) {
   const anyFocused = focusedId != null
   const isHovered = hoveredId === doc.id && !anyFocused
 
-  const focusScale = FOCUS_POSE.targetHeight / doc.paper.h
+  // Fill the view to targetHeight, but never wider than the viewport can
+  // show at the focus distance — wide sheets (the blueprint, the index card)
+  // would otherwise run off both edges of a portrait phone. The fov is
+  // vertical, so height framing is aspect-independent; width is not.
+  const { width: vw, height: vh } = useThree((s) => s.size)
+  const visW = 2 * Math.tan((CAMERA.fov * Math.PI) / 360) * FOCUS_DIST * (vw / vh)
+  const focusScale = Math.min(
+    FOCUS_POSE.targetHeight / doc.paper.h,
+    (visW * 0.94) / doc.paper.w
+  )
 
   // The two orientations as quaternions: flat on the desk (with a yaw spin)
   // and tilted to face the camera when read.

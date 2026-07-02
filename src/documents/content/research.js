@@ -1,14 +1,21 @@
 import {
   HAND, TYPE,
-  blueprintBase, handLine, handArrow, text,
+  blueprintBase, handLine, handArrow, text, pageGeom,
 } from '../../lib/docTextures'
+import { flowSheets } from '../../lib/pageFlow'
 
-// Blueprint roll — three sheets on the active-control rocket program.
+// Blueprint roll — the active-control rocket program, authored as block
+// sheets and flowed through the content box by pageFlow.js. The drafting
+// title block is decor: it lives in the bottom margin, outside the measured
+// content area, and renumbers itself as pagination changes.
+
+export const RESEARCH_PAPER = { w: 3.2, h: 2.0 }
+const { box } = pageGeom(RESEARCH_PAPER, true)
 
 const WHITE = '#e9f1fb'
 const DIM = 'rgba(233,241,251,0.75)'
 
-function titleBlock(ctx, W, H, rnd, sheet) {
+function titleBlock(ctx, W, H, rnd, sheet, count) {
   const bx = W - 660
   const by = H - 290
   ctx.strokeStyle = WHITE
@@ -16,28 +23,55 @@ function titleBlock(ctx, W, H, rnd, sheet) {
   ctx.strokeRect(bx, by, 520, 190)
   ctx.beginPath(); ctx.moveTo(bx, by + 66); ctx.lineTo(bx + 520, by + 66); ctx.stroke()
   text(ctx, 'MISSION LAUNCH ROCKETRY', bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
-  text(ctx, `DWG MLR-001 · SHT ${sheet} OF 3`, bx + 24, by + 112, { size: 28, color: DIM })
+  text(ctx, `DWG MLR-001 · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
   text(ctx, 'SCALE: NTS · UCLA', bx + 24, by + 160, { size: 28, color: DIM })
 }
 
-function sheetHead(ctx, rnd, title, sub) {
-  text(ctx, title, 120, 190, { font: TYPE, size: 92, color: WHITE, spacing: 4 })
-  ctx.strokeStyle = DIM
-  ctx.lineWidth = 4
-  handLine(ctx, 124, 218, 124 + Math.min(1300, title.length * 58), 212, rnd, 3)
-  text(ctx, sub, 124, 268, { size: 34, color: DIM, spacing: 4 })
+const decor = (ctx, W, H, rnd, page, count) => {
+  blueprintBase(ctx, W, H, rnd)
+  titleBlock(ctx, W, H, rnd, page + 1, count)
 }
 
-/* ---- sheet A: vehicle overview ---- */
-function paintOverview(ctx, W, H, rnd) {
-  blueprintBase(ctx, W, H, rnd)
-  sheetHead(ctx, rnd, 'ACTIVE-CONTROL ROCKET', 'CANARD TILT & ROLL AUTHORITY · CAD → CFD → CONTROL LAW → FLIGHT')
-  text(ctx, 'objective: hold attitude through boost, then a controlled coast.', 124, 330, {
-    font: HAND, size: 40, color: '#cfe0f4',
-  })
+/** Sheet header: big typewriter title, hand underline, subtitle. */
+const head = (title, sub) => ({
+  h: 210,
+  inkH: 180,
+  draw(ctx, W, H, y, rnd) {
+    text(ctx, title, 120, y + 94, { font: TYPE, size: 92, color: WHITE, spacing: 4 })
+    ctx.strokeStyle = DIM
+    ctx.lineWidth = 4
+    handLine(ctx, 124, y + 122, 124 + Math.min(1300, title.length * 58), y + 116, rnd, 3)
+    text(ctx, sub, 124, y + 172, { size: 34, color: DIM, spacing: 4 })
+  },
+})
 
+/** One annotation line; its own block so pages split between notes. */
+const note = (str, opts = {}) => ({
+  h: 60,
+  inkH: 44,
+  draw(ctx, W, H, y, rnd) {
+    text(ctx, str, 124, y + 24, { size: 33, color: WHITE, ...opts })
+  },
+})
+
+/** Small header repeated when a sheet spills onto a continuation page. */
+const cont = (title) => ({
+  h: 96,
+  inkH: 56,
+  draw(ctx, W, H, y, rnd) {
+    text(ctx, `${title} — CONT'D`, 124, y + 40, { font: TYPE, size: 34, color: DIM, spacing: 4 })
+    ctx.strokeStyle = DIM
+    ctx.lineWidth = 3
+    handLine(ctx, 124, y + 58, 560, y + 54, rnd, 2)
+  },
+})
+
+const figure = (h, inkH, draw) => ({ h, inkH, draw })
+
+/* ---- sheet A: vehicle overview ---- */
+const rocketFigure = figure(794, 782, (ctx, W, H, y, rnd) => {
   // side-view rocket, nose to the right
-  const cy = 720
+  const cy = y + 354
   ctx.strokeStyle = WHITE
   ctx.lineWidth = 4
   handLine(ctx, 300, cy - 85, 1330, cy - 85, rnd, 2) // body top
@@ -69,24 +103,20 @@ function paintOverview(ctx, W, H, rnd) {
 
   // leaders + callouts
   ctx.lineWidth = 3
-  handArrow(ctx, 1500, 400, 1290, cy - 155, rnd)
-  text(ctx, 'CANARDS — δ SWEEPS ±15°', 1370, 372, { size: 33, color: WHITE })
-  handArrow(ctx, 520, 1105, 640, cy + 95, rnd)
-  text(ctx, 'Cm(α, δ) FROM CFD', 300, 1140, { size: 33, color: WHITE })
-  handArrow(ctx, 1035, 1080, 830, cy + 62, rnd)
-  text(ctx, 'LQR / PID ATTITUDE LOOP', 1060, 1105, { size: 33, color: WHITE })
-
-  titleBlock(ctx, W, H, rnd, 'A')
-}
+  handArrow(ctx, 1500, y + 34, 1290, cy - 155, rnd)
+  text(ctx, 'CANARDS — δ SWEEPS ±15°', 1370, y + 6, { size: 33, color: WHITE })
+  handArrow(ctx, 520, y + 739, 640, cy + 95, rnd)
+  text(ctx, 'Cm(α, δ) FROM CFD', 300, y + 774, { size: 33, color: WHITE })
+  handArrow(ctx, 1035, y + 714, 830, cy + 62, rnd)
+  // right-aligned so the label ends before the drafting title block (decor)
+  text(ctx, 'LQR / PID ATTITUDE LOOP', 1370, y + 739, { size: 33, color: WHITE, align: 'right' })
+})
 
 /* ---- sheet B: CFD & canard sweeps ---- */
-function paintCFD(ctx, W, H, rnd) {
-  blueprintBase(ctx, W, H, rnd)
-  sheetHead(ctx, rnd, 'CFD & CANARD SWEEPS', 'SIMSCALE · DEFLECTION SWEEPS · CONTROL DERIVATIVES')
-
+const cfdFigure = figure(690, 654, (ctx, W, H, y, rnd) => {
   // left: canard profile at three deflections, flow arrows incoming
   const cx = 480
-  const cy = 640
+  const cy = y + 334
   for (let i = 0; i < 4; i++) {
     ctx.strokeStyle = DIM
     ctx.lineWidth = 3
@@ -115,7 +145,7 @@ function paintCFD(ctx, W, H, rnd) {
 
   // right: Cm vs alpha plot with two deflection curves
   const px = 1180
-  const py = 900
+  const py = y + 594
   const pw = 660
   const ph = 470
   ctx.strokeStyle = WHITE
@@ -137,31 +167,21 @@ function paintCFD(ctx, W, H, rnd) {
     ctx.beginPath()
     for (let x = 0; x <= pw - 60; x += 20) {
       const t = x / (pw - 60)
-      const y = py - ph / 2 - gain * (t * ph * 0.42) - (rnd() - 0.5) * 6
-      x === 0 ? ctx.moveTo(px + 30 + x, y) : ctx.lineTo(px + 30 + x, y)
+      const cyv = py - ph / 2 - gain * (t * ph * 0.42) - (rnd() - 0.5) * 6
+      x === 0 ? ctx.moveTo(px + 30 + x, cyv) : ctx.lineTo(px + 30 + x, cyv)
     }
     ctx.stroke()
     text(ctx, label, px + pw - 44, ly, { size: 30, color, align: 'right' })
   }
   curve(1, WHITE, 'δ = 15°', py - ph + 62)
   curve(0.45, 'rgba(233,241,251,0.6)', 'δ = 5°', py - ph / 2 - 116)
-
-  // notes, bottom left
-  text(ctx, '· SWEEPS EXTRACT CONTROL EFFECTIVENESS PER DEGREE', 124, 1020, { size: 33, color: WHITE })
-  text(ctx, '· FORCE / MOMENT COEFFICIENTS VS. ANGLE OF ATTACK', 124, 1080, { size: 33, color: WHITE })
-  text(ctx, '· FEEDS THE STABILITY DERIVATIVES THE CONTROLLER USES', 124, 1140, { size: 33, color: WHITE })
-
-  titleBlock(ctx, W, H, rnd, 'B')
-}
+})
 
 /* ---- sheet C: the control loop ---- */
-function paintControl(ctx, W, H, rnd) {
-  blueprintBase(ctx, W, H, rnd)
-  sheetHead(ctx, rnd, 'LQR / PID CONTROL LOOP', 'LINEARIZED DYNAMICS → A LOOP YOU CAN TRUST ON THE PAD')
-
+const loopFigure = figure(670, 572, (ctx, W, H, y, rnd) => {
   // block diagram
-  const by = 520
-  const box = (x, w, label, sub) => {
+  const by = y + 214
+  const block = (x, w, label, sub) => {
     ctx.strokeStyle = WHITE
     ctx.lineWidth = 4
     ctx.strokeRect(x, by, w, 150)
@@ -179,11 +199,11 @@ function paintControl(ctx, W, H, rnd) {
 
   text(ctx, 'θ ref', 130, sy - 24, { size: 32, color: DIM })
   handArrow(ctx, 128, sy, sx - 52, sy, rnd)
-  box(450, 330, 'LQR / PID', 'attitude regulation')
+  block(450, 330, 'LQR / PID', 'attitude regulation')
   handArrow(ctx, sx + 52, sy, 444, sy, rnd)
-  box(880, 360, 'CANARD SERVOS', 'δ commands')
+  block(880, 360, 'CANARD SERVOS', 'δ commands')
   handArrow(ctx, 786, sy, 874, sy, rnd)
-  box(1340, 400, 'VEHICLE DYNAMICS', 'from CFD derivatives')
+  block(1340, 400, 'VEHICLE DYNAMICS', 'from CFD derivatives')
   handArrow(ctx, 1246, sy, 1334, sy, rnd)
   handArrow(ctx, 1746, sy, 1900, sy, rnd)
   text(ctx, 'θ', 1920, sy + 12, { size: 36, color: WHITE })
@@ -193,13 +213,42 @@ function paintControl(ctx, W, H, rnd) {
   handLine(ctx, 1850, by + 300, sx, by + 304, rnd, 2)
   handArrow(ctx, sx, by + 304, sx, sy + 52, rnd)
   text(ctx, 'IMU · STATE ESTIMATE', 980, by + 350, { size: 30, color: DIM, align: 'center' })
+})
 
-  // notes
-  text(ctx, '· STATE-SPACE MODEL FROM THE CFD-DERIVED DERIVATIVES', 124, 1000, { size: 33, color: WHITE })
-  text(ctx, '· LQR FOR MULTI-AXIS REGULATION, PID AS THE ROBUST BASELINE', 124, 1060, { size: 33, color: WHITE })
-  text(ctx, '· SIMULATION-IN-THE-LOOP BEFORE ANYTHING FLIES', 124, 1120, { size: 33, color: WHITE })
+const sheets = [
+  {
+    decor,
+    cont: cont('ACTIVE-CONTROL ROCKET'),
+    blocks: [
+      head('ACTIVE-CONTROL ROCKET', 'CANARD TILT & ROLL AUTHORITY · CAD → CFD → CONTROL LAW → FLIGHT'),
+      note('objective: hold attitude through boost, then a controlled coast.', {
+        font: HAND, size: 40, color: '#cfe0f4',
+      }),
+      rocketFigure,
+    ],
+  },
+  {
+    decor,
+    cont: cont('CFD & CANARD SWEEPS'),
+    blocks: [
+      head('CFD & CANARD SWEEPS', 'SIMSCALE · DEFLECTION SWEEPS · CONTROL DERIVATIVES'),
+      cfdFigure,
+      note('· SWEEPS EXTRACT CONTROL EFFECTIVENESS PER DEGREE'),
+      note('· FORCE / MOMENT COEFFICIENTS VS. ANGLE OF ATTACK'),
+      note('· FEEDS THE STABILITY DERIVATIVES THE CONTROLLER USES'),
+    ],
+  },
+  {
+    decor,
+    cont: cont('LQR / PID CONTROL LOOP'),
+    blocks: [
+      head('LQR / PID CONTROL LOOP', 'LINEARIZED DYNAMICS → A LOOP YOU CAN TRUST ON THE PAD'),
+      loopFigure,
+      note('· STATE-SPACE MODEL FROM THE CFD-DERIVED DERIVATIVES'),
+      note('· LQR FOR MULTI-AXIS REGULATION, PID AS THE ROBUST BASELINE'),
+      note('· SIMULATION-IN-THE-LOOP BEFORE ANYTHING FLIES'),
+    ],
+  },
+]
 
-  titleBlock(ctx, W, H, rnd, 'C')
-}
-
-export const researchPages = [paintOverview, paintCFD, paintControl]
+export const researchPages = flowSheets(sheets, box)
