@@ -193,6 +193,143 @@ export function photoPlaceholderTexture() {
   return cache.photoPh
 }
 
+/** MathPrint-style multi-line LCD for the TI-36X Pro — mid-calculation. */
+export function calcScreenTexture() {
+  if (cache.calcScreen) return cache.calcScreen
+  const c = canvas(352, 112)
+  const ctx = c.getContext('2d')
+  // grey-green LCD glass with a soft top sheen
+  ctx.fillStyle = '#aeb89d'
+  ctx.fillRect(0, 0, 352, 112)
+  const sheen = ctx.createLinearGradient(0, 0, 0, 112)
+  sheen.addColorStop(0, 'rgba(255,255,255,0.16)')
+  sheen.addColorStop(0.35, 'rgba(255,255,255,0)')
+  ctx.fillStyle = sheen
+  ctx.fillRect(0, 0, 352, 112)
+  ctx.fillStyle = '#2d3226'
+  // status row
+  ctx.font = '13px "Cutive Mono", monospace'
+  ctx.fillText('DEG', 8, 18)
+  // expression + result rows, like a paused calculation
+  ctx.font = '24px "Cutive Mono", monospace'
+  ctx.fillText('4·π²·(0.18)/9.81', 10, 52)
+  ctx.textAlign = 'right'
+  ctx.fillText('0.0724', 340, 88)
+  ctx.textAlign = 'left'
+  // block cursor on the entry line
+  ctx.fillRect(10, 96, 13, 5)
+  cache.calcScreen = finish(c)
+  return cache.calcScreen
+}
+
+/** Coffee surface — dark liquid with a painted glare so it always reads as
+ *  liquid even where the lamp's specular misses the camera. */
+export function coffeeTexture() {
+  if (cache.coffee) return cache.coffee
+  const c = canvas(128, 128)
+  const ctx = c.getContext('2d')
+  const base = ctx.createRadialGradient(64, 64, 8, 64, 64, 64)
+  base.addColorStop(0, '#2b1709')
+  base.addColorStop(0.75, '#33200e')
+  base.addColorStop(1, '#3d2a15')
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, 128, 128)
+  // faint ring where the liquid climbs the wall
+  ctx.strokeStyle = 'rgba(214,160,110,0.18)'
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.arc(64, 64, 58, 0, Math.PI * 2)
+  ctx.stroke()
+  // soft window/lamp glare, off-centre
+  let g = ctx.createRadialGradient(44, 40, 2, 44, 40, 34)
+  g.addColorStop(0, 'rgba(255,224,180,0.30)')
+  g.addColorStop(0.4, 'rgba(255,224,180,0.10)')
+  g.addColorStop(1, 'rgba(255,224,180,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 128, 128)
+  // a sharper crescent highlight on the meniscus side
+  ctx.strokeStyle = 'rgba(255,236,205,0.35)'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.arc(60, 60, 46, Math.PI * 1.05, Math.PI * 1.45)
+  ctx.stroke()
+  cache.coffee = finish(c)
+  return cache.coffee
+}
+
+/**
+ * Scale markings for the drafting triangle, painted in shape space (texture
+ * u,v = shape x,y / SIZE) so ticks hug the two legs and the hypotenuse.
+ * Semi-transparent base keeps the acrylic translucent; each tick gets a dark
+ * line plus an offset pale line so it reads engraved, not printed.
+ */
+export function triangleScaleTexture(size = 1.6) {
+  if (cache.triScale) return cache.triScale
+  const PX = 512
+  const c = canvas(PX, PX)
+  const ctx = c.getContext('2d')
+  const px = (u) => (u / size) * PX
+  const py = (v) => PX - (v / size) * PX // shape y runs up, canvas y runs down
+  // translucent smoke-blue acrylic body
+  ctx.fillStyle = 'rgba(143,185,201,0.55)'
+  ctx.fillRect(0, 0, PX, PX)
+
+  const engraved = (x0, y0, x1, y1, w = 2) => {
+    ctx.strokeStyle = 'rgba(252,255,255,0.55)'
+    ctx.lineWidth = w
+    ctx.beginPath()
+    ctx.moveTo(x0 + 1.6, y0 + 1.6)
+    ctx.lineTo(x1 + 1.6, y1 + 1.6)
+    ctx.stroke()
+    ctx.strokeStyle = 'rgba(10,28,36,0.95)'
+    ctx.beginPath()
+    ctx.moveTo(x0, y0)
+    ctx.lineTo(x1, y1)
+    ctx.stroke()
+  }
+
+  ctx.font = '26px "Cutive Mono", monospace'
+  const label = (t, x, y) => {
+    ctx.fillStyle = 'rgba(252,255,255,0.45)'
+    ctx.fillText(t, x + 1.4, y + 1.4)
+    ctx.fillStyle = 'rgba(10,28,36,0.9)'
+    ctx.fillText(t, x, y)
+  }
+
+  const inset = 0.012 // ticks start just inside the edge
+  // continuous rule line along each scale edge, like the engraved baseline
+  engraved(px(inset), py(inset), px(size - 0.05), py(inset), 2.6)
+  engraved(px(inset), py(inset), px(inset), py(size - 0.05), 2.6)
+  for (let i = 0; i <= Math.round(size * 10); i++) {
+    const d = i / 10
+    if (d > size - 0.06) break
+    const major = i % 5 === 0
+    const len = major ? 0.095 : 0.05
+    // bottom leg (y = 0): ticks point up into the face
+    engraved(px(d), py(inset), px(d), py(inset + len), major ? 3.4 : 2.2)
+    // vertical leg (x = 0): ticks point right
+    engraved(px(inset), py(d), px(inset + len), py(d), major ? 3.4 : 2.2)
+    if (major && i > 0) {
+      ctx.textAlign = 'center'
+      label(String(i), px(d), py(inset + len + 0.04))
+      ctx.textAlign = 'left'
+      label(String(i), px(inset + len + 0.014), py(d - 0.014))
+    }
+  }
+  // plain half-centimetre ticks along the hypotenuse (x + y = size)
+  const diag = Math.SQRT1_2
+  for (let i = 1; i < Math.round(size * 10); i++) {
+    const d = i / 10
+    const hx = d * diag // distance d along the hypotenuse from the right corner
+    const x0 = size - hx - inset * diag
+    const y0 = hx - inset * diag
+    const len = i % 5 === 0 ? 0.075 : 0.045
+    engraved(px(x0), py(y0), px(x0 - len * diag), py(y0 - len * diag), i % 5 === 0 ? 3 : 2)
+  }
+  cache.triScale = finish(c)
+  return cache.triScale
+}
+
 /** Pale green engineering-pad ruling — hinted on interactive sheets. */
 export function gridPaperTexture() {
   if (cache.grid) return cache.grid

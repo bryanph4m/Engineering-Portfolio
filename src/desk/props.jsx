@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
+import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docTexture } from '../lib/docTextures'
 import { PAPER_T, SHEET_T } from './layout'
@@ -47,11 +48,57 @@ const FAN = [
   { dx: 0.044, dy: -0.046, rot: 0.013 },
 ]
 
+// Where flipped pages come to rest: a shallow pile hinged just past the top
+// (bound) edge, legal-pad style, each leaf stopping a few degrees short of
+// dead flat so up to `visible` sheet backs stay readable as the pile grows.
+// `base` is the newest leaf's rest angle as a fraction of a half-turn; each
+// deeper leaf lies `step` flatter and `drop` lower. `gap` slides a landed
+// leaf just past the hinge so the pile clears the bulldog clip, and `lift`
+// keeps the newest leaf proud of the hinge plane.
+const PILE = {
+  base: 0.965,
+  step: 0.012,
+  lift: 0.008,
+  drop: 0.004,
+  gap: 0.06,
+  visible: 3,
+}
+
+/** Rest angle (radians about the hinge) for the pile leaf at `depth`. */
+const pileAngle = (depth) => -Math.min(PILE.base + depth * PILE.step, 0.995) * Math.PI
+
+/** One already-read leaf at rest on the flipped-over pile. */
+function PileLeaf({ doc, idx, depth, back }) {
+  const { w, h } = doc.paper
+  const topZ = stackTopZ(doc)
+  return (
+    <group
+      position={[0, h / 2, topZ + SHEET_T + PILE.lift - depth * PILE.drop]}
+      rotation={[pileAngle(depth), 0, 0]}
+    >
+      <group position={[0, -PILE.gap, 0]}>
+        <mesh position={[0, -h / 2, 0.001]}>
+          <planeGeometry args={[w, h]} />
+          <meshStandardMaterial map={docTexture(doc, idx)} roughness={0.9} />
+        </mesh>
+        <mesh position={[0, -h / 2, -0.001]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[w, h]} />
+          <meshStandardMaterial color={back} roughness={0.9} />
+        </mesh>
+      </group>
+    </group>
+  )
+}
+
 /**
  * Any document with a `pages` array longer than one: real stacked leaves, the
  * current page painted on top, remaining pages peeking out under the right
  * edge, and a physical page-turn about the top (bound) edge driven by the
- * same react-spring stack as the pickup animation.
+ * same react-spring stack as the pickup animation. Turned pages land on the
+ * flipped-over pile past the bound edge (PileLeaf) instead of vanishing; the
+ * spring is underdamped and the rotation clamps against the pile / the front
+ * stack, so a landing page presses flat, relaxes back a touch and settles —
+ * in both flip directions.
  */
 function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7' }) {
   const { w, h } = doc.paper
@@ -80,22 +127,43 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
 
   const [{ turn }, turnApi] = useSpring(() => ({
     turn: 0,
-    config: { tension: 130, friction: 21 },
+    // underdamped on purpose: the overshoot past the rest angle is clamped by
+    // applyTurn, which reads as the page pressing flat and springing back
+    config: { tension: 140, friction: 15 },
   }))
   const pivotRef = useRef()
+  const slideRef = useRef()
+
+  // Drive the turning sheet from the spring value: rotation about the hinge
+  // (clamped so it can't pass through the pile or the front stack), plus the
+  // slide past the hinge and the lift up to the pile's top slot, both
+  // proportional to progress so the sheet lands exactly where the static
+  // PileLeaf will take over.
+  const applyTurn = (t) => {
+    const tc = THREE.MathUtils.clamp(t, 0, 1)
+    const k = Math.min(tc / PILE.base, 1)
+    if (pivotRef.current) {
+      pivotRef.current.rotation.x = -tc * Math.PI
+      pivotRef.current.position.z = topZ + SHEET_T + PILE.lift * k
+    }
+    if (slideRef.current) slideRef.current.position.y = -PILE.gap * k
+  }
+
   useLayoutEffect(() => {
     if (!anim) return
-    const from = anim.dir > 0 ? 0 : 1
-    if (pivotRef.current) pivotRef.current.rotation.x = -from * Math.PI * 0.99
+    const from = anim.dir > 0 ? 0 : PILE.base
+    applyTurn(from)
     turnApi.start({
       from: { turn: from },
-      turn: anim.dir > 0 ? 1 : 0,
+      turn: anim.dir > 0 ? PILE.base : 0,
       onRest: () => setAnim(null),
     })
+    // applyTurn is re-created per render but only reads refs + constants
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anim, turnApi])
 
   useFrame(() => {
-    if (pivotRef.current) pivotRef.current.rotation.x = -turn.get() * Math.PI * 0.99
+    if (anim) applyTurn(turn.get())
   })
 
   // The static top sheet: while flipping forward it already shows the next
@@ -109,8 +177,24 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   const blanksBelow = Math.max(count - 1 - topIndex, 0)
   const flipping = anim && anim.idx >= 0 && anim.idx < count
 
+  // Already-read pages resting past the bound edge. The turning sheet is
+  // never in this list — it hands off to a PileLeaf (or the front stack) the
+  // frame its spring rests. While a page is inbound the resident leaves sit
+  // one slot deeper so the newcomer's slot is free.
+  const pileCount = anim ? anim.idx : page
+  const pileDepthShift = anim && anim.dir > 0 ? 1 : 0
+
   return (
     <group>
+      {Array.from({ length: Math.min(pileCount, PILE.visible) }).map((_, k) => (
+        <PileLeaf
+          key={pileCount - 1 - k}
+          doc={doc}
+          idx={pileCount - 1 - k}
+          depth={k + pileDepthShift}
+          back={back}
+        />
+      ))}
       {Array.from({ length: blanksBelow }).map((_, i) => {
         const f = FAN[i % FAN.length]
         return (
@@ -144,17 +228,20 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
         />
       </mesh>
 
-      {/* the sheet mid-turn, hinged at the top edge */}
+      {/* the sheet mid-turn, hinged at the top edge; the inner group slides
+          it past the hinge as it turns so it settles onto the pile */}
       {flipping && (
         <group ref={pivotRef} position={[0, h / 2, topZ + SHEET_T]}>
-          <mesh position={[0, -h / 2, 0.001]}>
-            <planeGeometry args={[w, h]} />
-            <meshStandardMaterial map={docTexture(doc, anim.idx)} roughness={0.9} />
-          </mesh>
-          <mesh position={[0, -h / 2, -0.001]} rotation={[0, Math.PI, 0]}>
-            <planeGeometry args={[w, h]} />
-            <meshStandardMaterial color={back} roughness={0.9} />
-          </mesh>
+          <group ref={slideRef}>
+            <mesh position={[0, -h / 2, 0.001]}>
+              <planeGeometry args={[w, h]} />
+              <meshStandardMaterial map={docTexture(doc, anim.idx)} roughness={0.9} />
+            </mesh>
+            <mesh position={[0, -h / 2, -0.001]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[w, h]} />
+              <meshStandardMaterial color={back} roughness={0.9} />
+            </mesh>
+          </group>
         </group>
       )}
     </group>
@@ -188,15 +275,55 @@ export function BlueprintProp({ doc }) {
   return <MultiPageSheets doc={doc} blank={['#26507a', '#214a72']} back="#2a5580" />
 }
 
+// Paperclip wire path constants, local to the sheet's top edge (y = 0 is the
+// paper edge, negative y runs down the face, z is the paper normal).
+const CLIP_R = 0.011 // wire radius
+
+/** Wire gem clip gripping the top edge of a sheet: the double loop rides the
+ *  front face, the return leg passes behind, and the one bend that crosses
+ *  the paper plane arcs over the edge in free space — the wire never passes
+ *  through the sheet, it wraps it at its real thickness. */
+function paperclipGeometry() {
+  const zF = PAPER_T / 2 + CLIP_R // wire centreline resting on the front face
+  const zB = -PAPER_T / 2 - CLIP_R // …and on the back face
+  const pts = []
+  const pt = (x, y, z) => pts.push(new THREE.Vector3(x, y, z))
+  const arc = (cx, cy, r, a0, a1, z0, z1, n = 10) => {
+    for (let s = 0; s <= n; s++) {
+      const t = s / n
+      const a = a0 + (a1 - a0) * t
+      pt(cx + Math.cos(a) * r, cy + Math.sin(a) * r, z0 + (z1 - z0) * t)
+    }
+  }
+  // outer loop, on the face: left leg up, over the edge, right leg down
+  pt(-0.05, -0.28, zF)
+  pt(-0.05, -0.15, zF)
+  pt(-0.05, -0.03, zF)
+  arc(0, 0, 0.05, Math.PI, 0, zF, zF) // top outer bend, past the paper edge
+  pt(0.05, -0.15, zF)
+  pt(0.05, -0.292, zF)
+  arc(0.042, -0.3, 0.008, 0, -Math.PI, zF, zF, 6) // bottom bend
+  // inner leg back up the face…
+  pt(0.034, -0.15, zF)
+  pt(0.034, -0.012, zF)
+  // …then the crossing bend: past the edge, front plane -> back plane
+  arc(0, -0.012, 0.034, 0, Math.PI, zF, zB)
+  // return leg down the back of the sheet
+  pt(-0.034, -0.12, zB)
+  pt(-0.034, -0.24, zB)
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal')
+  return new THREE.TubeGeometry(curve, 160, CLIP_R, 8)
+}
+
 /** Folded formal document with a paperclip — the resume. */
 export function FoldProp({ doc }) {
   const { w, h } = doc.paper
+  const clip = useMemo(() => paperclipGeometry(), [])
   return (
     <group>
       <BoxSheet w={w} h={h} doc={doc} />
-      {/* paperclip hugging the top-left corner, just proud of the face */}
-      <mesh position={[-w / 2 + 0.22, h / 2 - 0.1, PAPER_T / 2 + 0.022]} rotation={[0, 0, 0.2]}>
-        <torusGeometry args={[0.12, 0.02, 8, 20, Math.PI * 1.4]} />
+      {/* gem clip slid over the top edge, near the top-left corner */}
+      <mesh castShadow geometry={clip} position={[-w / 2 + 0.3, h / 2, 0]}>
         <meshStandardMaterial color="#c9c9cf" metalness={0.7} roughness={0.3} />
       </mesh>
     </group>

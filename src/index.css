@@ -74,6 +74,174 @@ html, body, #root {
 @keyframes draw { to { stroke-dashoffset: 0; } }
 
 /* ------------------------------------------------------------------ */
+/* Start screen — drafted cover sheet shown before a site mode mounts  */
+/* ------------------------------------------------------------------ */
+.start {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 38%, #2a2013, #140d06 78%);
+  font-family: 'Architects Daughter', cursive;
+}
+.start__sheet {
+  position: relative;
+  width: min(92vw, 560px);
+  padding: clamp(28px, 6vh, 56px) clamp(24px, 6vw, 56px) clamp(20px, 4vh, 36px);
+  color: var(--ink);
+  background:
+    /* red margin line */
+    linear-gradient(to right, transparent 46px, var(--margin) 46px, var(--margin) 48px, transparent 48px),
+    /* ruled lines */
+    repeating-linear-gradient(
+      to bottom,
+      var(--paper) 0px,
+      var(--paper) 27px,
+      var(--rule) 27px,
+      var(--paper) 28px
+    );
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  box-shadow:
+    0 1px 0 #d8cbaa inset,
+    0 18px 50px rgba(0, 0, 0, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.4);
+  transform: rotate(-0.6deg);
+  animation: start-settle 0.7s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  transition: transform 0.6s cubic-bezier(0.5, 0, 0.75, 0.4), opacity 0.55s ease;
+}
+@keyframes start-settle {
+  from { opacity: 0; transform: translateY(26px) rotate(0.8deg); }
+  to { opacity: 1; transform: translateY(0) rotate(-0.6deg); }
+}
+/* leaving = the sheet is "picked up" toward the viewer, then the mode mounts */
+.start.is-leaving { pointer-events: none; }
+.start.is-leaving .start__sheet {
+  transform: translateY(-6vh) scale(1.12) rotate(0.4deg);
+  opacity: 0;
+}
+.start__pin {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d46a5b, #8f2f24 70%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+.start__cover {
+  margin: 0 0 clamp(18px, 4vh, 34px) 22px;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #8a7a55;
+}
+.start__name {
+  margin: 0 0 2px 22px;
+  font-family: 'Special Elite', monospace;
+  font-size: clamp(30px, 7vw, 46px);
+  letter-spacing: 4px;
+  line-height: 1.1;
+}
+.start__underline {
+  display: block;
+  width: min(100%, 400px);
+  margin-left: 18px;
+  color: #4a3f2c;
+  opacity: 0.75;
+}
+.start__sub {
+  margin: 10px 0 0 22px;
+  font-size: 16px;
+  color: #5c5340;
+}
+.start__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: clamp(26px, 6vh, 48px) 0 clamp(22px, 5vh, 40px);
+}
+.start__begin {
+  position: relative;
+  padding: 18px 38px;
+  margin-bottom: 20px; /* room for the note hanging under the ring */
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+.start__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: #7a4a3a;
+  opacity: 0.8;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.start__begin-label {
+  display: block;
+  font-size: 24px;
+  letter-spacing: 1px;
+}
+.start__begin-note {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -20px;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 12px;
+  color: #8a7a55;
+}
+.start__begin:hover .start__ring,
+.start__begin:focus-visible .start__ring {
+  opacity: 1;
+  transform: scale(1.04);
+  color: #a03a28;
+}
+.start__begin:focus-visible { outline: none; }
+.start__begin:disabled { cursor: default; }
+/* drafting title block, ruled off in the bottom-right corner */
+.start__titleblock {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 0 0 0 auto;
+  width: fit-content;
+  border: 1.5px solid #4a3f2c;
+  font-family: 'Cutive Mono', monospace;
+}
+.start__titleblock > div {
+  padding: 6px 14px 5px;
+  border-left: 1.5px solid #4a3f2c;
+}
+.start__titleblock > div:first-child { border-left: 0; }
+.start__titleblock dt {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #8a7a55;
+}
+.start__titleblock dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 480px) {
+  .start__titleblock > div { padding: 5px 8px 4px; }
+  .start__sub { font-size: 14px; }
+}
+
+/* ------------------------------------------------------------------ */
 /* HUD chrome — nav hint + title                                       */
 /* ------------------------------------------------------------------ */
 .hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
@@ -107,4 +275,6 @@ html, body, #root {
 
 @media (prefers-reduced-motion: reduce) {
   .loader { transition: none; animation: none; }
+  .start__sheet { animation: none; transition: opacity 0.3s ease; }
+  .start.is-leaving .start__sheet { transform: rotate(-0.6deg); }
 }

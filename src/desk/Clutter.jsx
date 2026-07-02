@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { COLORS } from './constants'
-import { paperTexture, pcbTexture, photoPlaceholderTexture } from '../lib/textures'
+import {
+  calcScreenTexture,
+  coffeeTexture,
+  paperTexture,
+  pcbTexture,
+  photoPlaceholderTexture,
+  triangleScaleTexture,
+} from '../lib/textures'
 
 /**
  * Static desk dressing that sells the "older engineer, manual drafting,
  * mid-project" read: T-square, a drafting compass, mechanical pencils,
  * kneaded eraser, slide rule, a vellum roll, a coffee mug, a drafting
  * triangle, a pin dish, stray circuit boards with loose components, a
- * vintage calculator and loose gears filling the middle of the desk, and a
- * small framed photo leaning at the back of the desk.
+ * TI-36X Pro calculator and a meshed pair of gears filling the middle of
+ * the desk, and a small framed photo leaning at the back of the desk.
  *
  * Layout rules (enforced by DevLayoutAudit in dev builds):
  *  - every object rests ON the desk: y = half its own height, nothing sunk
@@ -106,88 +113,142 @@ function DraftingCompass({ position, yaw = 0 }) {
   )
 }
 
+// TI-36X Pro colourway: near-black shell, charcoal function keys, white
+// digit/operator keys, the blue [2nd] key and blue-grey arrow pad.
+const TI_BODY = '#26262b'
+const TI_KEY_DARK = '#35353c'
+const TI_KEY_WHITE = '#f2efe6'
+const TI_BLUE = '#4a7fb5'
+
 /**
- * Boxy vintage desk calculator — beige shell, dark display bezel with a dim
- * green LED readout, cream keys with a terracotta operator column. Sits at a
- * slight angle like it was pushed aside mid-use.
+ * TI-36X Pro scientific calculator, pushed aside mid-use: dark grey shell,
+ * four-line MathPrint LCD up top with the solar strip beside the branding,
+ * blue-grey arrow pad, rows of charcoal function keys with the blue [2nd]
+ * at the top-left, and a white digit/operator pad at the bottom. Same desk
+ * footprint as the old prop, so the layout audit stays valid.
  */
 function Calculator({ position, yaw = 0 }) {
-  const keyRows = [-0.05, 0.06, 0.17, 0.28]
-  const keyCols = [-0.195, -0.065, 0.065, 0.195]
+  const screen = calcScreenTexture()
+  const key = (x, z, color = TI_KEY_DARK, w = 0.085, d = 0.05, h = 0.022) => (
+    <mesh key={`${x}:${z}`} castShadow position={[x, 0.16 + h / 2 - 0.004, z]}>
+      <boxGeometry args={[w, h, d]} />
+      <meshStandardMaterial color={color} roughness={0.45} />
+    </mesh>
+  )
+  // charcoal function rows — the top two stop short of the arrow pad
+  const fnKeys = []
+  for (const z of [-0.19, -0.115]) {
+    for (const x of [-0.245, -0.15, -0.055, 0.04]) {
+      fnKeys.push(key(x, z, z === -0.19 && x === -0.245 ? TI_BLUE : TI_KEY_DARK))
+    }
+  }
+  for (const z of [-0.04, 0.035]) {
+    for (const x of [-0.245, -0.1225, 0, 0.1225, 0.245]) fnKeys.push(key(x, z))
+  }
   return (
     <group position={position} rotation={[0, yaw, 0]}>
       {/* shell */}
       <mesh castShadow position={[0, 0.08, 0]}>
         <boxGeometry args={[0.62, 0.16, 0.9]} />
-        <meshStandardMaterial color="#cfc5ae" roughness={0.55} metalness={0.05} />
+        <meshStandardMaterial color={TI_BODY} roughness={0.5} metalness={0.05} />
       </mesh>
-      {/* display bezel + glass + a faint green LED readout */}
-      <mesh castShadow position={[0, 0.172, -0.29]}>
-        <boxGeometry args={[0.5, 0.028, 0.2]} />
-        <meshStandardMaterial color="#3a362f" roughness={0.5} />
+      {/* solar strip beside the branding, above the display */}
+      <mesh position={[0.185, 0.161, -0.405]}>
+        <boxGeometry args={[0.17, 0.004, 0.055]} />
+        <meshStandardMaterial color="#141828" roughness={0.25} metalness={0.3} />
       </mesh>
-      <mesh position={[0, 0.188, -0.29]}>
-        <boxGeometry args={[0.44, 0.006, 0.14]} />
-        <meshStandardMaterial color="#10150f" roughness={0.25} />
+      {/* display bezel + the four-line MathPrint LCD */}
+      <mesh castShadow position={[0, 0.166, -0.315]}>
+        <boxGeometry args={[0.54, 0.02, 0.21]} />
+        <meshStandardMaterial color="#1c1c21" roughness={0.5} />
       </mesh>
-      {[0.14, 0.06, -0.02, -0.1].map((dx, i) => (
-        <mesh key={i} position={[dx, 0.193, -0.29]}>
-          <boxGeometry args={[0.05, 0.004, 0.08]} />
-          <meshStandardMaterial
-            color="#7fd694"
-            emissive="#3f7a4c"
-            emissiveIntensity={0.55}
-            roughness={0.4}
-          />
-        </mesh>
-      ))}
-      {/* key grid; right column is the operator column */}
-      {keyRows.map((kz, r) =>
-        keyCols.map((kx, c) => (
-          <mesh key={`${r}-${c}`} castShadow position={[kx, 0.185, kz]}>
-            <boxGeometry args={[0.1, 0.05, 0.09]} />
-            <meshStandardMaterial
-              color={c === 3 ? '#b3563f' : r === 3 && c === 0 ? '#3f3b36' : '#efe6d0'}
-              roughness={0.5}
-            />
-          </mesh>
-        ))
+      <mesh position={[0, 0.1775, -0.315]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.46, 0.147]} />
+        <meshStandardMaterial map={screen} roughness={0.35} />
+      </mesh>
+      {/* blue-grey four-way arrow pad, top right */}
+      <mesh castShadow position={[0.2, 0.163, -0.1525]}>
+        <cylinderGeometry args={[0.075, 0.08, 0.026, 20]} />
+        <meshStandardMaterial color={TI_BLUE} roughness={0.5} />
+      </mesh>
+      <mesh position={[0.2, 0.1775, -0.1525]}>
+        <cylinderGeometry args={[0.026, 0.026, 0.004, 14]} />
+        <meshStandardMaterial color={TI_BODY} roughness={0.5} />
+      </mesh>
+      {fnKeys}
+      {/* digit rows: three white columns + white operator column, [on] dark */}
+      {[0.115, 0.195, 0.275, 0.355].map((z, r) =>
+        [-0.22, -0.08, 0.06, 0.22].map((x, c) =>
+          key(
+            x,
+            z,
+            r === 3 && c === 0 ? TI_KEY_DARK : TI_KEY_WHITE,
+            0.11,
+            0.058,
+            0.026
+          )
+        )
       )}
     </group>
   )
 }
 
-/** A loose steel gear lying flat — hub, bore, and box teeth around the rim. */
-function Gear({ position, yaw = 0, r = 0.24, teeth = 12, thickness = 0.05 }) {
-  const toothW = ((2 * Math.PI * r) / teeth) * 0.45
+/**
+ * A loose steel spur gear lying flat, cut like the real thing: trapezoidal
+ * teeth with angled flanks around a round root circle, a true through-bore,
+ * and a raised brass hub ring. `phase` spins the tooth pattern into the
+ * geometry (the prop itself never rotates) so two touching gears can be
+ * clocked to interlock: give both the same `module`, set their centre
+ * distance to the sum of their pitch radii (module * teeth / 2), and phase
+ * one with a tooth on the centre line and the other with a gap.
+ * Shape-space angle b lands at world angle -b once the extrusion is laid
+ * flat, so a tooth aimed at world angle t needs phase = -t.
+ */
+function Gear({ position, teeth = 12, module = 0.04, thickness = 0.05, phase = 0, bore = 0.05 }) {
+  const pitchR = (module * teeth) / 2
+  const { plate, hub } = useMemo(() => {
+    const tip = pitchR + module * 0.9 // addendum
+    const root = pitchR - module * 1.1 // dedendum
+    const p = (Math.PI * 2) / teeth
+    const s = new THREE.Shape()
+    for (let i = 0; i < teeth; i++) {
+      const a = phase + i * p
+      // one tooth: root -> leading flank -> tip flat -> trailing flank,
+      // then the root arc across the gap to the next tooth
+      const pts = [
+        [a - p * 0.24, root],
+        [a - p * 0.1, tip],
+        [a + p * 0.1, tip],
+        [a + p * 0.24, root],
+      ]
+      for (const [ang, rad] of pts) {
+        if (i === 0 && ang === pts[0][0]) s.moveTo(Math.cos(ang) * rad, Math.sin(ang) * rad)
+        else s.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad)
+      }
+      for (let k = 1; k <= 3; k++) {
+        const ang = a + p * 0.24 + ((p * 0.52) * k) / 3
+        s.lineTo(Math.cos(ang) * root, Math.sin(ang) * root)
+      }
+    }
+    s.closePath()
+    s.holes.push(new THREE.Path().absarc(0, 0, bore, 0, Math.PI * 2, true))
+    const plate = new THREE.ExtrudeGeometry(s, { depth: thickness, bevelEnabled: false })
+
+    const hs = new THREE.Shape()
+    hs.absarc(0, 0, bore * 2.1, 0, Math.PI * 2, false)
+    hs.holes.push(new THREE.Path().absarc(0, 0, bore, 0, Math.PI * 2, true))
+    const hub = new THREE.ExtrudeGeometry(hs, { depth: 0.024, bevelEnabled: false })
+    return { plate, hub }
+  }, [teeth, module, thickness, phase, bore, pitchR])
+
   return (
-    <group position={position} rotation={[0, yaw, 0]}>
-      <mesh castShadow position={[0, thickness / 2, 0]}>
-        <cylinderGeometry args={[r, r, thickness, 28]} />
+    <group position={position} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh castShadow geometry={plate}>
         <meshStandardMaterial {...steel} />
       </mesh>
-      {Array.from({ length: teeth }).map((_, i) => {
-        const a = (i / teeth) * Math.PI * 2
-        return (
-          <mesh
-            key={i}
-            castShadow
-            position={[Math.cos(a) * (r + 0.03), thickness / 2, Math.sin(a) * (r + 0.03)]}
-            rotation={[0, -a, 0]}
-          >
-            <boxGeometry args={[0.06, thickness, toothW]} />
-            <meshStandardMaterial {...steel} />
-          </mesh>
-        )
-      })}
-      {/* raised hub with a dark axle bore */}
-      <mesh castShadow position={[0, thickness / 2 + 0.012, 0]}>
-        <cylinderGeometry args={[r * 0.32, r * 0.32, thickness, 20]} />
+      {/* hub ring sits proud of the plate; the bore stays open through both */}
+      <mesh castShadow geometry={hub} position={[0, 0, thickness]}>
         <meshStandardMaterial {...brass} />
-      </mesh>
-      <mesh position={[0, thickness / 2 + 0.026, 0]}>
-        <cylinderGeometry args={[r * 0.13, r * 0.13, thickness, 12]} />
-        <meshStandardMaterial color="#1d1d20" roughness={0.6} />
       </mesh>
     </group>
   )
@@ -326,12 +387,22 @@ export default function Clutter() {
       <DraftingCompass position={[0.15, 0, 2.95]} yaw={1.25} />
 
       {/* ---- Middle-of-desk fillers: calculator pushed aside mid-use, and a
-           pair of loose gears between the papers. Both sit in the open pocket
+           meshed gear pair between the papers. Both sit in the open pocket
            bounded by the about card, resume, blueprint and project stack —
-           re-run window.__deskLayoutAudit() after moving either. ---- */}
+           re-run window.__deskLayoutAudit() after moving either. ----
+           Gear mesh: pitch radii 0.24 + 0.16 = the 0.40 centre distance, and
+           the phases clock a wheel tooth into a pinion gap along the centre
+           line (world angle -2.7172 rad from the wheel; see Gear docs). */}
       <Calculator position={[-0.62, 0, 1.25]} yaw={-0.38} />
-      <Gear position={[-0.12, 0, -0.1]} yaw={0.4} r={0.24} teeth={12} />
-      <Gear position={[-0.56, 0, -0.3]} yaw={-0.2} r={0.11} teeth={9} thickness={0.04} />
+      <Gear position={[-0.12, 0, -0.1]} teeth={12} module={0.04} phase={2.7172} bore={0.05} />
+      <Gear
+        position={[-0.485, 0, -0.265]}
+        teeth={8}
+        module={0.04}
+        thickness={0.04}
+        phase={-0.0317}
+        bore={0.035}
+      />
 
       {/* ---- Mechanical pencils + kneaded eraser, front-centre-left ---- */}
       <Pencil position={[-1.8, 0.048, 2.98]} rotation={[Math.PI / 2, 0, 0.9]} color="#7a1f24" />
@@ -378,16 +449,24 @@ export default function Clutter() {
         </mesh>
       </group>
 
-      {/* ---- Coffee mug (warmth), mid-right ---- */}
+      {/* ---- Coffee mug (warmth), mid-right — an open cup so the coffee
+           inside actually reads from the high camera angle ---- */}
       <group position={[3.7, 0, 0.4]}>
+        {/* tapered wall, open at the top */}
         <mesh castShadow position={[0, 0.33, 0]}>
-          <cylinderGeometry args={[0.32, 0.28, 0.66, 24]} />
+          <cylinderGeometry args={[0.32, 0.28, 0.66, 24, 1, true]} />
+          <meshStandardMaterial color="#7c3b2a" roughness={0.4} side={THREE.DoubleSide} />
+        </mesh>
+        {/* rolled rim capping the wall edge */}
+        <mesh castShadow position={[0, 0.657, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.318, 0.014, 10, 32]} />
           <meshStandardMaterial color="#7c3b2a" roughness={0.4} />
         </mesh>
-        {/* coffee */}
-        <mesh position={[0, 0.62, 0]}>
-          <cylinderGeometry args={[0.29, 0.29, 0.04, 24]} />
-          <meshStandardMaterial color="#2a1a10" roughness={0.2} />
+        {/* the coffee, a hand below the rim; glossy + painted glare so it
+            reads as liquid from every parallax angle */}
+        <mesh castShadow position={[0, 0.56, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.313, 32]} />
+          <meshStandardMaterial map={coffeeTexture()} roughness={0.12} metalness={0.08} />
         </mesh>
         {/* handle */}
         <mesh castShadow position={[0.36, 0.34, 0]} rotation={[Math.PI / 2, 0, 0]}>
@@ -396,7 +475,10 @@ export default function Clutter() {
         </mesh>
       </group>
 
-      {/* ---- Drafting triangle, mid-right between blueprint and roll ---- */}
+      {/* ---- Drafting triangle, mid-right between blueprint and roll:
+           translucent acrylic with an engraved tick scale along both legs
+           and the hypotenuse (texture UVs are shape-space, so the repeat
+           maps the 1.6-unit legs onto the canvas exactly) ---- */}
       <group position={[3.75, 0.004, -1.35]} rotation={[-Math.PI / 2, 0, 0.9]}>
         <mesh castShadow>
           <extrudeGeometry
@@ -423,7 +505,26 @@ export default function Clutter() {
               { depth: 0.03, bevelEnabled: false },
             ]}
           />
-          <meshStandardMaterial color="#8fb9c9" transparent opacity={0.55} roughness={0.2} metalness={0.1} />
+          {/* material 0 = faces (scale markings), material 1 = side walls */}
+          <meshStandardMaterial
+            attach="material-0"
+            map={(() => {
+              const t = triangleScaleTexture(1.6)
+              t.repeat.set(1 / 1.6, 1 / 1.6)
+              return t
+            })()}
+            transparent
+            roughness={0.2}
+            metalness={0.1}
+          />
+          <meshStandardMaterial
+            attach="material-1"
+            color="#8fb9c9"
+            transparent
+            opacity={0.55}
+            roughness={0.2}
+            metalness={0.1}
+          />
         </mesh>
       </group>
 
