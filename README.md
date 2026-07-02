@@ -8,6 +8,8 @@ set it back down.
 Built with **React + React Three Fiber**, **drei**, **@react-spring/three**,
 **Zustand**, and **Vite**. Tailwind dresses only the flat UI chrome.
 
+Access through Vercel: https://bryan-pham-portfolio.vercel.app/
+
 ## Run it
 
 ```bash
