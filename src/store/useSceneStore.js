@@ -8,6 +8,7 @@ import { create } from 'zustand'
  */
 export const useSceneStore = create((set) => ({
   ready: false, // assets + fonts loaded; gates the loading doodle
+  sceneDrawn: false, // the Canvas has actually rendered frames (see DeskScene)
   focusedId: null, // id of the picked-up document, or null for the idle desk
   hoveredId: null, // id of the document under the cursor (idle state only)
   pageIndex: 0, // current sheet within a multi-page document
@@ -15,6 +16,7 @@ export const useSceneStore = create((set) => ({
   flipNonce: 0, // bumps on every turn so the flip animation re-fires
 
   setReady: (v = true) => set({ ready: v }),
+  setSceneDrawn: (v = true) => set({ sceneDrawn: v }),
 
   focus: (id) => set({ focusedId: id, pageIndex: 0, flipDir: 0 }),
   close: () => set({ focusedId: null, hoveredId: null, pageIndex: 0, flipDir: 0 }),

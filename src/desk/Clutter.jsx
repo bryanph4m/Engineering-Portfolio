@@ -1,14 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { COLORS } from './constants'
 import {
-  calcScreenTexture,
+  createCalcScreen,
   coffeeTexture,
+  keyLabelTexture,
   paperTexture,
   pcbTexture,
   photoPlaceholderTexture,
   triangleScaleTexture,
 } from '../lib/textures'
+import { useSceneStore } from '../store/useSceneStore'
+import {
+  displayText,
+  evaluate,
+  formatResult,
+  initialCalc,
+  loadDesmos,
+  pressKey,
+} from '../lib/calcEngine'
 
 /**
  * Static desk dressing that sells the "older engineer, manual drafting,
@@ -119,32 +129,184 @@ const TI_BODY = '#26262b'
 const TI_KEY_DARK = '#35353c'
 const TI_KEY_WHITE = '#f2efe6'
 const TI_BLUE = '#4a7fb5'
+const TI_INK_LIGHT = '#e9e9ee'
+const TI_INK_DARK = '#26262b'
 
-/**
- * TI-36X Pro scientific calculator, pushed aside mid-use: dark grey shell,
- * four-line MathPrint LCD up top with the solar strip beside the branding,
- * blue-grey arrow pad, rows of charcoal function keys with the blue [2nd]
- * at the top-left, and a white digit/operator pad at the bottom. Same desk
- * footprint as the old prop, so the layout audit stays valid.
- */
-function Calculator({ position, yaw = 0 }) {
-  const screen = calcScreenTexture()
-  const key = (x, z, color = TI_KEY_DARK, w = 0.085, d = 0.05, h = 0.022) => (
-    <mesh key={`${x}:${z}`} castShadow position={[x, 0.16 + h / 2 - 0.004, z]}>
+// Everything on the shell face uses the same physical rule that fixed the
+// paper z-fighting: bases embedded a real KEY_EMBED into the body, tops a
+// real thickness proud of it — never hairline gaps or coplanar faces.
+const SHELL_TOP = 0.16
+const KEY_EMBED = 0.004
+const KEY_TRAVEL = 0.008 // how far a cap sinks while pressed
+const BEZEL_TOP = 0.176 // display bezel face (0.166 centre + 0.02/2)
+const PAD_TOP = 0.176 // arrow pad face (0.163 centre + 0.026/2)
+
+/** One key spec: where it sits, what it says, what it feeds the engine. */
+const calcKeys = (() => {
+  const list = []
+  const add = (label, x, z, key, opts = {}) =>
+    list.push({
+      id: `${x}:${z}`,
+      label,
+      x,
+      z,
+      key, // null = decorative only
+      w: 0.085,
+      d: 0.05,
+      h: 0.022,
+      color: TI_KEY_DARK,
+      ink: TI_INK_LIGHT,
+      ...opts,
+    })
+
+  // charcoal function rows — the top two stop short of the arrow pad
+  const fx = [-0.245, -0.15, -0.055, 0.04]
+  add('2nd', fx[0], -0.19, null, { color: TI_BLUE })
+  add('mode', fx[1], -0.19, null)
+  add('del', fx[2], -0.19, { k: 'del' })
+  add('clear', fx[3], -0.19, { k: 'clear' })
+  ;['math', 'num', 'data', 'stat'].forEach((l, i) => add(l, fx[i], -0.115, null))
+
+  // full-width scientific rows, all live
+  const sx = [-0.245, -0.1225, 0, 0.1225, 0.245]
+  add('x^2', sx[0], -0.04, { k: 'post', v: 'sq' })
+  add('x^-1', sx[1], -0.04, { k: 'post', v: 'inv' })
+  add('√', sx[2], -0.04, { k: 'sqrt' })
+  add('(', sx[3], -0.04, { k: 'open' })
+  add(')', sx[4], -0.04, { k: 'close' })
+  add('sin', sx[0], 0.035, { k: 'fn', v: 'sin' })
+  add('cos', sx[1], 0.035, { k: 'fn', v: 'cos' })
+  add('tan', sx[2], 0.035, { k: 'fn', v: 'tan' })
+  add('π', sx[3], 0.035, { k: 'pi' })
+  add('ans', sx[4], 0.035, { k: 'ans' })
+
+  // white digit/operator pad, equals bottom-right
+  const grid = [
+    ['7', '8', '9', '÷'],
+    ['4', '5', '6', '×'],
+    ['1', '2', '3', '−'],
+    ['0', '.', '+', '='],
+  ]
+  const keyFor = (l) =>
+    l === '=' ? { k: 'eval' }
+    : '0123456789.'.includes(l) ? { k: 'digit', v: l }
+    : { k: 'op', v: l }
+  grid.forEach((row, r) =>
+    row.forEach((l, c) =>
+      add(l, [-0.22, -0.08, 0.06, 0.22][c], [0.115, 0.195, 0.275, 0.355][r], keyFor(l), {
+        w: 0.11,
+        d: 0.058,
+        h: 0.026,
+        color: TI_KEY_WHITE,
+        ink: TI_INK_DARK,
+      })
+    )
+  )
+  return list
+})()
+
+const docFocused = () => useSceneStore.getState().focusedId != null
+
+/** A physical key cap: labelled top face, sunk base, and a press animation. */
+function CalcKey({ spec, pressed, onPressStart, onPressEnd, onPress }) {
+  const { x, z, w, d, h, color, ink, label } = spec
+  const cap = keyLabelTexture(label, color, ink)
+  const y = SHELL_TOP + h / 2 - KEY_EMBED - (pressed ? KEY_TRAVEL : 0)
+  return (
+    <mesh
+      castShadow
+      position={[x, y, z]}
+      onPointerOver={(e) => {
+        if (docFocused()) return
+        e.stopPropagation()
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={() => {
+        onPressEnd(spec.id)
+        if (!docFocused()) document.body.style.cursor = 'auto'
+      }}
+      onPointerDown={(e) => {
+        if (docFocused()) return
+        e.stopPropagation()
+        onPressStart(spec.id)
+      }}
+      onPointerUp={() => onPressEnd(spec.id)}
+      onClick={(e) => {
+        if (docFocused()) return
+        e.stopPropagation()
+        if (spec.key) onPress(spec.key)
+      }}
+    >
       <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={color} roughness={0.45} />
+      {[0, 1, 3, 4, 5].map((i) => (
+        <meshStandardMaterial key={i} attach={`material-${i}`} color={color} roughness={0.45} />
+      ))}
+      <meshStandardMaterial attach="material-2" map={cap} roughness={0.45} />
     </mesh>
   )
-  // charcoal function rows — the top two stop short of the arrow pad
-  const fnKeys = []
-  for (const z of [-0.19, -0.115]) {
-    for (const x of [-0.245, -0.15, -0.055, 0.04]) {
-      fnKeys.push(key(x, z, z === -0.19 && x === -0.245 ? TI_BLUE : TI_KEY_DARK))
+}
+
+/**
+ * TI-36X Pro scientific calculator — and a working one. Key caps are real
+ * meshes raycast by r3f; presses feed src/lib/calcEngine.js, which evaluates
+ * through a hidden Desmos instance (local degree-mode math if Desmos can't
+ * load) and the live entry/result render on the LCD's canvas texture. Same
+ * desk footprint as the old prop, so the layout audit stays valid.
+ */
+function Calculator({ position, yaw = 0 }) {
+  const screen = useMemo(() => createCalcScreen(), [])
+  const [state, setState] = useState(initialCalc)
+  const [pressedId, setPressedId] = useState(null)
+  const evalGen = useRef(0)
+
+  useEffect(() => {
+    screen.draw(displayText(state.tokens), state.result, state.error)
+  }, [screen, state])
+
+  const doPress = (key) => {
+    loadDesmos().catch(() => {}) // warm the engine on first touch
+    if (key.k === 'eval') {
+      if (!state.tokens.length || state.evaluated || state.error) return
+      const gen = ++evalGen.current
+      const snap = state
+      evaluate(snap.tokens, snap.ans)
+        .then((v) => {
+          if (evalGen.current !== gen) return
+          setState((cur) =>
+            cur.tokens === snap.tokens
+              ? { ...cur, result: formatResult(v), ans: v, error: false, evaluated: true }
+              : cur
+          )
+        })
+        .catch(() => {
+          if (evalGen.current !== gen) return
+          setState((cur) =>
+            cur.tokens === snap.tokens ? { ...cur, result: null, error: true, evaluated: true } : cur
+          )
+        })
+      return
     }
+    setState((s) => pressKey(s, key))
   }
-  for (const z of [-0.04, 0.035]) {
-    for (const x of [-0.245, -0.1225, 0, 0.1225, 0.245]) fnKeys.push(key(x, z))
-  }
+
+  // Dev/QA hooks: drive keys and read the LCD without synthesizing 3D clicks.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    window.__calcPress = (label) => {
+      const spec = calcKeys.find((s) => s.label === label)
+      if (spec?.key) doPress(spec.key)
+    }
+    window.__calcState = () => ({
+      expr: displayText(state.tokens),
+      result: state.result,
+      error: state.error,
+    })
+    return () => {
+      delete window.__calcPress
+      delete window.__calcState
+    }
+  })
+
   return (
     <group position={position} rotation={[0, yaw, 0]}>
       {/* shell */}
@@ -152,43 +314,41 @@ function Calculator({ position, yaw = 0 }) {
         <boxGeometry args={[0.62, 0.16, 0.9]} />
         <meshStandardMaterial color={TI_BODY} roughness={0.5} metalness={0.05} />
       </mesh>
-      {/* solar strip beside the branding, above the display */}
-      <mesh position={[0.185, 0.161, -0.405]}>
-        <boxGeometry args={[0.17, 0.004, 0.055]} />
+      {/* solar strip beside the branding — same embed/proud rule as the keys */}
+      <mesh position={[0.185, 0.162, -0.405]}>
+        <boxGeometry args={[0.17, 0.012, 0.055]} />
         <meshStandardMaterial color="#141828" roughness={0.25} metalness={0.3} />
       </mesh>
-      {/* display bezel + the four-line MathPrint LCD */}
+      {/* display bezel + the live LCD, a real 0.004 above the bezel face */}
       <mesh castShadow position={[0, 0.166, -0.315]}>
         <boxGeometry args={[0.54, 0.02, 0.21]} />
         <meshStandardMaterial color="#1c1c21" roughness={0.5} />
       </mesh>
-      <mesh position={[0, 0.1775, -0.315]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, BEZEL_TOP + 0.004, -0.315]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[0.46, 0.147]} />
-        <meshStandardMaterial map={screen} roughness={0.35} />
+        <meshStandardMaterial map={screen.texture} roughness={0.35} />
       </mesh>
-      {/* blue-grey four-way arrow pad, top right */}
+      {/* blue-grey four-way arrow pad, top right; the centre disk's base is
+          buried in the pad and its face sits a real 0.008 proud — the old
+          hairline 0.0005 overlap here is what made the pad flicker */}
       <mesh castShadow position={[0.2, 0.163, -0.1525]}>
         <cylinderGeometry args={[0.075, 0.08, 0.026, 20]} />
         <meshStandardMaterial color={TI_BLUE} roughness={0.5} />
       </mesh>
-      <mesh position={[0.2, 0.1775, -0.1525]}>
-        <cylinderGeometry args={[0.026, 0.026, 0.004, 14]} />
+      <mesh position={[0.2, PAD_TOP + 0.002, -0.1525]}>
+        <cylinderGeometry args={[0.026, 0.026, 0.012, 14]} />
         <meshStandardMaterial color={TI_BODY} roughness={0.5} />
       </mesh>
-      {fnKeys}
-      {/* digit rows: three white columns + white operator column, [on] dark */}
-      {[0.115, 0.195, 0.275, 0.355].map((z, r) =>
-        [-0.22, -0.08, 0.06, 0.22].map((x, c) =>
-          key(
-            x,
-            z,
-            r === 3 && c === 0 ? TI_KEY_DARK : TI_KEY_WHITE,
-            0.11,
-            0.058,
-            0.026
-          )
-        )
-      )}
+      {calcKeys.map((spec) => (
+        <CalcKey
+          key={spec.id}
+          spec={spec}
+          pressed={pressedId === spec.id}
+          onPressStart={setPressedId}
+          onPressEnd={(id) => setPressedId((cur) => (cur === id ? null : cur))}
+          onPress={doPress}
+        />
+      ))}
     </group>
   )
 }

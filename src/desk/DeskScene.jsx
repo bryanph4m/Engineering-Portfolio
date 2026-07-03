@@ -1,7 +1,8 @@
-import { Suspense } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, useRef } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { PerspectiveCamera, AdaptiveDpr, Preload } from '@react-three/drei'
 import * as THREE from 'three'
+import { useSceneStore } from '../store/useSceneStore'
 import { CAMERA } from './constants'
 import Desk from './Desk'
 import DeskLamp from './DeskLamp'
@@ -10,6 +11,22 @@ import Documents from './Documents'
 import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
 import DevLayoutAudit from './DevLayoutAudit'
+
+/**
+ * Flags the store once the canvas has really put frames on screen (shaders
+ * compiled, first paints done). The loading screen's fade-out is gated on
+ * this so it crossfades into a drawn desk, not a black canvas mid-compile.
+ */
+function FirstFramesGate() {
+  const setSceneDrawn = useSceneStore((s) => s.setSceneDrawn)
+  const frames = useRef(0)
+  useFrame(() => {
+    if (frames.current > 2) return
+    frames.current += 1
+    if (frames.current > 2) setSceneDrawn(true)
+  })
+  return null
+}
 
 /**
  * The single Canvas for the whole site. Everything lives under here and is
@@ -49,6 +66,7 @@ export default function DeskScene() {
         <Preload all />
       </Suspense>
 
+      <FirstFramesGate />
       {import.meta.env.DEV && <DevLayoutAudit />}
       <AdaptiveDpr pixelated />
     </Canvas>

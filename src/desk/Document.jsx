@@ -4,6 +4,7 @@ import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docLinks } from '../lib/docTextures'
+import { shadowDitherTexture } from '../lib/textures'
 import { DocProp } from './props'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT } from './constants'
 
@@ -19,6 +20,13 @@ const _q = new THREE.Quaternion()
 // page-turn hotspot on a focused multi-page document. Matches the dog-eared
 // corners painted by pageChrome in docTextures.js.
 const PAGE_CORNER = 0.16
+
+// The cast shadow fades out over this first slice of the pickup spring (and
+// back in over the same slice of the return), so it dissolves with the lift
+// instead of sweeping across the desk and snapping off at the shadow-frustum
+// edge. Shadow maps are binary per caster, so the fade is a dither: a noise
+// alphaMap on the depth material with alphaTest riding the `open` spring.
+const SHADOW_FADE_END = 0.35
 
 /**
  * One interactive document. It interpolates between its resting pose on the
@@ -81,6 +89,24 @@ export default function Document({ doc }) {
     config: { tension: 300, friction: 20 },
   }))
 
+  // Shared depth material for every casting mesh in this document: alphaTest
+  // starts just above 0 so the ALPHATEST shader path compiles once and never
+  // recompiles as the fade animates.
+  const shadowFade = useMemo(() => {
+    const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
+    m.alphaMap = shadowDitherTexture()
+    m.alphaTest = 0.001
+    return m
+  }, [])
+
+  // Re-applied after every render so any late-mounted casting mesh (page
+  // leaves come and go during flips) picks the fade material up too.
+  useEffect(() => {
+    groupRef.current?.traverse((o) => {
+      if (o.isMesh && o.castShadow) o.customDepthMaterial = shadowFade
+    })
+  })
+
   useEffect(() => {
     openApi.start({ open: isFocused ? 1 : 0 })
   }, [isFocused, openApi])
@@ -107,6 +133,9 @@ export default function Document({ doc }) {
     // scale: 1 on the desk -> focusScale in hand, with a tiny hover pop
     const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
     g.scale.setScalar(s)
+
+    // cast shadow dissolves with the same spring the motion rides
+    shadowFade.alphaTest = 0.001 + Math.min(t / SHADOW_FADE_END, 1) * 0.999
   })
 
   /** What a pointer event on the focused sheet is aimed at, if anything. */

@@ -23,34 +23,39 @@ function finish(c, { repeat = false } = {}) {
   return tex
 }
 
-/** Worn, warm oak desktop with grain, knots and a little grime. */
+/** Worn, warm oak desktop with grain, knots and a little grime.
+ *  NOT tileable — the vignette and knots would show hard seams at every UV
+ *  wrap, so the desk maps it exactly once (repeat 1,1). It is generated at
+ *  the desk's aspect and a resolution that matches the old tiled density. */
 export function woodTexture() {
   if (cache.wood) return cache.wood
-  const c = canvas(1024, 1024)
+  const W = 2048
+  const H = 1536
+  const c = canvas(W, H)
   const ctx = c.getContext('2d')
-  const base = ctx.createLinearGradient(0, 0, 1024, 900)
+  const base = ctx.createLinearGradient(0, 0, W, H * 0.88)
   base.addColorStop(0, '#7c5734')
   base.addColorStop(0.5, '#6a4a2b')
   base.addColorStop(1, '#573b22')
   ctx.fillStyle = base
-  ctx.fillRect(0, 0, 1024, 1024)
+  ctx.fillRect(0, 0, W, H)
 
-  for (let i = 0; i < 260; i++) {
-    const y = Math.random() * 1024
+  for (let i = 0; i < 700; i++) {
+    const y = Math.random() * H
     ctx.strokeStyle = `rgba(${38 + Math.random() * 46},${24 + Math.random() * 28},12,${0.04 + Math.random() * 0.13})`
     ctx.lineWidth = 0.5 + Math.random() * 2.2
     ctx.beginPath()
     ctx.moveTo(0, y)
-    for (let x = 0; x <= 1024; x += 24) {
-      const wobble = Math.sin((x / 1024) * Math.PI * 2 + i) * 5 + (Math.random() - 0.5) * 2.5
+    for (let x = 0; x <= W; x += 24) {
+      const wobble = Math.sin((x / W) * Math.PI * 4 + i) * 5 + (Math.random() - 0.5) * 2.5
       ctx.lineTo(x, y + wobble)
     }
     ctx.stroke()
   }
 
-  for (let i = 0; i < 7; i++) {
-    const x = Math.random() * 1024
-    const y = Math.random() * 1024
+  for (let i = 0; i < 14; i++) {
+    const x = Math.random() * W
+    const y = Math.random() * H
     const r = 12 + Math.random() * 34
     const g = ctx.createRadialGradient(x, y, 1, x, y, r)
     g.addColorStop(0, 'rgba(28,16,7,0.55)')
@@ -62,14 +67,14 @@ export function woodTexture() {
     ctx.fill()
   }
 
-  // soft edge grime / vignette
-  const vg = ctx.createRadialGradient(512, 512, 200, 512, 512, 720)
+  // soft edge grime / vignette — spans the whole desk exactly once
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.62)
   vg.addColorStop(0, 'rgba(0,0,0,0)')
   vg.addColorStop(1, 'rgba(20,12,4,0.35)')
   ctx.fillStyle = vg
-  ctx.fillRect(0, 0, 1024, 1024)
+  ctx.fillRect(0, 0, W, H)
 
-  cache.wood = finish(c, { repeat: true })
+  cache.wood = finish(c)
   return cache.wood
 }
 
@@ -193,33 +198,118 @@ export function photoPlaceholderTexture() {
   return cache.photoPh
 }
 
-/** MathPrint-style multi-line LCD for the TI-36X Pro — mid-calculation. */
-export function calcScreenTexture() {
-  if (cache.calcScreen) return cache.calcScreen
-  const c = canvas(352, 112)
+/**
+ * Live multi-line LCD for the TI-36X Pro — a CanvasTexture plus a `draw`
+ * function the Calculator repaints on every key press. Entry line on top
+ * (tail-scrolls like the real machine when it outgrows the glass), result
+ * right-aligned below, DEG badge in the status row.
+ */
+export function createCalcScreen() {
+  const W = 512
+  const H = 164
+  const c = canvas(W, H)
   const ctx = c.getContext('2d')
-  // grey-green LCD glass with a soft top sheen
-  ctx.fillStyle = '#aeb89d'
-  ctx.fillRect(0, 0, 352, 112)
-  const sheen = ctx.createLinearGradient(0, 0, 0, 112)
-  sheen.addColorStop(0, 'rgba(255,255,255,0.16)')
-  sheen.addColorStop(0.35, 'rgba(255,255,255,0)')
-  ctx.fillStyle = sheen
-  ctx.fillRect(0, 0, 352, 112)
-  ctx.fillStyle = '#2d3226'
-  // status row
-  ctx.font = '13px "Cutive Mono", monospace'
-  ctx.fillText('DEG', 8, 18)
-  // expression + result rows, like a paused calculation
-  ctx.font = '24px "Cutive Mono", monospace'
-  ctx.fillText('4·π²·(0.18)/9.81', 10, 52)
-  ctx.textAlign = 'right'
-  ctx.fillText('0.0724', 340, 88)
-  ctx.textAlign = 'left'
-  // block cursor on the entry line
-  ctx.fillRect(10, 96, 13, 5)
-  cache.calcScreen = finish(c)
-  return cache.calcScreen
+  const tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+
+  let last = { expr: '', result: null, error: false }
+
+  const render = () => {
+    // grey-green LCD glass with a soft top sheen
+    ctx.fillStyle = '#aeb89d'
+    ctx.fillRect(0, 0, W, H)
+    const sheen = ctx.createLinearGradient(0, 0, 0, H)
+    sheen.addColorStop(0, 'rgba(255,255,255,0.16)')
+    sheen.addColorStop(0.35, 'rgba(255,255,255,0)')
+    ctx.fillStyle = sheen
+    ctx.fillRect(0, 0, W, H)
+
+    ctx.fillStyle = '#2d3226'
+    ctx.textBaseline = 'alphabetic'
+    ctx.font = '20px "Cutive Mono", monospace'
+    ctx.textAlign = 'left'
+    ctx.fillText('DEG', 10, 24)
+
+    // entry line — show the tail when the expression outgrows the glass
+    ctx.font = '34px "Cutive Mono", monospace'
+    const expr = last.expr
+    const cursorW = 16
+    const maxW = W - 20 - cursorW
+    if (ctx.measureText(expr).width <= maxW) {
+      ctx.textAlign = 'left'
+      ctx.fillText(expr, 12, 78)
+      ctx.fillRect(14 + ctx.measureText(expr).width, 60, cursorW, 20)
+    } else {
+      ctx.textAlign = 'right'
+      ctx.fillText(expr, 12 + maxW, 78)
+      ctx.fillRect(16 + maxW, 60, cursorW, 20)
+    }
+
+    // result line
+    ctx.textAlign = 'right'
+    if (last.error) {
+      ctx.font = '42px "Cutive Mono", monospace'
+      ctx.fillText('Error', W - 14, 140)
+    } else if (last.result != null) {
+      ctx.font = '46px "Cutive Mono", monospace'
+      let out = last.result
+      while (ctx.measureText(out).width > W - 28 && out.length > 1) out = out.slice(0, -1)
+      ctx.fillText(out, W - 14, 142)
+    }
+    ctx.textAlign = 'left'
+    tex.needsUpdate = true
+  }
+
+  const draw = (expr, result, error = false) => {
+    last = { expr, result, error }
+    render()
+  }
+  render()
+  // first paint can land before the webfont — repaint once it arrives
+  document.fonts?.load('16px "Cutive Mono"').then(render).catch(() => {})
+
+  return { texture: tex, draw }
+}
+
+// TI key caps: legends drawn once per label+colour pair and cached. System
+// sans, not the drafting webfonts — key caps need to stay legible at a few
+// screen pixels, and this also avoids any font-load repaint dance.
+const KEY_TEX_W = 128
+const KEY_TEX_H = 72
+
+export function keyLabelTexture(label, base, ink) {
+  const key = `key:${label}:${base}:${ink}`
+  if (cache[key]) return cache[key]
+  const c = canvas(KEY_TEX_W, KEY_TEX_H)
+  const ctx = c.getContext('2d')
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, KEY_TEX_W, KEY_TEX_H)
+  // soft top-edge highlight so the cap reads slightly domed
+  const hl = ctx.createLinearGradient(0, 0, 0, KEY_TEX_H)
+  hl.addColorStop(0, 'rgba(255,255,255,0.14)')
+  hl.addColorStop(0.5, 'rgba(255,255,255,0)')
+  hl.addColorStop(1, 'rgba(0,0,0,0.10)')
+  ctx.fillStyle = hl
+  ctx.fillRect(0, 0, KEY_TEX_W, KEY_TEX_H)
+
+  ctx.fillStyle = ink
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  // "x^2"-style labels render as a main glyph plus a raised superscript
+  const [main, sup] = label.split('^')
+  const size = main.length > 3 ? 34 : main.length > 1 ? 40 : 52
+  ctx.font = `600 ${size}px "Segoe UI", Arial, sans-serif`
+  if (sup) {
+    const mw = ctx.measureText(main).width
+    ctx.fillText(main, KEY_TEX_W / 2 - 10, KEY_TEX_H / 2 + 4)
+    ctx.font = `600 ${Math.round(size * 0.6)}px "Segoe UI", Arial, sans-serif`
+    ctx.fillText(sup, KEY_TEX_W / 2 - 10 + mw / 2 + ctx.measureText(sup).width / 2 + 2, KEY_TEX_H / 2 - 12)
+  } else {
+    ctx.fillText(main, KEY_TEX_W / 2, KEY_TEX_H / 2 + 4)
+  }
+  cache[key] = finish(c)
+  return cache[key]
 }
 
 /** Coffee surface — dark liquid with a painted glare so it always reads as
@@ -328,6 +418,32 @@ export function triangleScaleTexture(size = 1.6) {
   }
   cache.triScale = finish(c)
   return cache.triScale
+}
+
+/**
+ * Uniform-noise alpha map for fading a mesh's cast shadow. Real shadow maps
+ * are binary per caster, so Document.jsx gives each picked-up sheet a
+ * MeshDepthMaterial with this as alphaMap and animates alphaTest along the
+ * pickup spring: the shadow dissolves texel-by-texel instead of snapping.
+ * Values are capped at 254 so alphaTest ≈ 1 discards every texel, and the
+ * texture is linear (not sRGB) because it encodes coverage, not colour.
+ */
+export function shadowDitherTexture() {
+  if (cache.shadowDither) return cache.shadowDither
+  const size = 64
+  const data = new Uint8Array(size * size * 4)
+  for (let i = 0; i < size * size; i++) {
+    const v = Math.floor(Math.random() * 255) // 0..254
+    data[i * 4] = v
+    data[i * 4 + 1] = v // alphaMap samples the green channel
+    data[i * 4 + 2] = v
+    data[i * 4 + 3] = 255
+  }
+  const tex = new THREE.DataTexture(data, size, size)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.needsUpdate = true
+  cache.shadowDither = tex
+  return tex
 }
 
 /** Pale green engineering-pad ruling — hinted on interactive sheets. */

@@ -11,11 +11,10 @@ import { COLORS } from './constants'
  * useTexture('/assets/textures/desk-wood.jpg').
  */
 export default function Desk() {
-  const wood = useMemo(() => {
-    const t = woodTexture()
-    t.repeat.set(2, 1.5)
-    return t
-  }, [])
+  // The wood texture maps the desktop exactly once — it has a baked vignette
+  // and knots, so any repeat > 1 shows hard tile seams that split the desk
+  // into visibly different regions. Density lives in the texture itself.
+  const wood = useMemo(() => woodTexture(), [])
   const grid = useMemo(() => gridPaperTexture(), [])
 
   return (
