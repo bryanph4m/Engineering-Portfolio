@@ -198,78 +198,34 @@ export function photoPlaceholderTexture() {
   return cache.photoPh
 }
 
-/**
- * Live multi-line LCD for the TI-36X Pro — a CanvasTexture plus a `draw`
- * function the Calculator repaints on every key press. Entry line on top
- * (tail-scrolls like the real machine when it outgrows the glass), result
- * right-aligned below, DEG badge in the status row.
- */
-export function createCalcScreen() {
-  const W = 512
-  const H = 164
-  const c = canvas(W, H)
+/** MathPrint-style multi-line LCD for the TI-36X Pro — mid-calculation.
+ *  Static set dressing: the calculator prop doesn't compute anything. */
+export function calcScreenTexture() {
+  if (cache.calcScreen) return cache.calcScreen
+  const c = canvas(352, 112)
   const ctx = c.getContext('2d')
-  const tex = new THREE.CanvasTexture(c)
-  tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 8
-
-  let last = { expr: '', result: null, error: false }
-
-  const render = () => {
-    // grey-green LCD glass with a soft top sheen
-    ctx.fillStyle = '#aeb89d'
-    ctx.fillRect(0, 0, W, H)
-    const sheen = ctx.createLinearGradient(0, 0, 0, H)
-    sheen.addColorStop(0, 'rgba(255,255,255,0.16)')
-    sheen.addColorStop(0.35, 'rgba(255,255,255,0)')
-    ctx.fillStyle = sheen
-    ctx.fillRect(0, 0, W, H)
-
-    ctx.fillStyle = '#2d3226'
-    ctx.textBaseline = 'alphabetic'
-    ctx.font = '20px "Cutive Mono", monospace'
-    ctx.textAlign = 'left'
-    ctx.fillText('DEG', 10, 24)
-
-    // entry line — show the tail when the expression outgrows the glass
-    ctx.font = '34px "Cutive Mono", monospace'
-    const expr = last.expr
-    const cursorW = 16
-    const maxW = W - 20 - cursorW
-    if (ctx.measureText(expr).width <= maxW) {
-      ctx.textAlign = 'left'
-      ctx.fillText(expr, 12, 78)
-      ctx.fillRect(14 + ctx.measureText(expr).width, 60, cursorW, 20)
-    } else {
-      ctx.textAlign = 'right'
-      ctx.fillText(expr, 12 + maxW, 78)
-      ctx.fillRect(16 + maxW, 60, cursorW, 20)
-    }
-
-    // result line
-    ctx.textAlign = 'right'
-    if (last.error) {
-      ctx.font = '42px "Cutive Mono", monospace'
-      ctx.fillText('Error', W - 14, 140)
-    } else if (last.result != null) {
-      ctx.font = '46px "Cutive Mono", monospace'
-      let out = last.result
-      while (ctx.measureText(out).width > W - 28 && out.length > 1) out = out.slice(0, -1)
-      ctx.fillText(out, W - 14, 142)
-    }
-    ctx.textAlign = 'left'
-    tex.needsUpdate = true
-  }
-
-  const draw = (expr, result, error = false) => {
-    last = { expr, result, error }
-    render()
-  }
-  render()
-  // first paint can land before the webfont — repaint once it arrives
-  document.fonts?.load('16px "Cutive Mono"').then(render).catch(() => {})
-
-  return { texture: tex, draw }
+  // grey-green LCD glass with a soft top sheen
+  ctx.fillStyle = '#aeb89d'
+  ctx.fillRect(0, 0, 352, 112)
+  const sheen = ctx.createLinearGradient(0, 0, 0, 112)
+  sheen.addColorStop(0, 'rgba(255,255,255,0.16)')
+  sheen.addColorStop(0.35, 'rgba(255,255,255,0)')
+  ctx.fillStyle = sheen
+  ctx.fillRect(0, 0, 352, 112)
+  ctx.fillStyle = '#2d3226'
+  // status row
+  ctx.font = '13px "Cutive Mono", monospace'
+  ctx.fillText('DEG', 8, 18)
+  // expression + result rows, like a paused calculation
+  ctx.font = '24px "Cutive Mono", monospace'
+  ctx.fillText('4·π²·(0.18)/9.81', 10, 52)
+  ctx.textAlign = 'right'
+  ctx.fillText('0.0724', 340, 88)
+  ctx.textAlign = 'left'
+  // block cursor on the entry line
+  ctx.fillRect(10, 96, 13, 5)
+  cache.calcScreen = finish(c)
+  return cache.calcScreen
 }
 
 // TI key caps: legends drawn once per label+colour pair and cached. System
@@ -421,28 +377,36 @@ export function triangleScaleTexture(size = 1.6) {
 }
 
 /**
- * Uniform-noise alpha map for fading a mesh's cast shadow. Real shadow maps
- * are binary per caster, so Document.jsx gives each picked-up sheet a
- * MeshDepthMaterial with this as alphaMap and animates alphaTest along the
- * pickup spring: the shadow dissolves texel-by-texel instead of snapping.
- * Values are capped at 254 so alphaTest ≈ 1 discards every texel, and the
- * texture is linear (not sRGB) because it encodes coverage, not colour.
+ * Soft rounded-rectangle ink blob — each document's grounded contact shadow
+ * (Document.jsx). Feathered by stacking translucent rounded rects, so the
+ * edge is fully transparent and the centre dense. The plane it maps onto is
+ * stretched to each paper's footprint; opacity is animated per-frame off the
+ * pickup spring, the texture itself never changes. Linear (not sRGB): it is
+ * pure black ink + alpha coverage.
  */
-export function shadowDitherTexture() {
-  if (cache.shadowDither) return cache.shadowDither
-  const size = 64
-  const data = new Uint8Array(size * size * 4)
-  for (let i = 0; i < size * size; i++) {
-    const v = Math.floor(Math.random() * 255) // 0..254
-    data[i * 4] = v
-    data[i * 4 + 1] = v // alphaMap samples the green channel
-    data[i * 4 + 2] = v
-    data[i * 4 + 3] = 255
+export function softShadowTexture() {
+  if (cache.softShadow) return cache.softShadow
+  const S = 256
+  const c = canvas(S, S)
+  const ctx = c.getContext('2d')
+  const roundedRect = (x, y, w, h, r) => {
+    ctx.beginPath()
+    ctx.moveTo(x + r, y)
+    ctx.arcTo(x + w, y, x + w, y + h, r)
+    ctx.arcTo(x + w, y + h, x, y + h, r)
+    ctx.arcTo(x, y + h, x, y, r)
+    ctx.arcTo(x, y, x + w, y, r)
+    ctx.closePath()
   }
-  const tex = new THREE.DataTexture(data, size, size)
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-  tex.needsUpdate = true
-  cache.shadowDither = tex
+  ctx.fillStyle = 'rgba(0,0,0,0.075)'
+  for (let i = 0; i < 16; i++) {
+    const inset = 16 + i * 4.5
+    roundedRect(inset, inset, S - 2 * inset, S - 2 * inset, Math.max(10, 36 - i * 1.5))
+    ctx.fill()
+  }
+  const tex = new THREE.CanvasTexture(c)
+  tex.anisotropy = 4
+  cache.softShadow = tex
   return tex
 }
 

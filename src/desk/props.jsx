@@ -22,11 +22,15 @@ const EDGE = '#ddd1b2' // exposed paper edges of the solid sheets
 /** World-local Z of a multi-page document's top sheet. */
 export const stackTopZ = (doc) => doc.pages.length * SHEET_T
 
+// Documents deliberately do NOT castShadow: per-caster shadow-map shadows are
+// binary (they cannot fade), which is what made pickup shadows pop. Grounding
+// comes from the animated contact-shadow plane in Document.jsx instead.
+
 /** A solid sheet with real thickness; the painted content is the +Z face. */
 function BoxSheet({ w, h, doc, back = '#e7dec7' }) {
   const tex = docTexture(doc, 0)
   return (
-    <mesh name="page-face" castShadow receiveShadow>
+    <mesh name="page-face" receiveShadow>
       <boxGeometry args={[w, h, PAPER_T]} />
       <meshStandardMaterial attach="material-0" color={EDGE} roughness={0.9} />
       <meshStandardMaterial attach="material-1" color={EDGE} roughness={0.9} />
@@ -217,7 +221,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
       })}
 
       {/* top sheet with the painted content */}
-      <mesh name="page-face" castShadow receiveShadow position={[0, 0, topZ]}>
+      <mesh name="page-face" receiveShadow position={[0, 0, topZ]}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial
           map={docTexture(doc, topIndex)}
@@ -262,7 +266,7 @@ export function StackProp({ doc }) {
     <group>
       <MultiPageSheets doc={doc} />
       {/* bulldog clip pinching the top edge — lifted clear of the sheet plane */}
-      <mesh castShadow position={[0, h / 2 - 0.03, topZ + 0.049]}>
+      <mesh position={[0, h / 2 - 0.03, topZ + 0.049]}>
         <boxGeometry args={[0.5, 0.16, 0.09]} />
         <meshStandardMaterial color="#3b3b40" metalness={0.6} roughness={0.4} />
       </mesh>
@@ -323,7 +327,7 @@ export function FoldProp({ doc }) {
     <group>
       <BoxSheet w={w} h={h} doc={doc} />
       {/* gem clip slid over the top edge, near the top-left corner */}
-      <mesh castShadow geometry={clip} position={[-w / 2 + 0.3, h / 2, 0]}>
+      <mesh geometry={clip} position={[-w / 2 + 0.3, h / 2, 0]}>
         <meshStandardMaterial color="#c9c9cf" metalness={0.7} roughness={0.3} />
       </mesh>
     </group>

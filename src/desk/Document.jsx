@@ -4,7 +4,7 @@ import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docLinks } from '../lib/docTextures'
-import { shadowDitherTexture } from '../lib/textures'
+import { softShadowTexture } from '../lib/textures'
 import { DocProp } from './props'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT } from './constants'
 
@@ -21,12 +21,17 @@ const _q = new THREE.Quaternion()
 // corners painted by pageChrome in docTextures.js.
 const PAGE_CORNER = 0.16
 
-// The cast shadow fades out over this first slice of the pickup spring (and
-// back in over the same slice of the return), so it dissolves with the lift
-// instead of sweeping across the desk and snapping off at the shadow-frustum
-// edge. Shadow maps are binary per caster, so the fade is a dither: a noise
-// alphaMap on the depth material with alphaTest riding the `open` spring.
-const SHADOW_FADE_END = 0.35
+// Grounded contact shadow: documents don't cast real shadow-map shadows
+// (those are binary per caster — they can only pop). Instead a soft blob
+// plane sits permanently mounted at each document's rest footprint, and its
+// opacity is written every frame from the SAME `open`/`hover` spring values
+// that drive the paper's position — one progress value, one easing, nothing
+// ever mounts or unmounts. It is fully faded by SHADOW_FADE_END of the
+// pickup and eases back in over the same slice of the return.
+const SHADOW_FADE_END = 0.45
+const SHADOW_REST = 0.16 // opacity flat on the desk (soft ambient rim)
+const SHADOW_HOVER = 0.3 // extra opacity at full hover lift
+const SHADOW_PAD = 1.22 // blob plane size relative to the paper footprint
 
 /**
  * One interactive document. It interpolates between its resting pose on the
@@ -89,23 +94,8 @@ export default function Document({ doc }) {
     config: { tension: 300, friction: 20 },
   }))
 
-  // Shared depth material for every casting mesh in this document: alphaTest
-  // starts just above 0 so the ALPHATEST shader path compiles once and never
-  // recompiles as the fade animates.
-  const shadowFade = useMemo(() => {
-    const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
-    m.alphaMap = shadowDitherTexture()
-    m.alphaTest = 0.001
-    return m
-  }, [])
-
-  // Re-applied after every render so any late-mounted casting mesh (page
-  // leaves come and go during flips) picks the fade material up too.
-  useEffect(() => {
-    groupRef.current?.traverse((o) => {
-      if (o.isMesh && o.castShadow) o.customDepthMaterial = shadowFade
-    })
-  })
+  const shadowMeshRef = useRef()
+  const shadowMatRef = useRef()
 
   useEffect(() => {
     openApi.start({ open: isFocused ? 1 : 0 })
@@ -134,8 +124,18 @@ export default function Document({ doc }) {
     const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
     g.scale.setScalar(s)
 
-    // cast shadow dissolves with the same spring the motion rides
-    shadowFade.alphaTest = 0.001 + Math.min(t / SHADOW_FADE_END, 1) * 0.999
+    // Contact shadow, from the very same spring reads as the motion above:
+    // smoothstep the lift fraction so the fade accelerates out of rest and
+    // settles gently, matching how the paper itself eases.
+    const k = Math.min(t / SHADOW_FADE_END, 1)
+    const fade = 1 - k * k * (3 - 2 * k)
+    if (shadowMatRef.current) {
+      shadowMatRef.current.opacity = (SHADOW_REST + SHADOW_HOVER * hv) * fade
+    }
+    if (shadowMeshRef.current) {
+      // spread slightly as the sheet rises, like a real softening shadow
+      shadowMeshRef.current.scale.setScalar(1 + 0.06 * hv + 0.25 * (1 - fade))
+    }
   })
 
   /** What a pointer event on the focused sheet is aimed at, if anything. */
@@ -156,9 +156,17 @@ export default function Document({ doc }) {
     return null
   }
 
+  // Scheme allowlist: painted hotspots are first-party content, but nothing
+  // downstream should ever be able to smuggle a javascript:/data: URL into a
+  // click handler. Same-origin paths and https/mailto only.
   const openLink = (href) => {
-    if (href.startsWith('mailto:')) window.location.href = href
-    else window.open(href, '_blank', 'noopener,noreferrer')
+    if (href.startsWith('mailto:')) {
+      window.location.href = href
+    } else if (href.startsWith('https://') || href.startsWith('/')) {
+      window.open(href, '_blank', 'noopener,noreferrer')
+    } else if (import.meta.env.DEV) {
+      console.warn(`[doc-link] blocked non-allowlisted URL: ${href}`)
+    }
   }
 
   const onOver = (e) => {
@@ -198,15 +206,37 @@ export default function Document({ doc }) {
   }
 
   return (
-    <group
-      ref={groupRef}
-      name={`doc-${doc.id}`}
-      onPointerOver={onOver}
-      onPointerMove={onMove}
-      onPointerOut={onOut}
-      onClick={onClick}
-    >
-      <DocProp doc={doc} />
-    </group>
+    <>
+      {/* permanently-mounted contact shadow at the rest footprint — opacity
+          animated in useFrame above, never unmounted, so it cannot hard-cut */}
+      <group
+        position={[doc.rest.position[0], 0.0012, doc.rest.position[2]]}
+        rotation={[0, doc.rest.yaw || 0, 0]}
+      >
+        <mesh ref={shadowMeshRef} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[doc.paper.w * SHADOW_PAD, doc.paper.h * SHADOW_PAD]} />
+          <meshBasicMaterial
+            ref={shadowMatRef}
+            map={softShadowTexture()}
+            transparent
+            opacity={SHADOW_REST}
+            depthWrite={false}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
+        </mesh>
+      </group>
+      <group
+        ref={groupRef}
+        name={`doc-${doc.id}`}
+        onPointerOver={onOver}
+        onPointerMove={onMove}
+        onPointerOut={onOut}
+        onClick={onClick}
+      >
+        <DocProp doc={doc} />
+      </group>
+    </>
   )
 }
