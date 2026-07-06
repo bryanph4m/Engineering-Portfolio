@@ -3,6 +3,7 @@ import {
   gridBase, handLine, handEllipse, handArrow, text, pageGeom,
 } from '../../lib/docTextures'
 import { flowSheets } from '../../lib/pageFlow'
+import { projects } from '../../content/portfolio'
 
 // A clipped stack of technical drawings — one project per sheet, authored as
 // blocks (head, figure, bullets) and flowed through the content box by
@@ -152,60 +153,32 @@ const reccoFigure = figure(554, 508, (ctx, W, H, y, rnd) => {
   text(ctx, 'signal → recommendation → loop', ox + 60, oy + 52, { font: HAND, size: 34, color: '#7a5a2f' })
 })
 
-const sheets = [
-  {
-    decor,
-    cont: cont('AUTONOMOUS DRONE'),
-    blocks: [
-      head('DRAWING 01 — AIRFRAME', 'AUTONOMOUS DRONE', '7" QUAD · ONBOARD CV · RESEARCH PLATFORM'),
-      droneFigure,
-      ...[
-        ['FLIGHT CTRL — STM32H7 · ARDUPILOT', 'the hard real-time half'],
-        ['COMPANION — PI ZERO 2 W', 'computer vision + autonomy'],
-        ['FRAME — 7" CLASS', 'sized for payload and endurance'],
-        ['GOAL — ONBOARD VISION', 'the autonomy research target'],
-      ].map(bullet),
-    ],
-  },
-  {
-    decor,
-    cont: cont('ASIDEAI'),
-    blocks: [
-      head('DRAWING 02 — SOFTWARE', 'ASIDEAI', 'CALHACKS 2026 · 1ST PLACE — DEEPGRAM TRACK', asideHeadExtra),
-      asideFigure,
-      ...[
-        ['REAL-TIME SPEECH VIA DEEPGRAM', 'transcription while you talk'],
-        ['LOW-LATENCY, HANDS-FREE LOOP', 'capture intent, turn it into action'],
-        ['BUILT END-TO-END IN A WEEKEND', 'hackathon time pressure included'],
-      ].map(bullet),
-    ],
-  },
-  {
-    decor,
-    cont: cont('ASIDEAI V2'),
-    blocks: [
-      head('DRAWING 03 — SOFTWARE', 'ASIDEAI V2', 'THE PRODUCTION REBUILD'),
-      asideV2Figure,
-      ...[
-        ['REWORKED STREAMING + STATE MODEL', 'reliability over demo luck'],
-        ['REFINED VOICE-FIRST UX', 'the interaction loop, sanded down'],
-        ['FOUNDATIONS FOR REAL USERS', 'built to stay open all day'],
-      ].map(bullet),
-    ],
-  },
-  {
-    decor,
-    cont: cont('RECCO'),
-    blocks: [
-      head('DRAWING 04 — SOFTWARE', 'RECCO', 'YC AI GROWTH HACKATHON 2026'),
-      reccoFigure,
-      ...[
-        ['BUILT AT YC\'S AI GROWTH HACKATHON'],
-        ['RAW SIGNAL IN, RECOMMENDATIONS OUT'],
-        ['AIMED AT THE PRODUCT GROWTH LOOP'],
-      ].map(bullet),
-    ],
-  },
-]
+// Per-project drawing figure and the one-off header flourish, keyed by the
+// shared project id. Everything else on the sheet — the drawing number, the
+// title, the spec bullets — is derived from src/content/portfolio.js so the
+// desk and the simple mode read from the same copy. The desk's ALL-CAPS
+// drafting look is just an uppercase of that shared text.
+const FIGURES = {
+  'autonomous-drone': droneFigure,
+  'asideai': asideFigure,
+  'asideai-v2': asideV2Figure,
+  'recco': reccoFigure,
+}
+const HEAD_EXTRAS = { 'asideai': asideHeadExtra }
+
+const sheets = projects.map((p, i) => ({
+  decor,
+  cont: cont(p.name.toUpperCase()),
+  blocks: [
+    head(
+      `DRAWING 0${i + 1} — ${p.category.toUpperCase()}`,
+      p.name.toUpperCase(),
+      p.summary.toUpperCase(),
+      HEAD_EXTRAS[p.id],
+    ),
+    FIGURES[p.id],
+    ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),
+  ],
+}))
 
 export const projectPages = flowSheets(sheets, box)

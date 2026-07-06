@@ -4,17 +4,21 @@ import { useEffect, useState } from 'react'
  * The entry sheet shown before any site mode mounts — a drafted cover page
  * in the same hand-drawn language as the desk (ruled paper, technical
  * lettering, a drawing title block). Deliberately its own component and not
- * part of the desk scene: when the flat "professional" mode lands it becomes
- * one more entry in MODES below, and App mounts whichever mode id onEnter
- * reports. Nothing here touches the desk internals.
+ * part of the desk scene: it offers a fork between the two site modes and
+ * App mounts whichever mode id onEnter reports. Nothing here touches the desk
+ * internals, and picking "simple view" never loads the 3D bundle at all.
  */
 const MODES = [
   {
     id: 'desk',
-    label: 'begin',
-    note: 'the interactive desk',
+    label: 'enter the desk',
+    note: 'the interactive 3D experience',
   },
-  // future: { id: 'professional', label: 'plain copy', note: 'quick read for recruiters' }
+  {
+    id: 'simple',
+    label: 'simple view',
+    note: 'quick read for recruiters',
+  },
 ]
 
 /** Hand-wobbled ellipse, like a pencil circling a word a couple of times. */

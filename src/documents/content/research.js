@@ -3,6 +3,7 @@ import {
   blueprintBase, handLine, handArrow, text, pageGeom,
 } from '../../lib/docTextures'
 import { flowSheets } from '../../lib/pageFlow'
+import { research } from '../../content/portfolio'
 
 // Blueprint roll — the active-control rocket program, authored as block
 // sheets and flowed through the content box by pageFlow.js. The drafting
@@ -215,40 +216,21 @@ const loopFigure = figure(670, 572, (ctx, W, H, y, rnd) => {
   text(ctx, 'IMU · STATE ESTIMATE', 980, by + 350, { size: 30, color: DIM, align: 'center' })
 })
 
-const sheets = [
-  {
-    decor,
-    cont: cont('ACTIVE-CONTROL ROCKET'),
-    blocks: [
-      head('ACTIVE-CONTROL ROCKET', 'CANARD TILT & ROLL AUTHORITY · CAD → CFD → CONTROL LAW → FLIGHT'),
-      note('objective: hold attitude through boost, then a controlled coast.', {
-        font: HAND, size: 40, color: '#cfe0f4',
-      }),
-      rocketFigure,
-    ],
-  },
-  {
-    decor,
-    cont: cont('CFD & CANARD SWEEPS'),
-    blocks: [
-      head('CFD & CANARD SWEEPS', 'SIMSCALE · DEFLECTION SWEEPS · CONTROL DERIVATIVES'),
-      cfdFigure,
-      note('· SWEEPS EXTRACT CONTROL EFFECTIVENESS PER DEGREE'),
-      note('· FORCE / MOMENT COEFFICIENTS VS. ANGLE OF ATTACK'),
-      note('· FEEDS THE STABILITY DERIVATIVES THE CONTROLLER USES'),
-    ],
-  },
-  {
-    decor,
-    cont: cont('LQR / PID CONTROL LOOP'),
-    blocks: [
-      head('LQR / PID CONTROL LOOP', 'LINEARIZED DYNAMICS → A LOOP YOU CAN TRUST ON THE PAD'),
-      loopFigure,
-      note('· STATE-SPACE MODEL FROM THE CFD-DERIVED DERIVATIVES'),
-      note('· LQR FOR MULTI-AXIS REGULATION, PID AS THE ROBUST BASELINE'),
-      note('· SIMULATION-IN-THE-LOOP BEFORE ANYTHING FLIES'),
-    ],
-  },
-]
+// Each blueprint sheet's drawing is keyed by the shared sheet id; the title,
+// subtitle and annotation notes all come from src/content/portfolio.js. The
+// blueprint's ALL-CAPS lettering is an uppercase of that shared copy, and
+// each note gets the drafting "· " tick prepended. The one hand-lettered
+// objective line is stored verbatim and rendered as-is.
+const FIGURES = { vehicle: rocketFigure, cfd: cfdFigure, control: loopFigure }
+
+const sheets = research.sheets.map((s) => {
+  const blocks = [head(s.title.toUpperCase(), s.sub.toUpperCase())]
+  if (s.lead) {
+    blocks.push(note(s.lead, { font: HAND, size: 40, color: '#cfe0f4' }))
+  }
+  blocks.push(FIGURES[s.id])
+  for (const n of s.notes ?? []) blocks.push(note(`· ${n.toUpperCase()}`))
+  return { decor, cont: cont(s.title.toUpperCase()), blocks }
+})
 
 export const researchPages = flowSheets(sheets, box)

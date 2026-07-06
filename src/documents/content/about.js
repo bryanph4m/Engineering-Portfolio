@@ -2,10 +2,13 @@ import {
   HAND, TYPE, FAINT, RED,
   paperBase, handLine, handEllipse, handArrow, text,
 } from '../../lib/docTextures'
+import { profile } from '../../content/portfolio'
 
 // Index card — the whole story fits on one card. The card ruling is decor
 // (it runs to the paper edge); everything else is measured content that
-// shrinks to fit the box if it ever outgrows the card.
+// shrinks to fit the box if it ever outgrows the card. The words come from
+// the shared portfolio data (src/content/portfolio.js) so this card and the
+// simple mode never disagree.
 
 function decorAbout(ctx, W, H, rnd) {
   paperBase(ctx, W, H, rnd, '#f8f2e4')
@@ -23,17 +26,13 @@ function decorAbout(ctx, W, H, rnd) {
 
 function paintAbout(ctx, W, H, rnd) {
   text(ctx, 'INDEX CARD · NO. 01', 100, 140, { size: 34, color: FAINT, spacing: 8 })
-  text(ctx, 'Bryan Pham · Los Angeles, CA', W - 100, 140, { size: 36, color: '#5c5340', align: 'right' })
+  text(ctx, `${profile.name} · ${profile.location}`, W - 100, 140, { size: 36, color: '#5c5340', align: 'right' })
   text(ctx, 'ABOUT', 96, 285, { font: TYPE, size: 128 })
   ctx.strokeStyle = RED
   ctx.lineWidth = 5
   handLine(ctx, 100, 308, 540, 302, rnd, 4)
 
-  const lines = [
-    ['Mechanical Engineering Student @ ', 'UCLA'],
-    ['Founding Engineer — ', 'Aria AI'],
-    ['Co-founder & President — ', 'Mission Launch Rocketry'],
-  ]
+  const lines = profile.roles.map((r) => [r.lead, r.emphasis])
   let y = 445
   for (const [head, tail] of lines) {
     const w1 = text(ctx, head, 110, y, { font: HAND, size: 56 })
@@ -47,7 +46,7 @@ function paintAbout(ctx, W, H, rnd) {
   }
 
   // the motto, scribbled between the rules
-  text(ctx, '"design it on paper first — let the wind tunnel argue back."', 130, 880, {
+  text(ctx, `"${profile.motto}"`, 130, 880, {
     font: HAND, size: 44, color: '#7a5a2f',
   })
 
@@ -57,7 +56,7 @@ function paintAbout(ctx, W, H, rnd) {
   ctx.strokeStyle = 'rgba(122,90,47,0.9)'
   ctx.lineWidth = 4
   handArrow(ctx, 470, H - 165, 545, H - 118, rnd)
-  text(ctx, 'now: canard rockets · drones · AI tooling', 565, H - 100, {
+  text(ctx, `now: ${profile.now.join(' · ')}`, 565, H - 100, {
     font: HAND, size: 42, color: '#7a5a2f',
   })
 }

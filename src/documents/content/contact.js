@@ -2,10 +2,12 @@ import {
   HAND, INK, FAINT, RED,
   paperBase, handLine, handEllipse, text,
 } from '../../lib/docTextures'
+import { contact } from '../../content/portfolio'
 
 // Addressed envelope — the address block doubles as the live links. The
 // flap, stamp and postmark hug the paper edge, so they're decor; the
-// addressee block is measured content.
+// addressee block is measured content pulled from the shared portfolio data
+// so the envelope and the simple mode list the same links.
 
 function decorContact(ctx, W, H, rnd) {
   paperBase(ctx, W, H, rnd, '#f0e7d2')
@@ -50,12 +52,11 @@ function decorContact(ctx, W, H, rnd) {
 function paintContact(ctx, W, H, rnd, link) {
   text(ctx, 'CORRESPONDENCE', 110, 130, { size: 30, color: FAINT, spacing: 7 })
 
-  // addressee block, written by hand — the last three lines are live links
+  // addressee block, written by hand — the name plus the live links, all
+  // from the shared portfolio data.
   const lines = [
-    ['Bryan Pham', 62, INK, null],
-    ['bryanpham2024@gmail.com', 52, '#2f5d86', 'mailto:bryanpham2024@gmail.com'],
-    ['linkedin.com/in/bryanph4m', 52, '#2f5d86', 'https://www.linkedin.com/in/bryanph4m'],
-    ['github.com/bryanph4m', 52, '#2f5d86', 'https://github.com/bryanph4m'],
+    [contact.name, 62, INK, null],
+    ...contact.links.map((l) => [l.label, 52, '#2f5d86', l.href]),
   ]
   let y = H * 0.5 + 40
   for (const [str, size, color, href] of lines) {
