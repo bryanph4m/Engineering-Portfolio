@@ -31,48 +31,113 @@
 }
 
 /* ---- top bar --------------------------------------------------------- */
+/* Metrics measured off the live Vector 2022 header (en.wikipedia.org,     */
+/* 1280×800): bar 66px tall, padding 8px 44px, no bottom border; 32×32     */
+/* quiet hamburger with a 20×20 icon pulled 6px flush-left; a 140×38 logo  */
+/* block (22px wordmark + 5px gap + 11px tagline, margin 6px 0); a 32px   */
+/* search input (padding 4px 8px 4px 34px, border #72777d) with an        */
+/* attached bold "Search" button; and a 14px right-aligned link cluster — */
+/* here swapped for the live clock.                                       */
 .wiki__top {
   grid-area: top;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 18px;
-  border-bottom: 1px solid var(--wiki-border);
+  box-sizing: border-box;
+  height: 66px;
+  padding: 8px 44px;
   background: var(--wiki-bg);
 }
+.wiki__menu {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -6px; /* Vector's flush-left: the *icon* edge sits on the 44px gutter */
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #404244;
+  cursor: pointer;
+}
+.wiki__menu:hover {
+  background: #eaecf0;
+}
+.wiki__menu:active {
+  background: #dadde3;
+}
+.wiki__menu svg {
+  display: block;
+}
 .wiki__brand {
+  flex: none;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  width: 140px; /* the wordmark + tagline images' exact bounding box */
+  margin: 6px 0 6px 14px;
   padding: 0;
   border: 0;
   background: none;
   cursor: pointer;
   font: inherit;
-  color: inherit;
+  color: var(--wiki-text);
   text-align: left;
 }
 .wiki__brand-name {
-  font-family: var(--wiki-serif);
-  font-size: 20px;
-  line-height: 1.1;
+  font-family: 'Linux Libertine', 'Hoefler Text', Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  line-height: 22px;
+  white-space: nowrap;
 }
 .wiki__brand-tag {
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  color: var(--wiki-muted);
+  height: 11px;
+  margin-top: 5px;
+  font-family: 'Linux Libertine', 'Hoefler Text', Georgia, 'Times New Roman', serif;
+  font-size: 12px;
+  line-height: 11px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  color: var(--wiki-text);
 }
 .wiki__search {
   position: relative;
-  margin-left: auto;
-  width: min(320px, 42vw);
+  display: flex;
+  align-items: stretch;
+  flex: 0 1 475px; /* 404px input + 71px attached button, shrinkable */
+  min-width: 0;
+  height: 32px;
+  margin-left: 42px;
+}
+.wiki__search-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wiki__search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  color: var(--wiki-text);
+  pointer-events: none;
+}
+.wiki__search-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 .wiki__search-input {
+  box-sizing: border-box;
   width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--wiki-border);
-  border-radius: 2px;
+  height: 32px;
+  padding: 4px 8px 4px 34px;
+  border: 1px solid #72777d;
+  border-radius: 2px 0 0 2px;
   font: inherit;
   font-size: 14px;
   color: var(--wiki-text);
@@ -81,7 +146,33 @@
 .wiki__search-input:focus {
   outline: none;
   border-color: var(--wiki-link);
-  box-shadow: 0 0 0 1px var(--wiki-link);
+  box-shadow: inset 0 0 0 1px var(--wiki-link);
+}
+.wiki__search-btn {
+  flex: none;
+  margin-left: -1px; /* share the border with the input, like Codex's attached button */
+  padding: 0 12px;
+  border: 1px solid #72777d;
+  border-radius: 0 2px 2px 0;
+  background: var(--wiki-panel);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #404244;
+  cursor: pointer;
+}
+.wiki__search-btn:hover {
+  background: var(--wiki-bg);
+}
+.wiki__search-toggle {
+  display: none; /* icon-only search entry point, compact widths only */
+}
+.wiki__clock {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--wiki-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .wiki__results {
   position: absolute;
@@ -126,6 +217,14 @@
   padding: 8px 12px;
   color: var(--wiki-muted);
   font-size: 13px;
+}
+
+/* ---- hamburger-collapsed sidebar ------------------------------------- */
+.wiki--nav-closed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+.wiki--nav-closed .wiki__side {
+  display: none;
 }
 
 /* ---- left sidebar ---------------------------------------------------- */
@@ -342,12 +441,80 @@
   outline-offset: 1px;
 }
 
+/* ---- compact header (< 1120px, Wikipedia's own header breakpoint) ---- */
+/* Vector 2022 measured at 1000/720/500px: padding drops to 8px 24px, the  */
+/* hamburger grows to a 44×44 touch target (flush-left −12px), the search  */
+/* box collapses to an icon-only button, and tapping it expands search     */
+/* across the whole bar.                                                   */
+@media (max-width: 1119px) {
+  .wiki__top {
+    padding: 8px 24px;
+  }
+  .wiki__menu {
+    width: 44px;
+    height: 44px;
+    margin-left: -12px;
+  }
+  .wiki__brand {
+    margin-left: 8px;
+  }
+  .wiki__search {
+    display: none;
+    flex: 1 1 auto;
+    margin-left: 0;
+  }
+  .wiki__search-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background: none;
+    color: #404244;
+    cursor: pointer;
+  }
+  .wiki__search-toggle:hover {
+    background: #eaecf0;
+  }
+  .wiki__search-toggle:active {
+    background: #dadde3;
+  }
+  .wiki__search-toggle svg {
+    display: block;
+  }
+  .wiki__clock {
+    margin-left: 12px;
+  }
+  /* Expanded mobile search takes over the bar, as on Wikipedia. */
+  .wiki--search-open .wiki__menu,
+  .wiki--search-open .wiki__brand,
+  .wiki--search-open .wiki__search-toggle,
+  .wiki--search-open .wiki__clock {
+    display: none;
+  }
+  .wiki--search-open .wiki__search {
+    display: flex;
+  }
+}
+
 /* ---- narrow screens: stack the nav above the article ---------------- */
 @media (max-width: 800px) {
   .wiki {
     grid-template-areas: 'top' 'side' 'main';
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto 1fr;
+  }
+  .wiki--nav-closed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Phone widths: drop the date, keep the ticking time. */
+  .wiki__clock-date {
+    display: none;
   }
   .wiki__side {
     border-right: 0;

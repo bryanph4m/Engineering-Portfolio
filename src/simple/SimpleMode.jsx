@@ -240,10 +240,54 @@ const SEARCH_INDEX = [
     section: 'contact', anchor: 'contact-links', label: 'Contact',
     text: contact.links.map((l) => `${l.kind} ${l.label}`).join(' '),
   },
-].map((e) => ({ ...e, haystack: `${e.label} ${e.text}`.toLowerCase() }))
+].map((e, i) => ({ ...e, key: i, haystack: `${e.label} ${e.text}`.toLowerCase() }))
 
 function scrollToAnchor(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+// WikimediaUI "menu" icon — the exact three-bar glyph Vector 2022 uses for
+// its main-menu toggle (20×20, bars at y = 3 / 9 / 15).
+function MenuIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path fill="currentColor" d="M1 3v2h18V3zm0 6v2h18V9zm0 6v2h18v-2z" />
+    </svg>
+  )
+}
+
+// WikimediaUI "search" magnifying glass (20×20).
+function SearchIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M7.5 13c3.04 0 5.5-2.46 5.5-5.5S10.54 2 7.5 2 2 4.46 2 7.5 4.46 13 7.5 13zm4.55.46A7.43 7.43 0 0 1 7.5 15C3.36 15 0 11.64 0 7.5S3.36 0 7.5 0C11.64 0 15 3.36 15 7.5c0 1.71-.57 3.29-1.54 4.55l6.49 6.49-1.41 1.41-6.49-6.49z"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Live clock in the slot Wikipedia gives its Donate / Create account / Log in
+ * cluster. Isolated component so the 1 s tick only re-renders this <time>,
+ * never the article tree.
+ */
+function HeaderClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <time className="wiki__clock" dateTime={now.toISOString()}>
+      <span className="wiki__clock-date">
+        {now.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+        {' · '}
+      </span>
+      {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+    </time>
+  )
 }
 
 function Toc({ items }) {
@@ -288,7 +332,22 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
   const [pending, setPending] = useState(null)
   const [query, setQuery] = useState('')
   const [resultsOpen, setResultsOpen] = useState(false)
+  // Sidebar visibility, toggled by the header hamburger the way Wikipedia's
+  // main-menu button works: open by default on desktop, closed on narrow
+  // screens where the hamburger is the primary way into the nav.
+  const [navOpen, setNavOpen] = useState(
+    () => window.matchMedia('(min-width: 800px)').matches,
+  )
+  // Below Wikipedia's 1120px header breakpoint the search bar collapses to an
+  // icon-only button; tapping it expands search across the whole bar.
+  const [searchOpen, setSearchOpen] = useState(false)
   const mainRef = useRef(null)
+  const searchInputRef = useRef(null)
+
+  // Focus the input when the collapsed (mobile) search expands.
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
 
   const go = (section, anchor = null) => {
     setActive(section)
@@ -322,30 +381,66 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
   }, [query])
 
   return (
-    <div className="wiki">
+    <div
+      className={`wiki${navOpen ? '' : ' wiki--nav-closed'}${searchOpen ? ' wiki--search-open' : ''}`}
+    >
+      {/*
+        Header replicating Wikipedia's Vector 2022 top bar structure:
+        [hamburger][wordmark + tagline][search input + Search button] ... [right slot]
+        with the branding swapped for this portfolio and the Donate/Create
+        account/Log in cluster replaced by a live clock.
+      */}
       <header className="wiki__top">
+        <button
+          type="button"
+          className="wiki__menu"
+          aria-label="Main menu"
+          aria-expanded={navOpen}
+          title="Main menu"
+          onClick={() => setNavOpen((v) => !v)}
+        >
+          <MenuIcon />
+        </button>
+
         <button className="wiki__brand" type="button" onClick={() => go('about')}>
           <span className="wiki__brand-name">{profile.name}</span>
           <span className="wiki__brand-tag">engineering portfolio</span>
         </button>
 
         <div className="wiki__search" role="search">
-          <input
-            className="wiki__search-input"
-            type="search"
-            placeholder="Search this portfolio…"
-            aria-label="Search this portfolio"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setResultsOpen(true) }}
-            onFocus={() => setResultsOpen(true)}
-            onBlur={() => setTimeout(() => setResultsOpen(false), 150)}
-            onKeyDown={(e) => { if (e.key === 'Escape') { setQuery(''); setResultsOpen(false) } }}
-          />
+          <div className="wiki__search-field">
+            <span className="wiki__search-icon"><SearchIcon /></span>
+            <input
+              ref={searchInputRef}
+              className="wiki__search-input"
+              type="search"
+              placeholder={`Search ${profile.name}`}
+              aria-label={`Search ${profile.name}`}
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setResultsOpen(true) }}
+              onFocus={() => setResultsOpen(true)}
+              onBlur={() => setTimeout(() => { setResultsOpen(false); setSearchOpen(false) }, 150)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setQuery(''); setResultsOpen(false); setSearchOpen(false) }
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            className="wiki__search-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (results.length) go(results[0].section, results[0].anchor)
+              else searchInputRef.current?.focus()
+            }}
+          >
+            Search
+          </button>
           {resultsOpen && query.trim().length >= 2 && (
             results.length ? (
               <ul className="wiki__results">
                 {results.map((r) => (
-                  <li key={`${r.section}-${r.anchor}`}>
+                  <li key={r.key}>
                     <button
                       type="button"
                       className="wiki__result"
@@ -365,6 +460,19 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
             )
           )}
         </div>
+
+        {/* Icon-only search toggle, shown below the 1120px header breakpoint
+            exactly where Wikipedia collapses its search box. */}
+        <button
+          type="button"
+          className="wiki__search-toggle"
+          aria-label="Search"
+          onClick={() => setSearchOpen(true)}
+        >
+          <SearchIcon />
+        </button>
+
+        <HeaderClock />
       </header>
 
       <nav className="wiki__side" aria-label="Sections">
