@@ -57,23 +57,6 @@ const cont = (title) => ({
 
 const figure = (h, inkH, draw) => ({ h, inkH, draw })
 
-/* ---- sheet 1: the 7" quad ---- */
-const droneFigure = figure(324, 274, (ctx, W, H, y, rnd) => {
-  // hand-sketched 7" quad: X frame, four rotors, center plate
-  const qx = W / 2 + 60
-  const qy = y + 134
-  ctx.strokeStyle = 'rgba(51,41,29,0.85)'
-  ctx.lineWidth = 4
-  handLine(ctx, qx - 130, qy - 82, qx + 130, qy + 82, rnd, 2)
-  handLine(ctx, qx - 130, qy + 82, qx + 130, qy - 82, rnd, 2)
-  for (const [sx, sy] of [[-130, -82], [130, -82], [-130, 82], [130, 82]]) {
-    handEllipse(ctx, qx + sx, qy + sy, 52, 52, rnd)
-  }
-  ctx.strokeRect(qx - 30, qy - 22, 60, 44)
-  handArrow(ctx, qx - 285, qy + 10, qx - 165, qy - 8, rnd)
-  text(ctx, '7in', qx - 350, qy + 22, { font: HAND, size: 38, color: '#7a5a2f' })
-})
-
 // Circle a phrase in the subtitle — positions are measured from the shared
 // summary text itself, so rewording it in portfolio.js moves the ellipse too.
 const circleHighlight = (summary, highlight) => (ctx, W, y, rnd) => {
@@ -89,9 +72,9 @@ const circleHighlight = (summary, highlight) => (ctx, W, y, rnd) => {
   handEllipse(ctx, 130 + pre + word / 2, y + 236, word / 2 + 26, 34, rnd)
 }
 
-/* ---- sheet 2: AsideAI ---- */
+/* ---- Aside AI: camera/mic → waveform → narration ---- */
 const asideFigure = figure(384, 266, (ctx, W, H, y, rnd) => {
-  // mic → waveform → action, sketched
+  // mic → waveform → narration, sketched
   const my = y + 134
   ctx.strokeStyle = 'rgba(51,41,29,0.85)'
   ctx.lineWidth = 4
@@ -107,53 +90,111 @@ const asideFigure = figure(384, 266, (ctx, W, H, y, rnd) => {
   ctx.stroke()
   handArrow(ctx, 605, my, 665, my, rnd)
   ctx.strokeRect(675, my - 52, 185, 104) // right edge stays inside the content box
-  text(ctx, 'ACTION', 767, my + 10, { font: TYPE, size: 34, align: 'center' })
-  text(ctx, 'speak → it happens', 300, my + 120, { font: HAND, size: 36, color: '#7a5a2f' })
+  text(ctx, 'NARRATE', 767, my + 10, { font: TYPE, size: 32, align: 'center' })
+  text(ctx, 'clip on → it narrates', 300, my + 120, { font: HAND, size: 36, color: '#7a5a2f' })
 })
 
-/* ---- sheet 3: AsideAI v2 ---- */
-const asideV2Figure = figure(404, 320, (ctx, W, H, y, rnd) => {
-  // three-box pipeline with a reliability loop underneath
-  const by = y + 94
-  const boxes = [
-    ['VOICE', 140],
-    ['STREAM', 410],
-    ['STATE', 680],
-  ]
+/* ---- Mission Launch Rocketry: two-stage stack, dual deploy ---- */
+const rocketryFigure = figure(464, 410, (ctx, W, H, y, rnd) => {
+  const cy = y + 250
   ctx.strokeStyle = 'rgba(51,41,29,0.85)'
   ctx.lineWidth = 4
-  for (const [label, bx] of boxes) {
-    ctx.strokeRect(bx, by, 190, 100)
-    text(ctx, label, bx + 95, by + 62, { font: TYPE, size: 32, align: 'center' })
-  }
-  handArrow(ctx, 336, by + 50, 404, by + 50, rnd)
-  handArrow(ctx, 606, by + 50, 674, by + 50, rnd)
-  // loop back
-  handLine(ctx, 775, by + 106, 775, by + 170, rnd, 2)
-  handLine(ctx, 775, by + 170, 235, by + 174, rnd, 2)
-  handArrow(ctx, 235, by + 174, 235, by + 112, rnd)
-  text(ctx, 'reliability loop', 420, by + 214, { font: HAND, size: 34, color: '#7a5a2f' })
+  // booster stage
+  handLine(ctx, 150, cy - 40, 420, cy - 40, rnd, 2)
+  handLine(ctx, 150, cy + 40, 420, cy + 40, rnd, 2)
+  handLine(ctx, 150, cy - 40, 150, cy + 40, rnd, 2)
+  // fins
+  handLine(ctx, 150, cy - 40, 185, cy - 95, rnd, 1.5)
+  handLine(ctx, 185, cy - 95, 250, cy - 40, rnd, 1.5)
+  handLine(ctx, 150, cy + 40, 185, cy + 95, rnd, 1.5)
+  handLine(ctx, 185, cy + 95, 250, cy + 40, rnd, 1.5)
+  // separation joint (dashed)
+  ctx.save()
+  ctx.setLineDash([14, 10])
+  ctx.lineWidth = 2.5
+  ctx.beginPath(); ctx.moveTo(432, cy - 48); ctx.lineTo(432, cy + 48); ctx.stroke()
+  ctx.restore()
+  // sustainer + nose cone
+  handLine(ctx, 445, cy - 40, 660, cy - 40, rnd, 2)
+  handLine(ctx, 445, cy + 40, 660, cy + 40, rnd, 2)
+  handLine(ctx, 445, cy - 40, 445, cy + 40, rnd, 2)
+  handLine(ctx, 660, cy - 40, 760, cy, rnd, 2)
+  handLine(ctx, 660, cy + 40, 760, cy, rnd, 2)
+  // recovery: drogue (small) and main (big) canopies overhead
+  handEllipse(ctx, 560, cy - 160, 42, 28, rnd)
+  text(ctx, 'drogue', 620, cy - 150, { font: HAND, size: 32, color: '#7a5a2f' })
+  handEllipse(ctx, 300, cy - 175, 66, 40, rnd)
+  text(ctx, 'main', 170, cy - 200, { font: HAND, size: 32, color: '#7a5a2f' })
+  handArrow(ctx, 432, cy + 140, 432, cy + 58, rnd)
+  text(ctx, 'staged separation', 470, cy + 156, { font: HAND, size: 34, color: '#7a5a2f' })
 })
 
-/* ---- sheet 4: Recco ---- */
-const reccoFigure = figure(554, 508, (ctx, W, H, y, rnd) => {
-  // growth curve, sketched on the grid
-  const ox = 200
-  const oy = y + 444
+/* ---- Recco: viewfinder + target-lock reticle ---- */
+const reccoFigure = figure(474, 420, (ctx, W, H, y, rnd) => {
+  const vx = 170
+  const vy = y + 20
+  const vw = 430
+  const vh = 320
   ctx.strokeStyle = 'rgba(51,41,29,0.85)'
   ctx.lineWidth = 4
-  handLine(ctx, ox, oy, ox, oy - 390, rnd, 2) // y axis
-  handLine(ctx, ox, oy, 760, oy, rnd, 2) // x axis
-  ctx.beginPath()
-  ctx.moveTo(ox + 10, oy - 14)
-  for (let x = 0; x <= 480; x += 20) {
-    const t = x / 480
-    ctx.lineTo(ox + 10 + x, oy - 14 - t * t * 330 - rnd() * 8)
-  }
-  ctx.stroke()
-  handArrow(ctx, ox + 470, oy - 330, ox + 520, oy - 372, rnd)
-  text(ctx, 'growth', ox + 540, oy - 380, { font: HAND, size: 36, color: '#7a5a2f' })
-  text(ctx, 'signal → recommendation → loop', ox + 60, oy + 52, { font: HAND, size: 34, color: '#7a5a2f' })
+  ctx.strokeRect(vx, vy, vw, vh) // viewfinder frame
+  // subject: head + shoulders near screen center
+  const fx = vx + vw / 2
+  const fy = vy + 138
+  handEllipse(ctx, fx, fy, 44, 54, rnd)
+  handLine(ctx, fx - 105, vy + vh, fx - 55, fy + 62, rnd, 2)
+  handLine(ctx, fx + 105, vy + vh, fx + 55, fy + 62, rnd, 2)
+  // target-lock reticle with crosshair ticks
+  handEllipse(ctx, fx, fy, 84, 90, rnd)
+  handLine(ctx, fx - 116, fy, fx - 88, fy, rnd, 1)
+  handLine(ctx, fx + 88, fy, fx + 116, fy, rnd, 1)
+  handLine(ctx, fx, fy - 122, fx, fy - 94, rnd, 1)
+  handLine(ctx, fx, fy + 94, fx, fy + 122, rnd, 1)
+  // resolve the lock to an identity
+  handArrow(ctx, vx + vw + 12, fy, vx + vw + 88, fy, rnd)
+  ctx.strokeRect(vx + vw + 98, fy - 52, 165, 104)
+  text(ctx, 'WHO?', vx + vw + 180, fy + 10, { font: TYPE, size: 34, align: 'center' })
+  text(ctx, 'lock the face nearest center', vx + 20, vy + vh + 60, { font: HAND, size: 34, color: '#7a5a2f' })
+})
+
+/* ---- RollAway: street grid + ranked vendor spot ---- */
+const rollawayFigure = figure(454, 400, (ctx, W, H, y, rnd) => {
+  const mx = 150
+  const my = y + 20
+  const mw = 560
+  const mh = 300
+  ctx.strokeStyle = 'rgba(51,41,29,0.85)'
+  ctx.lineWidth = 4
+  ctx.strokeRect(mx, my, mw, mh) // map frame
+  // streets
+  ctx.lineWidth = 2.5
+  for (let i = 1; i < 4; i++) handLine(ctx, mx, my + (i * mh) / 4, mx + mw, my + (i * mh) / 4, rnd, 1.5)
+  for (let i = 1; i < 5; i++) handLine(ctx, mx + (i * mw) / 5, my, mx + (i * mw) / 5, my + mh, rnd, 1.5)
+  // pin on the winning spot
+  const px = mx + mw * 0.62
+  const py = my + mh * 0.55
+  ctx.lineWidth = 4
+  handEllipse(ctx, px, py - 46, 26, 26, rnd)
+  handLine(ctx, px - 18, py - 28, px, py + 8, rnd, 1)
+  handLine(ctx, px + 18, py - 28, px, py + 8, rnd, 1)
+  text(ctx, '#1', px + 44, py - 44, { font: HAND, size: 36, color: '#7a5a2f' })
+  text(ctx, 'rank spots → pull permits', mx + 40, my + mh + 60, { font: HAND, size: 34, color: '#7a5a2f' })
+})
+
+/* ---- Engineering Portfolio: one content source, two faces ---- */
+const portfolioFigure = figure(494, 440, (ctx, W, H, y, rnd) => {
+  const by = y + 120
+  ctx.strokeStyle = 'rgba(51,41,29,0.85)'
+  ctx.lineWidth = 4
+  ctx.strokeRect(330, by - 80, 220, 110) // the shared content file
+  text(ctx, 'CONTENT', 440, by - 15, { font: TYPE, size: 32, align: 'center' })
+  handArrow(ctx, 370, by + 42, 250, by + 130, rnd)
+  handArrow(ctx, 510, by + 42, 630, by + 130, rnd)
+  ctx.strokeRect(140, by + 140, 200, 110)
+  text(ctx, 'DESK', 240, by + 205, { font: TYPE, size: 32, align: 'center' })
+  ctx.strokeRect(540, by + 140, 200, 110)
+  text(ctx, 'WIKI', 640, by + 205, { font: TYPE, size: 32, align: 'center' })
+  text(ctx, 'one source, two faces', 300, by + 330, { font: HAND, size: 34, color: '#7a5a2f' })
 })
 
 // Per-project drawing figure, keyed by the shared project id. Everything
@@ -162,10 +203,11 @@ const reccoFigure = figure(554, 508, (ctx, W, H, y, rnd) => {
 // and the simple mode read from the same copy. The desk's ALL-CAPS drafting
 // look is just an uppercase of that shared text.
 const FIGURES = {
-  'autonomous-drone': droneFigure,
   'asideai': asideFigure,
-  'asideai-v2': asideV2Figure,
+  'mission-launch-rocketry': rocketryFigure,
   'recco': reccoFigure,
+  'rollaway': rollawayFigure,
+  'engineering-portfolio': portfolioFigure,
 }
 
 const sheets = projects.map((p, i) => ({

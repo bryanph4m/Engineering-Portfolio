@@ -32,6 +32,8 @@ function paintAbout(ctx, W, H, rnd) {
   ctx.lineWidth = 5
   handLine(ctx, 100, 308, 540, 302, rnd, 4)
 
+  // spacing tightens as roles are added so the list stays clear of the motto
+  const step = profile.roles.length > 3 ? 108 : 130
   let y = 445
   for (const r of profile.roles) {
     const w1 = text(ctx, r.lead, 110, y, { font: HAND, size: 56 })
@@ -41,7 +43,7 @@ function paintAbout(ctx, W, H, rnd) {
       ctx.lineWidth = 4
       handEllipse(ctx, 110 + w1 + w2 / 2, y - 18, w2 / 2 + 34, 44, rnd)
     }
-    y += 130
+    y += step
   }
 
   // the motto, scribbled between the rules

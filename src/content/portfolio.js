@@ -8,6 +8,11 @@
  *     Wikipedia-style article.
  * Edit a fact once here and both modes update — they never drift.
  *
+ * Provenance: everything factual below is sourced from the resume PDF at
+ * /public/assets/Bryan-Pham-Resume.pdf and the public GitHub account
+ * (github.com/bryanph4m). If a claim isn't backed by one of those two, it
+ * doesn't belong in this file.
+ *
  * Casing convention: text is stored in its natural, human-readable case
  * (correct acronyms and all). The desk's drafting sheets happen to render a
  * lot of it in ALL CAPS, so those painters uppercase on the way out — an
@@ -20,107 +25,121 @@ export const profile = {
   name: 'Bryan Pham',
   location: 'Los Angeles, CA',
   // the one-line billing used on the cover sheet and as the article subtitle
-  disciplines: ['mechanical engineering', 'rocketry', 'ai'],
+  disciplines: ['mechanical engineering', 'rocketry', 'ai', 'embedded systems'],
   // each role is a lead phrase (with its connector) plus the emphasized org.
   // `circled: true` gets the hand-drawn ellipse on the desk's index card;
   // `section` cross-links the org in the simple mode's About article.
   roles: [
     { lead: 'Mechanical Engineering Student @ ', emphasis: 'UCLA', circled: true },
     { lead: 'Founding Engineer — ', emphasis: 'Aria AI' },
-    { lead: 'Co-founder & President — ', emphasis: 'Mission Launch Rocketry', section: 'research' },
+    { lead: 'Design & Manufacturing Engineering Intern — ', emphasis: 'Mission College' },
+    { lead: 'Founder & President — ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
   ],
-  motto: 'design it on paper first — let the wind tunnel argue back.',
+  motto: 'design it on paper first & let the airframe speak for itself.',
   // current focus; `section` is where the simple mode's About article links each one
   now: [
-    { label: 'canard rockets', section: 'research' },
-    { label: 'drones', section: 'projects' },
-    { label: 'AI tooling', section: 'projects' },
+    { label: 'active-control rocketry', section: 'research' },
+    { label: 'voice AI hardware at Aria AI', section: 'resume' },
   ],
 }
 
 export const projects = [
   {
-    id: 'autonomous-drone',
-    name: 'Autonomous Drone',
-    category: 'Airframe',
-    summary: '7" quad · onboard CV · research platform',
-    specs: [
-      { lead: 'Flight ctrl — STM32H7 · ArduPilot', sub: 'the hard real-time half' },
-      { lead: 'Companion — Pi Zero 2 W', sub: 'computer vision + autonomy' },
-      { lead: 'Frame — 7" class', sub: 'sized for payload and endurance' },
-      { lead: 'Goal — onboard vision', sub: 'the autonomy research target' },
-    ],
-  },
-  {
     id: 'asideai',
-    name: 'AsideAI',
-    category: 'Software',
-    summary: 'CalHacks 2026 · 1st place — Deepgram track',
+    name: 'Aside AI',
+    category: 'Hardware · Software',
+    summary: '1st place — Deepgram track · Berkeley AI Hackathon',
     // substring of `summary` the desk sheet circles in red; must appear verbatim
     highlight: '1st place',
     specs: [
-      { lead: 'Real-time speech via Deepgram', sub: 'transcription while you talk' },
-      { lead: 'Low-latency, hands-free loop', sub: 'capture intent, turn it into action' },
-      { lead: 'Built end-to-end in a weekend', sub: 'hackathon time pressure included' },
+      { lead: 'Clip-on camera + mic', sub: 'narrates surroundings live via AI personalities' },
+      { lead: 'Raspberry Pi on QNX 8.0', sub: 'Python coordination · React Native app' },
+      { lead: 'End-to-end narration in 1–2 s', sub: 'Deepgram speech + Redis' },
     ],
   },
   {
-    id: 'asideai-v2',
-    name: 'AsideAI v2',
-    category: 'Software',
-    summary: 'the production rebuild',
+    id: 'mission-launch-rocketry',
+    name: 'Mission Launch Rocketry',
+    category: 'Rocketry',
+    summary: 'founded & led a 52-member college rocketry club',
     specs: [
-      { lead: 'Reworked streaming + state model', sub: 'reliability over demo luck' },
-      { lead: 'Refined voice-first UX', sub: 'the interaction loop, sanded down' },
-      { lead: 'Foundations for real users', sub: 'built to stay open all day' },
+      { lead: 'Founder & President', sub: 'budget + design-build-launch, concept → flight' },
+      { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery — drogue + main' },
+      { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
+      { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
     ],
   },
   {
     id: 'recco',
     name: 'Recco',
     category: 'Software',
-    summary: 'YC AI Growth Hackathon 2026',
+    summary: 'YC AI Growth Hackathon · camera-first iOS networking assistant',
     specs: [
-      { lead: "Built at YC's AI Growth Hackathon" },
-      { lead: 'Raw signal in, recommendations out' },
-      { lead: 'Aimed at the product growth loop' },
+      { lead: 'Identifies people at events, live', sub: 'face tracking + cloud vision + identity lookup' },
+      { lead: 'SwiftUI + AVFoundation pipeline', sub: 'Apple Vision tracking · target-lock reticle · AR overlay' },
+      { lead: 'Voice or text commands', sub: 'resolves the person nearest screen center' },
+    ],
+  },
+  {
+    id: 'rollaway',
+    name: 'RollAway',
+    category: 'Software',
+    summary: '1st place — Beginner track · MLH × DigitalOcean AI for Social Good',
+    highlight: '1st place',
+    specs: [
+      { lead: 'Permit planning for SF food vendors', sub: 'ranks legal, low-competition spots per time window' },
+      { lead: 'React + TypeScript', sub: 'DigitalOcean serverless backend · permit checklist' },
+      { lead: 'Zustand-driven UI', sub: 'auto-filled forms from user-ingested data' },
+    ],
+  },
+  {
+    id: 'engineering-portfolio',
+    name: 'Engineering Portfolio',
+    category: 'Software',
+    summary: 'this site — a 3D desk & a wiki view, one shared content source',
+    specs: [
+      { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
+      { lead: 'Wikipedia-style simple mode', sub: 'same content, a few KB of DOM' },
+      { lead: 'Open source', sub: 'github.com/bryanph4m/Engineering-Portfolio' },
     ],
   },
 ]
 
 export const research = {
-  title: 'Active-control rocket',
-  program: 'Mission Launch Rocketry',
-  org: 'UCLA',
+  title: 'Active-Control Rocket',
+  program: 'Mission College',
+  org: 'Santa Clara, CA',
   // the article lead; the vehicle → flight pipeline in one line
-  lead: 'CAD → CFD → control law → flight for a canard-actuated, actively stabilized rocket.',
+  lead: 'SolidWorks airframe → SimScale CFD → an active tilt/roll control system for a high-powered model rocket.',
+  // full-sentence attribution the simple mode appends to the lead
+  credit: 'Built at Mission College as a Design & Manufacturing Engineering intern.',
   sheets: [
     {
       id: 'vehicle',
       title: 'Active-Control Rocket',
-      sub: 'Canard tilt & roll authority · CAD → CFD → control law → flight',
+      sub: 'High-powered model rocket · tilt & roll control · SolidWorks',
       // rendered verbatim (hand-lettered) on the desk, so stored verbatim
-      lead: 'objective: hold attitude through boost, then a controlled coast.',
+      lead: 'objective: structural integrity with active tilt/roll control on board.',
       notes: [],
     },
     {
       id: 'cfd',
-      title: 'CFD & Canard Sweeps',
-      sub: 'SimScale · deflection sweeps · control derivatives',
+      title: 'CFD Validation',
+      sub: 'SimScale · aerodynamic performance before fabrication',
       notes: [
-        'Sweeps extract control effectiveness per degree',
-        'Force / moment coefficients vs. angle of attack',
-        'Feeds the stability derivatives the controller uses',
+        'Validates drag, pressure distribution, and stability',
+        'Airframe design informed by 3000+ hours of CFD',
+        'Simulated prior to fabrication',
       ],
     },
     {
       id: 'control',
-      title: 'LQR / PID Control Loop',
-      sub: 'Linearized dynamics → a loop you can trust on the pad',
+      title: 'Tilt/Roll Control System',
+      sub: 'Micro-servos · IMU + altimeter avionics',
       notes: [
-        'State-space model from the CFD-derived derivatives',
-        'LQR for multi-axis regulation, PID as the robust baseline',
-        'Simulation-in-the-loop before anything flies',
+        'Micro-servos actuate the tilt/roll control system',
+        'IMU and altimeter feed live data from the avionics bay',
+        'Components integrated in the vehicle without compromising structure',
       ],
     },
   ],
@@ -134,20 +153,57 @@ export const resume = {
     {
       label: 'Education',
       entries: [
-        { title: 'UCLA — B.S. Mechanical Engineering', sub: 'design · embedded systems · in progress' },
+        {
+          title: 'UCLA — B.S. Mechanical Engineering',
+          sub: 'transfer GPA 4.0 · June 2026 – May 2028 · Los Angeles, CA',
+        },
+        {
+          title: 'Relevant coursework',
+          sub: 'circuit analysis, engineering graphics & design, statics, dynamics, MATLAB, materials',
+        },
       ],
     },
     {
       label: 'Experience',
       entries: [
-        { title: 'Aria AI — Founding Engineer', sub: 'part of the Deepgram (YC W16) startup program' },
-        { title: 'Mission College — Engineering Research Intern', sub: 'tilt/roll-control rocket program: CAD → CFD → flight' },
+        {
+          title: 'Mission College — Design & Manufacturing Engineering Intern',
+          sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
+        },
+        {
+          title: 'Aria AI — Founding Engineer',
+          sub: 'June 2026 – present · Deepgram (YC W16) Startup Program · voice AI hardware',
+        },
+        {
+          title: 'Mission College — Associated Student Government Senator',
+          sub: 'Aug 2025 – May 2026 · student advocacy with campus leadership',
+        },
       ],
     },
     {
       label: 'Projects',
       entries: [
-        { title: 'AsideAI · Recco', sub: 'CalHacks 1st place · YC hackathon' },
+        {
+          title: 'Aside AI · Recco · RollAway · Mission Launch Rocketry',
+          sub: 'two hackathon wins · a 52-member rocketry club',
+        },
+      ],
+    },
+    {
+      label: 'Skills',
+      entries: [
+        {
+          title: 'Languages',
+          sub: 'C, C++, Python, TypeScript, JavaScript, MATLAB, Swift, HTML/CSS',
+        },
+        {
+          title: 'CAD',
+          sub: 'SolidWorks, Onshape, AutoCAD, Fusion360',
+        },
+        {
+          title: 'Manufacturing & lab tools',
+          sub: '3D printing, soldering, microcontrollers, SimScale, microcomputers, computer vision, PSpice, LTSpice, oscilloscope, function generator',
+        },
       ],
     },
   ],
@@ -157,7 +213,7 @@ export const contact = {
   name: 'Bryan Pham',
   links: [
     { kind: 'Email', label: 'bryanpham2024@gmail.com', href: 'mailto:bryanpham2024@gmail.com' },
-    { kind: 'LinkedIn', label: 'linkedin.com/in/bryanph4m', href: 'https://www.linkedin.com/in/bryanph4m' },
+    { kind: 'LinkedIn', label: 'linkedin.com/in/bryan-pham2028', href: 'https://www.linkedin.com/in/bryan-pham2028' },
     { kind: 'GitHub', label: 'github.com/bryanph4m', href: 'https://github.com/bryanph4m' },
   ],
 }

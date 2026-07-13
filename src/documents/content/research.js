@@ -24,7 +24,7 @@ function titleBlock(ctx, W, H, rnd, sheet, count) {
   ctx.strokeRect(bx, by, 520, 190)
   ctx.beginPath(); ctx.moveTo(bx, by + 66); ctx.lineTo(bx + 520, by + 66); ctx.stroke()
   text(ctx, research.program.toUpperCase(), bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
-  text(ctx, `DWG MLR-001 · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
+  text(ctx, `DWG MC-001 · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
   text(ctx, `SCALE: NTS · ${research.org.toUpperCase()}`, bx + 24, by + 160, { size: 28, color: DIM })
 }
 
@@ -87,7 +87,7 @@ const rocketFigure = figure(794, 782, (ctx, W, H, y, rnd) => {
   ctx.strokeStyle = DIM
   ctx.beginPath(); ctx.moveTo(250, cy); ctx.lineTo(1620, cy); ctx.stroke()
   ctx.restore()
-  // canards near the nose
+  // tilt/roll control surfaces near the nose
   ctx.lineWidth = 4
   handLine(ctx, 1225, cy - 85, 1265, cy - 150, rnd, 1.5)
   handLine(ctx, 1265, cy - 150, 1305, cy - 85, rnd, 1.5)
@@ -105,17 +105,17 @@ const rocketFigure = figure(794, 782, (ctx, W, H, y, rnd) => {
   // leaders + callouts
   ctx.lineWidth = 3
   handArrow(ctx, 1500, y + 34, 1290, cy - 155, rnd)
-  text(ctx, 'CANARDS — δ SWEEPS ±15°', 1370, y + 6, { size: 33, color: WHITE })
+  text(ctx, 'TILT/ROLL CONTROL SURFACES', 1340, y + 6, { size: 33, color: WHITE })
   handArrow(ctx, 520, y + 739, 640, cy + 95, rnd)
-  text(ctx, 'Cm(α, δ) FROM CFD', 300, y + 774, { size: 33, color: WHITE })
+  text(ctx, 'AERO LOADS FROM SIMSCALE CFD', 300, y + 774, { size: 33, color: WHITE })
   handArrow(ctx, 1035, y + 714, 830, cy + 62, rnd)
   // right-aligned so the label ends before the drafting title block (decor)
-  text(ctx, 'LQR / PID ATTITUDE LOOP', 1370, y + 739, { size: 33, color: WHITE, align: 'right' })
+  text(ctx, 'MICRO-SERVOS · IMU + ALTIMETER', 1370, y + 739, { size: 33, color: WHITE, align: 'right' })
 })
 
-/* ---- sheet B: CFD & canard sweeps ---- */
+/* ---- sheet B: CFD validation ---- */
 const cfdFigure = figure(690, 654, (ctx, W, H, y, rnd) => {
-  // left: canard profile at three deflections, flow arrows incoming
+  // left: control-surface profile at three deflections, flow arrows incoming
   const cx = 480
   const cy = y + 334
   for (let i = 0; i < 4; i++) {
@@ -137,14 +137,14 @@ const cfdFigure = figure(690, 654, (ctx, W, H, y, rnd) => {
   fin(-0.26, 'rgba(233,241,251,0.45)')
   fin(0, WHITE)
   fin(0.26, 'rgba(233,241,251,0.45)')
-  text(ctx, 'δ = -15° / 0° / +15°', cx - 170, cy + 130, { size: 32, color: DIM })
+  text(ctx, 'TILT / ROLL DEFLECTIONS', cx - 190, cy + 130, { size: 32, color: DIM })
   // hinge pivot mark
   ctx.strokeStyle = WHITE
   ctx.lineWidth = 3
   handLine(ctx, cx - 14, cy - 14, cx + 14, cy + 14, rnd, 1, 3)
   handLine(ctx, cx - 14, cy + 14, cx + 14, cy - 14, rnd, 1, 3)
 
-  // right: Cm vs alpha plot with two deflection curves
+  // right: drag vs alpha plot — baseline airframe vs control surfaces out
   const px = 1180
   const py = y + 594
   const pw = 660
@@ -153,7 +153,7 @@ const cfdFigure = figure(690, 654, (ctx, W, H, y, rnd) => {
   ctx.lineWidth = 3.5
   handLine(ctx, px, py, px, py - ph, rnd, 2) // y axis
   handLine(ctx, px, py, px + pw, py, rnd, 2) // x axis
-  text(ctx, 'Cm', px - 66, py - ph + 40, { size: 34, color: WHITE })
+  text(ctx, 'Cd', px - 66, py - ph + 40, { size: 34, color: WHITE })
   text(ctx, 'α (deg)', px + pw - 110, py + 52, { size: 34, color: WHITE })
   // dashed zero line
   ctx.save()
@@ -174,8 +174,8 @@ const cfdFigure = figure(690, 654, (ctx, W, H, y, rnd) => {
     ctx.stroke()
     text(ctx, label, px + pw - 44, ly, { size: 30, color, align: 'right' })
   }
-  curve(1, WHITE, 'δ = 15°', py - ph + 62)
-  curve(0.45, 'rgba(233,241,251,0.6)', 'δ = 5°', py - ph / 2 - 116)
+  curve(1, WHITE, 'surfaces out', py - ph + 62)
+  curve(0.45, 'rgba(233,241,251,0.6)', 'baseline', py - ph / 2 - 116)
 })
 
 /* ---- sheet C: the control loop ---- */
@@ -200,11 +200,11 @@ const loopFigure = figure(670, 572, (ctx, W, H, y, rnd) => {
 
   text(ctx, 'θ ref', 130, sy - 24, { size: 32, color: DIM })
   handArrow(ctx, 128, sy, sx - 52, sy, rnd)
-  block(450, 330, 'LQR / PID', 'attitude regulation')
+  block(450, 330, 'CONTROLLER', 'tilt / roll commands')
   handArrow(ctx, sx + 52, sy, 444, sy, rnd)
-  block(880, 360, 'CANARD SERVOS', 'δ commands')
+  block(880, 360, 'MICRO-SERVOS', 'surface deflection')
   handArrow(ctx, 786, sy, 874, sy, rnd)
-  block(1340, 400, 'VEHICLE DYNAMICS', 'from CFD derivatives')
+  block(1340, 400, 'VEHICLE DYNAMICS', 'validated in CFD')
   handArrow(ctx, 1246, sy, 1334, sy, rnd)
   handArrow(ctx, 1746, sy, 1900, sy, rnd)
   text(ctx, 'θ', 1920, sy + 12, { size: 36, color: WHITE })
@@ -213,7 +213,7 @@ const loopFigure = figure(670, 572, (ctx, W, H, y, rnd) => {
   handLine(ctx, 1850, sy, 1850, by + 300, rnd, 2)
   handLine(ctx, 1850, by + 300, sx, by + 304, rnd, 2)
   handArrow(ctx, sx, by + 304, sx, sy + 52, rnd)
-  text(ctx, 'IMU · STATE ESTIMATE', 980, by + 350, { size: 30, color: DIM, align: 'center' })
+  text(ctx, 'IMU + ALTIMETER · AVIONICS BAY', 980, by + 350, { size: 30, color: DIM, align: 'center' })
 })
 
 // Each blueprint sheet's drawing is keyed by the shared sheet id; the title,

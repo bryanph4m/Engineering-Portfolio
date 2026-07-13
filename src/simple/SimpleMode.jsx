@@ -126,7 +126,7 @@ function buildArticles(go) {
       title: 'Research',
       lead: (
         <p>
-          {research.lead} Built with <strong>{research.program}</strong> at {research.org}.
+          {research.lead} {research.credit}
         </p>
       ),
       subsections: research.sheets.map((s) => ({
