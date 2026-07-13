@@ -163,8 +163,8 @@ export function pcbTexture(mask = 'green') {
   return cache[key]
 }
 
-/** Sepia stand-in portrait for the picture frame until the real photo lands
- *  at /public/assets/profile-photo.jpg. */
+/** Sepia stand-in portrait for the picture frame, shown for any album slot
+ *  whose file hasn't been dropped into /public/assets/gallery/ yet. */
 export function photoPlaceholderTexture() {
   if (cache.photoPh) return cache.photoPh
   const c = canvas(512, 640)
@@ -193,7 +193,7 @@ export function photoPlaceholderTexture() {
   ctx.textAlign = 'center'
   ctx.fillText('photo goes here', 256, 500)
   ctx.font = '20px "Cutive Mono", monospace'
-  ctx.fillText('/assets/profile-photo.jpg', 256, 540)
+  ctx.fillText('/assets/gallery/', 256, 540)
   cache.photoPh = finish(c)
   return cache.photoPh
 }

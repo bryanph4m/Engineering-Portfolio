@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import * as THREE from 'three'
 import { COLORS } from './constants'
 import {
@@ -7,7 +7,6 @@ import {
   keyLabelTexture,
   paperTexture,
   pcbTexture,
-  photoPlaceholderTexture,
   triangleScaleTexture,
 } from '../lib/textures'
 
@@ -17,7 +16,8 @@ import {
  * kneaded eraser, slide rule, a vellum roll, a coffee mug, a drafting
  * triangle, a pin dish, stray circuit boards with loose components, a
  * TI-36X Pro calculator and a meshed pair of gears filling the middle of
- * the desk, and a small framed photo leaning at the back of the desk.
+ * the desk. (The framed photo that used to lean at the back is now its own
+ * interactive album — see PhotoFrame.jsx.)
  *
  * Layout rules (enforced by DevLayoutAudit in dev builds):
  *  - every object rests ON the desk: y = half its own height, nothing sunk
@@ -342,74 +342,6 @@ function LooseResistor({ position, yaw = 0 }) {
   )
 }
 
-/** Placeholder-aware loader for the framed profile photo. */
-function useProfilePhoto() {
-  const placeholder = useMemo(() => photoPlaceholderTexture(), [])
-  const [photo, setPhoto] = useState(null)
-  useEffect(() => {
-    let alive = true
-    new THREE.TextureLoader().load(
-      '/assets/profile-photo.jpg',
-      (t) => {
-        if (!alive) return
-        t.colorSpace = THREE.SRGBColorSpace
-        t.anisotropy = 8
-        setPhoto(t)
-      },
-      undefined,
-      () => {} // no photo dropped in yet — keep the painted placeholder
-    )
-    return () => {
-      alive = false
-    }
-  }, [])
-  return photo ?? placeholder
-}
-
-/**
- * A small worn wooden frame leaning against the (unseen) wall at the back
- * edge of the desk, propped on a kickstand. Drop the real portrait at
- * /public/assets/profile-photo.jpg and it replaces the placeholder.
- */
-function PictureFrame({ position, yaw = 0 }) {
-  const photo = useProfilePhoto()
-  const W = 0.72
-  const H = 0.9
-  const B = 0.06
-  const D = 0.05
-  const wood = { color: '#4e3823', roughness: 0.72, metalness: 0.05 }
-  return (
-    <group position={position} rotation={[0, yaw, 0]}>
-      <group rotation={[-0.17, 0, 0]}>
-        <mesh castShadow position={[0, B / 2, 0]}>
-          <boxGeometry args={[W, B, D]} />
-          <meshStandardMaterial {...wood} />
-        </mesh>
-        <mesh castShadow position={[0, H - B / 2, 0]}>
-          <boxGeometry args={[W, B, D]} />
-          <meshStandardMaterial {...wood} />
-        </mesh>
-        {[-1, 1].map((s) => (
-          <mesh key={s} castShadow position={[(s * (W - B)) / 2, H / 2, 0]}>
-            <boxGeometry args={[B, H - 2 * B, D]} />
-            <meshStandardMaterial {...wood} />
-          </mesh>
-        ))}
-        {/* the photo, recessed just behind the front face of the rails */}
-        <mesh position={[0, H / 2, 0.01]}>
-          <planeGeometry args={[W - 2 * B + 0.02, H - 2 * B + 0.02]} />
-          <meshStandardMaterial map={photo} roughness={0.5} />
-        </mesh>
-      </group>
-      {/* kickstand strut down to the desk behind the frame */}
-      <mesh castShadow position={[0, 0.31, -0.215]} rotation={[0.267, 0, 0]}>
-        <boxGeometry args={[0.09, 0.63, 0.016]} />
-        <meshStandardMaterial {...wood} />
-      </mesh>
-    </group>
-  )
-}
-
 export default function Clutter() {
   const paper = paperTexture(true)
   return (
@@ -632,9 +564,6 @@ export default function Clutter() {
           </mesh>
         ))}
       </group>
-
-      {/* ---- Framed photo leaning at the back edge of the desk ---- */}
-      <PictureFrame position={[1.9, 0.005, -3.32]} yaw={0.08} />
 
       {/* ---- Pushpin dish, front-left corner ---- */}
       <group position={[-3.3, 0, 3.4]}>

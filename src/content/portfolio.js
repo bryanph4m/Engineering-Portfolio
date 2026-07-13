@@ -9,9 +9,16 @@
  * Edit a fact once here and both modes update — they never drift.
  *
  * Provenance: everything factual below is sourced from the resume PDF at
- * /public/assets/Bryan-Pham-Resume.pdf and the public GitHub account
- * (github.com/bryanph4m). If a claim isn't backed by one of those two, it
- * doesn't belong in this file.
+ * /public/assets/Bryan-Pham-Resume.pdf, the public GitHub account
+ * (github.com/bryanph4m), and vetted project write-ups provided by the
+ * author. If a claim isn't backed by one of those, it doesn't belong here.
+ *
+ * Per-project prose lives in each entry's `detail` array — a list of
+ * `{ heading, body: [paragraphs] }` sections. Both faces render it: the
+ * desk flipbook flows it across as many flip-pages as it needs
+ * (src/documents/content/projects.js), and the simple mode renders it as
+ * article prose. `specs` stays the at-a-glance highlight list; `detail` is
+ * the narrative. Keep the two complementary, not duplicative.
  *
  * Casing convention: text is stored in its natural, human-readable case
  * (correct acronyms and all). The desk's drafting sheets happen to render a
@@ -56,6 +63,33 @@ export const projects = [
       { lead: 'Raspberry Pi on QNX 8.0', sub: 'Python coordination · React Native app' },
       { lead: 'End-to-end narration in 1–2 s', sub: 'Deepgram speech + Redis' },
     ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'Aside AI is a real-time narration and companion system split across on-device capture and cloud intelligence. It comes in three parts: firmware on the device, a laptop backend, and a mobile app.',
+        ],
+      },
+      {
+        heading: 'On the device',
+        body: [
+          'The firmware runs on a Raspberry Pi under QNX, in C++. It captures camera frames over QSF plus microphone audio, runs TensorFlow Lite on-device for fast event detection — entrance, wave, fall — and ships frames, audio, and event signals to the laptop over the LAN.',
+        ],
+      },
+      {
+        heading: 'The orchestrator',
+        body: [
+          'A Python backend on a laptop on the same LAN is the brain. It sends each camera frame straight to Claude Haiku 4.5 vision, so a single call returns the in-character line — Claude is both eyes and brain.',
+          'It pulls speech from Deepgram STT and the active personality from Redis, builds the prompt, and sends the reply to Deepgram TTS for voice. Redis holds memory and state, and Sentry watches the run. Keeping the orchestrator on the laptop keeps the cloud SDKs off QNX.',
+        ],
+      },
+      {
+        heading: 'The app',
+        body: [
+          'A React Native and Expo app switches personalities and modes and includes a custom personality builder. An audio manager ducks or cuts music under narration so the voice always has priority, and manual cue buttons fire an entrance theme or a laugh track.',
+        ],
+      },
+    ],
   },
   {
     id: 'mission-launch-rocketry',
@@ -79,6 +113,34 @@ export const projects = [
       { lead: 'SwiftUI + AVFoundation pipeline', sub: 'Apple Vision tracking · target-lock reticle · AR overlay' },
       { lead: 'Voice or text commands', sub: 'resolves the person nearest screen center' },
     ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          "Recco is built for the moment at a busy event when you're holding your phone and want to know who someone is and whether they're worth talking to. The product is the AR lens, not a dashboard.",
+        ],
+      },
+      {
+        heading: 'The flow',
+        body: [
+          "You set a mission on first launch — “looking for investors,” “hiring a Swift engineer,” “trying to get hired.” A fullscreen camera opens with an AR intelligence layer: a target reticle, face brackets, and a minimal scan / mic / keyboard dock.",
+          'Recco locks the person closest to center; you ask by voice or type, and the backend resolves their identity and hands back the answer over the same lens.',
+        ],
+      },
+      {
+        heading: 'Under the hood',
+        body: [
+          'Identity comes from reading the badge and context with OpenAI Vision, searching profile data with Fiber, and verifying faces through a computer-vision service. Every resolved scan becomes a memory node in “Brain” — name, role, company, LinkedIn, confidence, lead score, and follow-up state.',
+          "Recco then drafts a cold email or DM tailored to the mission and the person, and Lazy GTM mode turns “find me 8 Swift engineers” into a prospect graph and an outreach queue.",
+        ],
+      },
+      {
+        heading: 'Stack',
+        body: [
+          'A SwiftUI iOS app carries the fullscreen camera, AR overlay, Brain graph, mission setup, Lazy GTM, and a Deepgram voice client. A Convex backend handles identity, voice tokens, memories, mission scoring, GTM runs, and outreach drafts over HTTP Actions, and a FastAPI + InsightFace service returns 512-dimension face embeddings. Secrets live in Convex environment variables, never in the app.',
+        ],
+      },
+    ],
   },
   {
     id: 'rollaway',
@@ -91,6 +153,34 @@ export const projects = [
       { lead: 'React + TypeScript', sub: 'DigitalOcean serverless backend · permit checklist' },
       { lead: 'Zustand-driven UI', sub: 'auto-filled forms from user-ingested data' },
     ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          "RollAway is a map-first location-intelligence and permit-planning PWA for mobile food vendors in San Francisco. It ranks legal, low-competition places to set up for a chosen time window, explains the reasoning behind each pick, and collapses the city's four-agency permit maze into a single guided checklist.",
+        ],
+      },
+      {
+        heading: 'How it decides',
+        body: [
+          'Scoring, hard constraints like setbacks and closures, travel time, and legality are all computed deterministically in DigitalOcean Functions — never inside a language model. The LLMs only phrase explanations and read menus or forms, always grounded in the precomputed signals and cited sources.',
+          'The map renders a wide candidate pool as pins but promotes only the top three to tray tiles. Each spot opens a detail sheet with a good / check / avoid verdict, a one-line why, a Navigate action, Street View, and the grounded facts behind the score — foot traffic, competition, closures, and legality.',
+        ],
+      },
+      {
+        heading: 'Permit Copilot',
+        body: [
+          'A Permit Copilot turns permitting into a cited, ordered checklist across all four SF agencies, complete with fillable agency PDFs. Vendors sign up and ingest their menu through Gradient-backed extraction from text, links, images, or PDFs.',
+        ],
+      },
+      {
+        heading: 'Stack',
+        body: [
+          'RollAway is an installable PWA with an offline shell and a schematic-map fallback: React 19 and TypeScript on Vite 8, Tailwind v4, Zustand for path-based routing with no router library, and Mapbox GL code-split off the landing page.',
+          'Seven DigitalOcean Functions handle serverless data and deterministic scoring, and a dependency-free agents runtime on DigitalOcean Gradient powers the spot scout, permit copilot, menu RAG, and grounded form-fill. External data comes from SF open data, a Bay Wheels foot-traffic proxy, Google Places and Street View, Ticketmaster events, and Mapbox tiles and travel times.',
+        ],
+      },
+    ],
   },
   {
     id: 'engineering-portfolio',
@@ -102,8 +192,47 @@ export const projects = [
       { lead: 'Wikipedia-style simple mode', sub: 'same content, a few KB of DOM' },
       { lead: 'Open source', sub: 'github.com/bryanph4m/Engineering-Portfolio' },
     ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          "This site is a personal portfolio rendered as an old mechanical engineer's drafting desk, viewed from a fixed isometric-ish angle. Each page of the site is a physical document you pick up, read, flip through, and set back down.",
+        ],
+      },
+      {
+        heading: 'How it works',
+        body: [
+          'It is one Canvas with no routing — the whole scene lives in a single component, with focus held in Zustand state so Three.js never remounts. Idle is a fixed wide view with a few degrees of pointer parallax; hover lifts a document, a click floats it to a readable pose while the desk dims behind a vignette, and click-away or Esc sets it down.',
+          'Multi-page stacks rotate a physical sheet about its left edge on each turn, with an in-world handwritten tally, flippable by on-screen arrows, arrow keys, or a swipe. Document text is real DOM locked over the sheet, so it stays crisp at any zoom and is lazy-loaded on open.',
+        ],
+      },
+      {
+        heading: 'Stack',
+        body: [
+          'Built with React and React Three Fiber, drei, @react-spring/three, Zustand, and Vite, with Tailwind dressing only the flat UI.',
+        ],
+      },
+    ],
   },
 ]
+
+/**
+ * The desk's framed photo, as a small album. The frame is interactive — pick
+ * it up like a document and click / arrow through the photos. Drive it entirely
+ * from this list: the first entry is the one shown resting in the frame on the
+ * desk. Each entry is `{ src, caption? }`; `src` is a path under /public (so
+ * it resolves from the site root). See the README's "Photo frame album"
+ * section for how to add your own. If the list is empty, the frame falls back
+ * to a painted placeholder.
+ */
+export const gallery = {
+  photos: [
+    { src: '/assets/gallery/photo-1.jpg', caption: 'Bryan Pham' },
+    // Add more photos by dropping files in /public/assets/gallery and listing
+    // them here, e.g.:
+    // { src: '/assets/gallery/photo-2.jpg', caption: 'Mission Launch Rocketry — launch day' },
+  ],
+}
 
 export const research = {
   title: 'Active-Control Rocket',

@@ -11,6 +11,13 @@ import { resume } from '../../content/portfolio'
 // dynamically, so adding or editing an entry there reflows this sheet and
 // the simple mode together. If the flow runs slightly past the content box
 // the whole-page fit pass in docTextures.js shrinks it back in.
+//
+// This sheet renders every resume section EXCEPT Skills: the skills list is
+// dense and was crowding out experience and education at the picked-up zoom.
+// The data still lives in portfolio.js (the simple mode renders it in full);
+// PAPER_SECTIONS just scopes it out of this one view, which frees the space to
+// set the remaining copy at a larger, more comfortable size.
+const PAPER_SECTIONS = resume.sections.filter((s) => s.label !== 'Skills')
 
 function decorResume(ctx, W, H, rnd) {
   paperBase(ctx, W, H, rnd)
@@ -50,33 +57,33 @@ function wrapSub(ctx, str, size, maxW) {
  * whole-page fit pass.
  */
 function flowSections(ctx, W, rnd, k, y0, apply) {
-  const subSize = 21 * k
-  const subLine = 25 * k
+  const subSize = 26 * k
+  const subLine = 33 * k
   const subMaxW = W - 116 - 96
   let y = y0
-  for (const sec of resume.sections) {
+  for (const sec of PAPER_SECTIONS) {
     if (apply) {
-      text(ctx, sec.label.toUpperCase(), 96, y + 30 * k, { font: TYPE, size: 34 * k })
+      text(ctx, sec.label.toUpperCase(), 96, y + 34 * k, { font: TYPE, size: 40 * k })
       ctx.strokeStyle = 'rgba(60,50,30,0.4)'
       ctx.lineWidth = 2
-      handLine(ctx, 96, y + 44 * k, W - 96, y + 42 * k, rnd, 1.5)
+      handLine(ctx, 96, y + 50 * k, W - 96, y + 48 * k, rnd, 1.5)
     }
-    y += 62 * k
+    y += 74 * k
 
     for (const e of sec.entries) {
       if (apply) {
-        text(ctx, e.title, 116, y + 24 * k, { size: 29 * k, color: INK, weight: 'bold', font: 'Georgia, serif' })
+        text(ctx, e.title, 116, y + 28 * k, { size: 33 * k, color: INK, weight: 'bold', font: 'Georgia, serif' })
       }
-      y += 34 * k
+      y += 44 * k
       if (e.sub) {
         for (const line of wrapSub(ctx, e.sub, subSize, subMaxW)) {
-          if (apply) text(ctx, line, 116, y + 18 * k, { size: subSize, color: '#5c5340' })
+          if (apply) text(ctx, line, 116, y + 22 * k, { size: subSize, color: '#5c5340' })
           y += subLine
         }
       }
-      y += 8 * k
+      y += 14 * k
     }
-    y += 14 * k
+    y += 22 * k
   }
   return y
 }

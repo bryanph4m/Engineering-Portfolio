@@ -35,6 +35,10 @@ npm run preview  # serve the build
 - **Multi-page stacks** (Projects, Rocketry): a physical sheet rotates about the
   left edge on each turn, with an in-world handwritten `1 / 4` tally. Flip with
   the on-screen arrows, the **←/→** keys, or a swipe.
+- **Photo frame album** (`src/desk/PhotoFrame.jsx`): the framed photo is
+  interactive too — pick it up like a document, then click the left/right half
+  of the picture (or press **←/→**) to page through the album, with a `2 / 5`
+  indicator in the HUD. Its photos are data — see "Photo frame album" below.
 - **Legible content.** Each document's text is real DOM (`src/ui/ContentOverlay.jsx`)
   locked over the sheet — crisp at any zoom, and lazy-loaded on open from
   `src/documents/content/*`.
@@ -70,6 +74,7 @@ What each export feeds:
 | `research`    | the blueprint roll (one sheet per `sheets` entry)| Research article sections     |
 | `resume`      | the folded resume sheet + PDF link               | Resume article + PDF link     |
 | `contact`     | the envelope's addressee links                   | Contact article               |
+| `gallery`     | the framed photo album (PhotoFrame.jsx)          | —                             |
 | `sections`    | —                                                | sidebar nav order             |
 
 Notes:
@@ -104,9 +109,47 @@ The standing content rules these follow (single source of truth, resume is
 authoritative, no invented projects, manual vs auto-managed fields) live in
 `CLAUDE.md`.
 
+## Photo frame album
+
+The framed photo on the desk is a small, clickable album, driven entirely by
+data — no code change needed to add or remove pictures.
+
+1. **Drop your image files** in `public/assets/gallery/`. Anything under
+   `public/` is served from the site root, so a file at
+   `public/assets/gallery/photo-2.jpg` is referenced as `/assets/gallery/photo-2.jpg`.
+2. **List them** in the `gallery.photos` array in `src/content/portfolio.js`.
+   Each entry is `{ src, caption? }`:
+
+   ```js
+   export const gallery = {
+     photos: [
+       { src: '/assets/gallery/photo-1.jpg', caption: 'Bryan Pham' },
+       { src: '/assets/gallery/photo-2.jpg', caption: 'Launch day, 2026' },
+       { src: '/assets/gallery/photo-3.jpg' }, // caption is optional
+     ],
+   }
+   ```
+
+   The **first entry** is the photo shown resting in the frame on the desk; the
+   rest appear once you pick the frame up and page through it. Order in the
+   array is the order you flip through.
+3. **Formats & sizing.** Use `.jpg`, `.png`, or `.webp`. The picture opening is
+   **portrait, roughly a 4 : 5 ratio** (e.g. **1200 × 1500 px**). Match that
+   aspect so images aren't stretched — anything wider or taller is scaled to
+   fill and cropped by the frame. Keep files reasonable (≲ 500 KB each) so the
+   scene stays quick to load.
+4. **Captions** are optional per photo (the `caption` field). Leave it off and
+   the photo simply shows without one.
+
+If a listed file hasn't been added yet, the frame falls back to a painted
+"photo goes here" placeholder for that slot, so a missing image never breaks
+the scene. (Captions are stored in the data and available to the frame; they
+don't render on the picture itself by default.)
+
 ## Swapping in your own material
 
-- **Textures / photos:** see `public/assets/textures/README.md`.
+- **Photos in the frame:** see "Photo frame album" above.
+- **Textures:** see `public/assets/textures/README.md`.
 - **Resume PDF:** replace `public/assets/Bryan-Pham-Resume.pdf`.
 - **Words:** edit `src/content/portfolio.js` (see above). Add or remove a
   desk document by editing `src/documents/registry.js` and giving it a

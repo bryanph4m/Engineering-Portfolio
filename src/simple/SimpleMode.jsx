@@ -117,6 +117,12 @@ function buildArticles(go) {
                 </li>
               ))}
             </ul>
+            {p.detail?.map((sec, i) => (
+              <div key={i}>
+                {sec.heading ? <h3 className="wiki__h3">{sec.heading}</h3> : null}
+                {sec.body.map((para, j) => <p key={j}>{para}</p>)}
+              </div>
+            ))}
           </>
         ),
       })),
@@ -218,7 +224,7 @@ const SEARCH_INDEX = [
   },
   ...projects.map((p) => ({
     section: 'projects', anchor: p.id, label: p.name,
-    text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')}`,
+    text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')} ${(p.detail ?? []).map((d) => `${d.heading ?? ''} ${d.body.join(' ')}`).join(' ')}`,
   })),
   {
     section: 'research', anchor: research.sheets[0].id, label: 'Research',

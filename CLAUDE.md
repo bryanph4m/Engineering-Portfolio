@@ -10,8 +10,8 @@ render the same shared content. See README.md for architecture.
    `src/ui/`) or the simple mode (`src/simple/`). Any content change is made in the
    shared file so both modes update together.
 2. **No invented facts.** Projects may only come from real GitHub repos under
-   `github.com/bryanph4m` or from the resume. There is **no autonomous drone
-   project** — never reintroduce one.
+   `github.com/bryanph4m` or from the resume — never invent a project or a
+   fact that isn't backed by one of those.
 3. **The resume is authoritative** for experience, education, and skills:
    `public/assets/Bryan-Pham-Resume.pdf`. If site copy conflicts with it, the resume wins.
 4. **LinkedIn is manual by design** — a static link plus manually maintained fields.

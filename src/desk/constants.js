@@ -33,6 +33,12 @@ export const FOCUS_POSE = {
 
 export const HOVER_LIFT = 0.14 // metres a document rises on hover
 
+// The framed photo album shares the desk's focus machinery (pick up, flip,
+// Esc to set down) but isn't a paper document, so it lives outside the
+// registry. This id is the value focusedId takes when the frame is picked up —
+// shared by PhotoFrame, KeyControls and HudHints so they never drift.
+export const PHOTO_FRAME_ID = 'photos'
+
 export const COLORS = {
   wood: '#6f4c2c',
   woodDark: '#49301a',

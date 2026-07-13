@@ -43,6 +43,74 @@ const bullet = ([lead, sub]) => ({
   },
 })
 
+// ---- Narrative prose (the per-project `detail` sections) ----
+// Body copy is the readable half of the drawing. It's set in the same mono
+// face as the rest of the sheet and word-wrapped up front so each paragraph
+// declares an exact height and pageFlow can split the story between paragraphs
+// (never mid-sentence). Cutive Mono is monospace, so a conservative per-glyph
+// advance wraps deterministically without waiting on the web font to load;
+// the per-line auto-fit in text() catches any line that still runs long.
+const BODY_X = 130
+const BODY_SIZE = 30
+const BODY_LINE = 40
+const BODY_COLOR = '#4a4032'
+const MONO_ADV = 0.62 // Cutive Mono advance ≈ 0.6em; rounded up for headroom
+const BODY_MAXW = box.x + box.w - BODY_X
+
+/** Greedy word-wrap by monospace glyph count — deterministic at build time. */
+const wrapMono = (str, size, maxW) => {
+  const maxChars = Math.max(1, Math.floor(maxW / (size * MONO_ADV)))
+  const lines = []
+  let line = ''
+  for (const word of str.split(' ')) {
+    const probe = line ? `${line} ${word}` : word
+    if (line && probe.length > maxChars) {
+      lines.push(line)
+      line = word
+    } else {
+      line = probe
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+/** Small section heading inside a drawing — a mono kicker + hand underline. */
+const subhead = (title) => ({
+  h: 92,
+  inkH: 68,
+  draw(ctx, W, H, y, rnd) {
+    text(ctx, title.toUpperCase(), BODY_X, y + 46, { font: TYPE, size: 36, spacing: 2 })
+    ctx.strokeStyle = 'rgba(51,41,29,0.42)'
+    ctx.lineWidth = 3
+    handLine(ctx, BODY_X, y + 64, BODY_X + Math.min(560, title.length * 28), y + 60, rnd, 2)
+  },
+})
+
+/** One prose paragraph, pre-wrapped so its height is known before layout. */
+const para = (str) => {
+  const lines = wrapMono(str, BODY_SIZE, BODY_MAXW)
+  const inkH = lines.length * BODY_LINE
+  return {
+    h: inkH + 20, // trailing breathing room between paragraphs
+    inkH,
+    draw(ctx, W, H, y, rnd) {
+      let yy = y + BODY_SIZE
+      for (const ln of lines) {
+        text(ctx, ln, BODY_X, yy, { size: BODY_SIZE, color: BODY_COLOR })
+        yy += BODY_LINE
+      }
+    },
+  }
+}
+
+/** Flatten a project's `detail` sections into subhead + paragraph blocks. */
+const detailBlocks = (detail = []) =>
+  detail.flatMap((sec) => [
+    ...(sec.heading ? [subhead(sec.heading)] : []),
+    ...sec.body.map(para),
+  ])
+
 /** Small header repeated when a drawing spills onto a continuation page. */
 const cont = (title) => ({
   h: 96,
@@ -222,6 +290,7 @@ const sheets = projects.map((p, i) => ({
     ),
     FIGURES[p.id],
     ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),
+    ...detailBlocks(p.detail),
   ],
 }))
 
