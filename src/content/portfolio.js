@@ -38,9 +38,9 @@ export const profile = {
   // `section` cross-links the org in the simple mode's About article.
   roles: [
     { lead: 'Mechanical Engineering Student @ ', emphasis: 'UCLA', circled: true },
-    { lead: 'Founding Engineer — ', emphasis: 'Aria AI' },
-    { lead: 'Design & Manufacturing Engineering Intern — ', emphasis: 'Mission College' },
-    { lead: 'Founder & President — ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
+    { lead: 'Founding Engineer, ', emphasis: 'Aria AI' },
+    { lead: 'Design & Manufacturing Engineering Intern, ', emphasis: 'Mission College' },
+    { lead: 'Founder & President, ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
   ],
   motto: 'design it on paper first & let the airframe speak for itself.',
   // current focus; `section` is where the simple mode's About article links each one
@@ -55,7 +55,7 @@ export const projects = [
     id: 'asideai',
     name: 'Aside AI',
     category: 'Hardware · Software',
-    summary: '1st place — Deepgram track · Berkeley AI Hackathon',
+    summary: '1st place, Deepgram track · Berkeley AI Hackathon',
     // substring of `summary` the desk sheet circles in red; must appear verbatim
     highlight: '1st place',
     specs: [
@@ -67,19 +67,19 @@ export const projects = [
       {
         heading: 'Overview',
         body: [
-          'Aside AI is a real-time narration and companion system split across on-device capture and cloud intelligence. It comes in three parts: firmware on the device, a laptop backend, and a mobile app.',
+          'Aside AI is a real-time narration and companion system that runs across on-device capture and cloud AI. It has three parts: firmware on the device, a laptop backend, and a mobile app.',
         ],
       },
       {
         heading: 'On the device',
         body: [
-          'The firmware runs on a Raspberry Pi under QNX, in C++. It captures camera frames over QSF plus microphone audio, runs TensorFlow Lite on-device for fast event detection — entrance, wave, fall — and ships frames, audio, and event signals to the laptop over the LAN.',
+          'The firmware runs on a Raspberry Pi under QNX, written in C++. It captures camera frames over QSF plus microphone audio, runs TensorFlow Lite on-device for fast event detection (entrance, wave, fall), and ships frames, audio, and event signals to the laptop over the LAN.',
         ],
       },
       {
         heading: 'The orchestrator',
         body: [
-          'A Python backend on a laptop on the same LAN is the brain. It sends each camera frame straight to Claude Haiku 4.5 vision, so a single call returns the in-character line — Claude is both eyes and brain.',
+          'A Python backend on a laptop on the same LAN handles coordination. It sends each camera frame straight to Claude Haiku 4.5 vision, so one call both reads the scene and returns the in-character line.',
           'It pulls speech from Deepgram STT and the active personality from Redis, builds the prompt, and sends the reply to Deepgram TTS for voice. Redis holds memory and state, and Sentry watches the run. Keeping the orchestrator on the laptop keeps the cloud SDKs off QNX.',
         ],
       },
@@ -98,7 +98,7 @@ export const projects = [
     summary: 'founded & led a 52-member college rocketry club',
     specs: [
       { lead: 'Founder & President', sub: 'budget + design-build-launch, concept → flight' },
-      { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery — drogue + main' },
+      { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery (drogue + main)' },
       { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
       { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
     ],
@@ -117,20 +117,20 @@ export const projects = [
       {
         heading: 'Overview',
         body: [
-          "Recco is built for the moment at a busy event when you're holding your phone and want to know who someone is and whether they're worth talking to. The product is the AR lens, not a dashboard.",
+          "Recco is built for the moment at a busy event when you're holding your phone and want to know who someone is and whether they're worth talking to. Everything happens in the AR camera lens rather than in a separate dashboard.",
         ],
       },
       {
         heading: 'The flow',
         body: [
-          "You set a mission on first launch — “looking for investors,” “hiring a Swift engineer,” “trying to get hired.” A fullscreen camera opens with an AR intelligence layer: a target reticle, face brackets, and a minimal scan / mic / keyboard dock.",
+          "You set a mission on first launch: “looking for investors,” “hiring a Swift engineer,” “trying to get hired.” A fullscreen camera opens with an AR intelligence layer: a target reticle, face brackets, and a minimal scan / mic / keyboard dock.",
           'Recco locks the person closest to center; you ask by voice or type, and the backend resolves their identity and hands back the answer over the same lens.',
         ],
       },
       {
         heading: 'Under the hood',
         body: [
-          'Identity comes from reading the badge and context with OpenAI Vision, searching profile data with Fiber, and verifying faces through a computer-vision service. Every resolved scan becomes a memory node in “Brain” — name, role, company, LinkedIn, confidence, lead score, and follow-up state.',
+          'Identity comes from reading the badge and context with OpenAI Vision, searching profile data with Fiber, and verifying faces through a computer-vision service. Every resolved scan becomes a memory node in “Brain”: name, role, company, LinkedIn, confidence, lead score, and follow-up state.',
           "Recco then drafts a cold email or DM tailored to the mission and the person, and Lazy GTM mode turns “find me 8 Swift engineers” into a prospect graph and an outreach queue.",
         ],
       },
@@ -146,7 +146,7 @@ export const projects = [
     id: 'rollaway',
     name: 'RollAway',
     category: 'Software',
-    summary: '1st place — Beginner track · MLH × DigitalOcean AI for Social Good',
+    summary: '1st place, Beginner track · MLH × DigitalOcean AI for Social Good',
     highlight: '1st place',
     specs: [
       { lead: 'Permit planning for SF food vendors', sub: 'ranks legal, low-competition spots per time window' },
@@ -163,8 +163,8 @@ export const projects = [
       {
         heading: 'How it decides',
         body: [
-          'Scoring, hard constraints like setbacks and closures, travel time, and legality are all computed deterministically in DigitalOcean Functions — never inside a language model. The LLMs only phrase explanations and read menus or forms, always grounded in the precomputed signals and cited sources.',
-          'The map renders a wide candidate pool as pins but promotes only the top three to tray tiles. Each spot opens a detail sheet with a good / check / avoid verdict, a one-line why, a Navigate action, Street View, and the grounded facts behind the score — foot traffic, competition, closures, and legality.',
+          'Scoring, hard constraints like setbacks and closures, travel time, and legality are all computed deterministically in DigitalOcean Functions, never inside a language model. The LLMs only phrase explanations and read menus or forms, always grounded in the precomputed signals and cited sources.',
+          'The map renders a wide candidate pool as pins but promotes only the top three to tray tiles. Each spot opens a detail sheet with a good / check / avoid verdict, a one-line why, a Navigate action, Street View, and the grounded facts behind the score: foot traffic, competition, closures, and legality.',
         ],
       },
       {
@@ -186,7 +186,7 @@ export const projects = [
     id: 'engineering-portfolio',
     name: 'Engineering Portfolio',
     category: 'Software',
-    summary: 'this site — a 3D desk & a wiki view, one shared content source',
+    summary: 'this site, a 3D desk & a wiki view from one shared content source',
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
       { lead: 'Wikipedia-style simple mode', sub: 'same content, a few KB of DOM' },
@@ -202,7 +202,7 @@ export const projects = [
       {
         heading: 'How it works',
         body: [
-          'It is one Canvas with no routing — the whole scene lives in a single component, with focus held in Zustand state so Three.js never remounts. Idle is a fixed wide view with a few degrees of pointer parallax; hover lifts a document, a click floats it to a readable pose while the desk dims behind a vignette, and click-away or Esc sets it down.',
+          'It is one Canvas with no routing; the whole scene lives in a single component, with focus held in Zustand state so Three.js never remounts. Idle is a fixed wide view with a few degrees of pointer parallax; hover lifts a document, a click floats it to a readable pose while the desk dims behind a vignette, and click-away or Esc sets it down.',
           'Multi-page stacks rotate a physical sheet about its left edge on each turn, with an in-world handwritten tally, flippable by on-screen arrows, arrow keys, or a swipe. Document text is real DOM locked over the sheet, so it stays crisp at any zoom and is lazy-loaded on open.',
         ],
       },
@@ -230,7 +230,7 @@ export const gallery = {
     { src: '/assets/gallery/photo-1.jpg', caption: 'Bryan Pham' },
     // Add more photos by dropping files in /public/assets/gallery and listing
     // them here, e.g.:
-    // { src: '/assets/gallery/photo-2.jpg', caption: 'Mission Launch Rocketry — launch day' },
+    // { src: '/assets/gallery/photo-2.jpg', caption: 'Mission Launch Rocketry, launch day' },
   ],
 }
 
@@ -276,14 +276,14 @@ export const research = {
 
 export const resume = {
   name: 'Bryan Pham',
-  subtitle: 'RESUME — MECHANICAL ENGINEERING',
+  subtitle: 'RESUME · MECHANICAL ENGINEERING',
   pdf: '/assets/Bryan-Pham-Resume.pdf',
   sections: [
     {
       label: 'Education',
       entries: [
         {
-          title: 'UCLA — B.S. Mechanical Engineering',
+          title: 'UCLA, B.S. Mechanical Engineering',
           sub: 'transfer GPA 4.0 · June 2026 – May 2028 · Los Angeles, CA',
         },
         {
@@ -296,15 +296,15 @@ export const resume = {
       label: 'Experience',
       entries: [
         {
-          title: 'Mission College — Design & Manufacturing Engineering Intern',
+          title: 'Mission College, Design & Manufacturing Engineering Intern',
           sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
         {
-          title: 'Aria AI — Founding Engineer',
+          title: 'Aria AI, Founding Engineer',
           sub: 'June 2026 – present · Deepgram (YC W16) Startup Program · voice AI hardware',
         },
         {
-          title: 'Mission College — Associated Student Government Senator',
+          title: 'Mission College, Associated Student Government Senator',
           sub: 'Aug 2025 – May 2026 · student advocacy with campus leadership',
         },
       ],

@@ -60,7 +60,7 @@ const cont = (title) => ({
   h: 96,
   inkH: 56,
   draw(ctx, W, H, y, rnd) {
-    text(ctx, `${title} — CONT'D`, 124, y + 40, { font: TYPE, size: 34, color: DIM, spacing: 4 })
+    text(ctx, `${title} · CONT'D`, 124, y + 40, { font: TYPE, size: 34, color: DIM, spacing: 4 })
     ctx.strokeStyle = DIM
     ctx.lineWidth = 3
     handLine(ctx, 124, y + 58, 560, y + 54, rnd, 2)

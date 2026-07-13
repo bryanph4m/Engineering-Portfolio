@@ -70,7 +70,7 @@ function paintContact(ctx, W, H, rnd, link) {
   handLine(ctx, W * 0.3, H * 0.5 + 152, W * 0.3 + 590, H * 0.5 + 146, rnd, 3)
 
   // signed with the first name, pulled from the shared data
-  text(ctx, `— ${contact.name.split(' ')[0]}`, W - 130, H - 78, { font: HAND, size: 46, color: '#7a5a2f', align: 'right' })
+  text(ctx, contact.name.split(' ')[0], W - 130, H - 78, { font: HAND, size: 46, color: '#7a5a2f', align: 'right' })
 }
 
 export const contactPages = [{ decor: decorContact, draw: paintContact }]

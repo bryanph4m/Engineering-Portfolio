@@ -116,7 +116,7 @@ const cont = (title) => ({
   h: 96,
   inkH: 56,
   draw(ctx, W, H, y, rnd) {
-    text(ctx, `${title} — CONT'D`, 130, y + 40, { size: 27, color: FAINT, spacing: 5 })
+    text(ctx, `${title} · CONT'D`, 130, y + 40, { size: 27, color: FAINT, spacing: 5 })
     ctx.strokeStyle = 'rgba(51,41,29,0.4)'
     ctx.lineWidth = 3
     handLine(ctx, 130, y + 58, 470, y + 54, rnd, 2)
@@ -283,7 +283,7 @@ const sheets = projects.map((p, i) => ({
   cont: cont(p.name.toUpperCase()),
   blocks: [
     head(
-      `DRAWING 0${i + 1} — ${p.category.toUpperCase()}`,
+      `DRAWING 0${i + 1} · ${p.category.toUpperCase()}`,
       p.name.toUpperCase(),
       p.summary.toUpperCase(),
       p.highlight ? circleHighlight(p.summary, p.highlight) : undefined,

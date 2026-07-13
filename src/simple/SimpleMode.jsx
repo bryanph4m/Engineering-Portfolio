@@ -113,7 +113,7 @@ function buildArticles(go) {
               {p.specs.map((s, i) => (
                 <li key={i}>
                   <span className="wiki__spec-lead">{s.lead}</span>
-                  {s.sub ? <> — <span className="wiki__spec-sub">{s.sub}</span></> : null}
+                  {s.sub ? <> · <span className="wiki__spec-sub">{s.sub}</span></> : null}
                 </li>
               ))}
             </ul>
@@ -177,7 +177,7 @@ function buildArticles(go) {
             {sec.entries.map((e, i) => (
               <li key={i}>
                 <span className="wiki__spec-lead">{e.title}</span>
-                {e.sub ? <> — <span className="wiki__spec-sub">{e.sub}</span></> : null}
+                {e.sub ? <> · <span className="wiki__spec-sub">{e.sub}</span></> : null}
               </li>
             ))}
           </ul>
@@ -235,7 +235,7 @@ const SEARCH_INDEX = [
     text: `${s.title} ${s.sub} ${s.lead ?? ''} ${(s.notes ?? []).join(' ')}`,
   })),
   ...resume.sections.map((sec) => ({
-    section: 'resume', anchor: `resume-${slug(sec.label)}`, label: `Resume — ${sec.label}`,
+    section: 'resume', anchor: `resume-${slug(sec.label)}`, label: `Resume · ${sec.label}`,
     text: sec.entries.map((e) => `${e.title} ${e.sub}`).join(' '),
   })),
   {
