@@ -87,6 +87,23 @@ Notes:
   `index.html` are static HTML (they can't import JS) — update them by hand
   if the name or tagline changes.
 
+## Content commands (Claude Code)
+
+Three project-scoped slash commands live in `.claude/commands/`, so they're
+version-controlled and travel with the repo. All three produce **reviewable
+drafts/reports only** — none of them commits, pushes, or deploys, and none runs
+unless you explicitly type it (`disable-model-invocation: true`).
+
+| Command | What it does | When to use it |
+| ------- | ------------ | -------------- |
+| `/sync-content` | Pulls fresh `bryanph4m` repo metadata, refreshes only the auto-managed `github: {…}` fields in `portfolio.js` (never the editorial copy), then diffs the resume against the site and reports drift. | After pushing new repos or updating the resume PDF. |
+| `/draft-project <repo>` | Reads a repo's metadata + README and drafts a project entry in the exact `portfolio.js` shape, inserted under a `// REVIEW:` marker with `TODO`s where info is missing. | When a new repo deserves a spot on the site. |
+| `/check-site` | Read-only health check: link validity, resume ↔ site consistency, no hardcoded content outside the shared file, both modes wired to it. Reports a pass/fail checklist, fixes nothing. | Before committing content changes or deploying. |
+
+The standing content rules these follow (single source of truth, resume is
+authoritative, no invented projects, manual vs auto-managed fields) live in
+`CLAUDE.md`.
+
 ## Swapping in your own material
 
 - **Textures / photos:** see `public/assets/textures/README.md`.
