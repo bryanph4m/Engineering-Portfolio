@@ -410,6 +410,102 @@ export function softShadowTexture() {
   return tex
 }
 
+/**
+ * A felt UCLA college pennant — a right-pointing triangle in UCLA blue with a
+ * gold hoist band, gold edge trim and gold felt "UCLA" lettering. Drawn on a
+ * transparent canvas so the triangle silhouette itself is the shape: the plane
+ * it maps onto is a plain rectangle and the corners outside the triangle stay
+ * fully transparent, so it reads as a real pennant lying in the desk clutter.
+ * The hoist is at the left edge (u=0), the point at the right (u=1).
+ */
+export function pennantTexture() {
+  if (cache.pennant) return cache.pennant
+  const W = 1024
+  const H = 512
+  const c = canvas(W, H)
+  const ctx = c.getContext('2d')
+
+  const UCLA_BLUE = '#2774AE'
+  const UCLA_BLUE_DK = '#1b5a8a'
+  const GOLD = '#FFD100'
+  const GOLD_DK = '#e0a800'
+
+  const pad = 26
+  const tipX = W - pad
+  const topY = pad
+  const botY = H - pad
+  const midY = H / 2
+
+  // felt triangle body
+  const tri = () => {
+    ctx.beginPath()
+    ctx.moveTo(pad, topY)
+    ctx.lineTo(tipX, midY)
+    ctx.lineTo(pad, botY)
+    ctx.closePath()
+  }
+  tri()
+  const g = ctx.createLinearGradient(pad, 0, tipX, 0)
+  g.addColorStop(0, UCLA_BLUE)
+  g.addColorStop(1, UCLA_BLUE_DK)
+  ctx.fillStyle = g
+  ctx.fill()
+
+  // clip to the triangle for all the trim + felt speckle
+  ctx.save()
+  tri()
+  ctx.clip()
+
+  // felt speckle: fine light/dark flecks so it doesn't read as flat plastic
+  for (let i = 0; i < 9000; i++) {
+    const x = pad + Math.random() * (tipX - pad)
+    const y = topY + Math.random() * (botY - topY)
+    ctx.fillStyle =
+      Math.random() < 0.5
+        ? `rgba(255,255,255,${Math.random() * 0.05})`
+        : `rgba(0,0,0,${Math.random() * 0.06})`
+    ctx.fillRect(x, y, 1.6, 1.6)
+  }
+
+  // gold hoist band down the left edge
+  ctx.fillStyle = GOLD
+  ctx.fillRect(pad, topY, 42, botY - topY)
+  ctx.fillStyle = GOLD_DK
+  ctx.fillRect(pad + 42, topY, 6, botY - topY)
+
+  // gold edge trim along the two long sides
+  ctx.strokeStyle = GOLD
+  ctx.lineWidth = 12
+  ctx.beginPath()
+  ctx.moveTo(pad, topY)
+  ctx.lineTo(tipX, midY)
+  ctx.lineTo(pad, botY)
+  ctx.stroke()
+
+  // "UCLA" in gold block letters, reading from hoist toward the point and
+  // shrinking slightly to sit inside the taper
+  ctx.fillStyle = GOLD
+  ctx.strokeStyle = GOLD_DK
+  ctx.lineWidth = 3
+  ctx.textBaseline = 'middle'
+  const letters = 'UCLA'
+  const startX = pad + 120
+  const stepX = 168
+  const sizes = [190, 176, 160, 142]
+  letters.split('').forEach((ch, i) => {
+    ctx.font = `900 ${sizes[i]}px Georgia, "Times New Roman", serif`
+    const x = startX + i * stepX
+    ctx.fillText(ch, x, midY)
+    ctx.strokeText(ch, x, midY)
+  })
+
+  ctx.restore()
+
+  const tex = finish(c)
+  cache.pennant = tex
+  return tex
+}
+
 /** Pale green engineering-pad ruling — hinted on interactive sheets. */
 export function gridPaperTexture() {
   if (cache.grid) return cache.grid

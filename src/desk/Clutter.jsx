@@ -7,6 +7,7 @@ import {
   keyLabelTexture,
   paperTexture,
   pcbTexture,
+  pennantTexture,
   triangleScaleTexture,
 } from '../lib/textures'
 
@@ -342,6 +343,139 @@ function LooseResistor({ position, yaw = 0 }) {
   )
 }
 
+/**
+ * A UCLA felt pennant lying flat in the clutter — a personal touch. It is a
+ * single flat plane carrying the pennant texture (a right-pointing triangle on
+ * a transparent canvas, so the alpha-cut silhouette *is* the pennant shape),
+ * laid on the desk with the same polygonOffset trick the flat papers use so it
+ * never z-fights the slab. It's positioned so the coffee mug pins one felt
+ * corner, tucking it into the clutter instead of floating on top. The `hoist`
+ * (with the UCLA lettering) reads toward the camera; the point trails off to
+ * the side. DoubleSide so it reads from every parallax angle.
+ */
+function Pennant({ position, yaw = 0 }) {
+  const tex = pennantTexture()
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.5, 0.75]} />
+        <meshStandardMaterial
+          map={tex}
+          roughness={0.88}
+          metalness={0}
+          transparent
+          alphaTest={0.4}
+          side={THREE.DoubleSide}
+          polygonOffset
+          polygonOffsetFactor={-1.5}
+          polygonOffsetUnits={-1.5}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+const ROCKET_WHITE = { color: '#ece4d2', roughness: 0.32, metalness: 0.14 }
+const ROCKET_RED = { color: '#b0271d', roughness: 0.38, metalness: 0.1 }
+const ROCKET_NOZZLE = { color: '#2b2b30', metalness: 0.35, roughness: 0.5 }
+
+/** One swept trapezoidal fin, authored in the body's X–Y plane (X along the
+ *  tube, +Y radial out from the surface) and rotated about the tube axis to
+ *  its clock angle. Thin in the tangential (Z) direction. */
+function RocketFin({ alpha }) {
+  const geo = useMemo(() => {
+    const s = new THREE.Shape()
+    s.moveTo(0.18, 0.125) // leading root, at the body surface
+    s.lineTo(0.33, 0.3) // leading tip (swept back)
+    s.lineTo(0.47, 0.3) // trailing tip
+    s.lineTo(0.52, 0.125) // trailing root
+    s.closePath()
+    const g = new THREE.ExtrudeGeometry(s, { depth: 0.014, bevelEnabled: false })
+    g.translate(0, 0, -0.007) // centre the thickness on the plane
+    return g
+  }, [])
+  return (
+    <mesh castShadow geometry={geo} rotation={[alpha, 0, 0]}>
+      <meshStandardMaterial {...ROCKET_RED} side={THREE.DoubleSide} />
+    </mesh>
+  )
+}
+
+/**
+ * A physical scale-model high-powered rocket lying on its side on a small
+ * cradle: red ogive nose cone, cream body tube, three 120°-clocked fins (one
+ * pointing up, two splayed down as the visual "feet"), a recessed motor mount
+ * with a flared nozzle at the aft, and a launch lug along the flank. Authored
+ * with the tube axis on local X (nose at −X) and the axis lifted to local
+ * y = 0.17 so the two lower fins clear the desk; two dark cradle saddles carry
+ * the tube so nothing floats. Static set dressing — no handlers, no per-frame
+ * cost — sitting in the open front-right pocket of the desk.
+ */
+function ModelRocket({ position, yaw = 0 }) {
+  const AXIS_Y = 0.17
+  return (
+    <group position={position} rotation={[0, yaw, 0]}>
+      {/* everything on the tube axis */}
+      <group position={[0, AXIS_Y, 0]}>
+        {/* body tube */}
+        <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.13, 0.13, 1.0, 24]} />
+          <meshStandardMaterial {...ROCKET_WHITE} />
+        </mesh>
+        {/* a red trim band around the forward body */}
+        <mesh castShadow position={[-0.34, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.132, 0.132, 0.09, 24]} />
+          <meshStandardMaterial {...ROCKET_RED} />
+        </mesh>
+        {/* ogive-ish nose cone at −X (apex points −X after the Z spin) */}
+        <mesh castShadow position={[-0.66, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <coneGeometry args={[0.13, 0.32, 24]} />
+          <meshStandardMaterial {...ROCKET_RED} />
+        </mesh>
+        {/* shoulder ring where the nose meets the tube */}
+        <mesh position={[-0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.128, 0.128, 0.02, 24]} />
+          <meshStandardMaterial color="#d8cfba" roughness={0.4} />
+        </mesh>
+
+        {/* three fins, one up + two down as feet */}
+        {[0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].map((a) => (
+          <RocketFin key={a} alpha={a} />
+        ))}
+
+        {/* aft motor mount: a recessed dark tube + a flared nozzle exit */}
+        <mesh castShadow position={[0.53, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.11, 0.11, 0.12, 20]} />
+          <meshStandardMaterial {...ROCKET_NOZZLE} />
+        </mesh>
+        <mesh position={[0.6, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.055, 0.095, 0.1, 20, 1, true]} />
+          <meshStandardMaterial {...ROCKET_NOZZLE} side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* launch lug: a short straw parallel to the tube, on the upper flank
+            between the up fin and one lower fin */}
+        <mesh castShadow position={[-0.02, 0.075, 0.13]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.26, 12]} />
+          <meshStandardMaterial color="#cfc7b2" roughness={0.5} />
+        </mesh>
+      </group>
+
+      {/* two cradle saddles carrying the tube (dark stained wood) */}
+      {[-0.12, 0.12].map((x) => (
+        <group key={x} position={[x, 0, 0]}>
+          {[-1, 1].map((s) => (
+            <mesh key={s} castShadow position={[0, 0.05, s * 0.045]} rotation={[s * 0.5, 0, 0]}>
+              <boxGeometry args={[0.05, 0.11, 0.02]} />
+              <meshStandardMaterial color="#3a2c1c" roughness={0.7} metalness={0.05} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  )
+}
+
 export default function Clutter() {
   const paper = paperTexture(true)
   return (
@@ -361,6 +495,16 @@ export default function Clutter() {
 
       {/* ---- The drafting compass, set down by the pencils mid-layout ---- */}
       <DraftingCompass position={[0.15, 0, 2.95]} yaw={1.25} />
+
+      {/* ---- Model rocket resting on its cradle in the open front-right
+           pocket, in front of the projects stack. Emptiest region on the desk;
+           re-run window.__deskLayoutAudit() if you nudge it. ---- */}
+      <ModelRocket position={[2.15, 0, 3.08]} yaw={0} />
+
+      {/* ---- UCLA felt pennant, laid flat with the hoist corner tucked under
+           the coffee mug so it reads as layered into the clutter (polygonOffset
+           keeps it off the desk slab, like the flat papers). ---- */}
+      <Pennant position={[4.05, 0.004, 0.55]} yaw={0.5} />
 
       {/* ---- Middle-of-desk fillers: calculator pushed aside mid-use, and a
            meshed gear pair between the papers. Both sit in the open pocket

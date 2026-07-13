@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
-import { photoPlaceholderTexture } from '../lib/textures'
+import { photoPlaceholderTexture, softShadowTexture } from '../lib/textures'
 import { gallery } from '../content/portfolio'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT, PHOTO_FRAME_ID } from './constants'
 
@@ -39,6 +39,22 @@ const WOOD = { color: '#4e3823', roughness: 0.72, metalness: 0.05 }
 // Resting pose on the desk: leaning back at the rear edge, propped on its
 // kickstand. Matches where the static prop used to sit.
 const REST = { position: [1.9, 0.46, -3.38], yaw: 0.08, lean: -0.17 }
+
+// Grounded contact shadow — identical treatment to the paper documents
+// (Document.jsx). The frame used to cast a real shadow-map shadow, which is
+// binary per caster and so vanished the instant the frame lifted out of the
+// lamp's shadow frustum on pickup. Instead a soft blob plane is permanently
+// mounted on the desk under the frame's foot and its opacity is written every
+// frame from the SAME `open`/`hover` springs that drive the frame's motion —
+// so it eases out as the frame lifts and back in as it returns, one coordinated
+// animation that can never hard-cut. Numbers mirror Document.jsx.
+const SHADOW_FADE_END = 0.45
+const SHADOW_REST = 0.18 // opacity flat on the desk
+const SHADOW_HOVER = 0.28 // extra opacity at full hover lift
+// The frame's desk footprint is roughly its width by the depth of its leaned
+// body + kickstand — wider and deeper than the picture opening itself.
+const SHADOW_SIZE = [FRAME.W * 1.5, 0.82]
+const SHADOW_POS = [REST.position[0], 0.0012, REST.position[2] + 0.16]
 
 /** Loads each gallery photo into a texture, falling back to the placeholder. */
 function useGalleryTextures() {
@@ -76,6 +92,8 @@ function useGalleryTextures() {
 export default function PhotoFrame() {
   const groupRef = useRef()
   const kickRef = useRef()
+  const shadowMeshRef = useRef()
+  const shadowMatRef = useRef()
   const textures = useGalleryTextures()
   const count = textures.length
 
@@ -159,6 +177,18 @@ export default function PhotoFrame() {
     const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
     g.scale.setScalar(s)
 
+    // Contact shadow, read from the very same spring as the motion above:
+    // smoothstep the lift fraction so it eases out of rest and settles gently,
+    // matching how the frame itself eases (same math as Document.jsx).
+    const kf = Math.min(t / SHADOW_FADE_END, 1)
+    const fade = 1 - kf * kf * (3 - 2 * kf)
+    if (shadowMatRef.current) {
+      shadowMatRef.current.opacity = (SHADOW_REST + SHADOW_HOVER * hv) * fade
+    }
+    if (shadowMeshRef.current) {
+      shadowMeshRef.current.scale.setScalar(1 + 0.06 * hv + 0.25 * (1 - fade))
+    }
+
     // The kickstand only makes sense while the frame rests on the desk: fade it
     // out early in the pickup and hide it once the frame is airborne.
     const k = kickRef.current
@@ -211,41 +241,63 @@ export default function PhotoFrame() {
 
   const { W, H, B, D } = FRAME
   return (
-    <group
-      ref={groupRef}
-      name={`photo-${PHOTO_FRAME_ID}`}
-      onPointerOver={onOver}
-      onPointerMove={onMove}
-      onPointerOut={onOut}
-      onClick={onClick}
-    >
-      {/* wooden rails, centred on the photo */}
-      <mesh castShadow position={[0, H / 2 - B / 2, 0]}>
-        <boxGeometry args={[W, B, D]} />
-        <meshStandardMaterial {...WOOD} />
-      </mesh>
-      <mesh castShadow position={[0, -(H / 2 - B / 2), 0]}>
-        <boxGeometry args={[W, B, D]} />
-        <meshStandardMaterial {...WOOD} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={s} castShadow position={[(s * (W - B)) / 2, 0, 0]}>
-          <boxGeometry args={[B, H - 2 * B, D]} />
+    <>
+      {/* permanently-mounted contact shadow at the rest footprint — opacity
+          animated in useFrame above, never unmounted, so it cannot hard-cut.
+          A sibling of the moving frame group, so it stays put on the desk. */}
+      <group position={SHADOW_POS} rotation={[0, REST.yaw, 0]}>
+        <mesh ref={shadowMeshRef} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={SHADOW_SIZE} />
+          <meshBasicMaterial
+            ref={shadowMatRef}
+            map={softShadowTexture()}
+            transparent
+            opacity={SHADOW_REST}
+            depthWrite={false}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
+        </mesh>
+      </group>
+      <group
+        ref={groupRef}
+        name={`photo-${PHOTO_FRAME_ID}`}
+        onPointerOver={onOver}
+        onPointerMove={onMove}
+        onPointerOut={onOut}
+        onClick={onClick}
+      >
+        {/* wooden rails, centred on the photo. They deliberately do NOT
+            castShadow: like the documents, grounding is the animated blob
+            above, so nothing pops when the frame lifts off the desk. */}
+        <mesh position={[0, H / 2 - B / 2, 0]}>
+          <boxGeometry args={[W, B, D]} />
           <meshStandardMaterial {...WOOD} />
         </mesh>
-      ))}
+        <mesh position={[0, -(H / 2 - B / 2), 0]}>
+          <boxGeometry args={[W, B, D]} />
+          <meshStandardMaterial {...WOOD} />
+        </mesh>
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[(s * (W - B)) / 2, 0, 0]}>
+            <boxGeometry args={[B, H - 2 * B, D]} />
+            <meshStandardMaterial {...WOOD} />
+          </mesh>
+        ))}
 
-      {/* the picture, recessed just behind the front face of the rails */}
-      <mesh name="photo-face" position={[0, 0, D / 2 - 0.012]}>
-        <planeGeometry args={[W - 2 * B + 0.02, H - 2 * B + 0.02]} />
-        <meshStandardMaterial map={textures[displayIndex]} roughness={0.5} />
-      </mesh>
+        {/* the picture, recessed just behind the front face of the rails */}
+        <mesh name="photo-face" position={[0, 0, D / 2 - 0.012]}>
+          <planeGeometry args={[W - 2 * B + 0.02, H - 2 * B + 0.02]} />
+          <meshStandardMaterial map={textures[displayIndex]} roughness={0.5} />
+        </mesh>
 
-      {/* kickstand strut down to the desk behind the frame — faded on pickup */}
-      <mesh ref={kickRef} castShadow position={[0, -0.14, -0.22]} rotation={[0.267, 0, 0]}>
-        <boxGeometry args={[0.09, 0.63, 0.016]} />
-        <meshStandardMaterial {...WOOD} />
-      </mesh>
-    </group>
+        {/* kickstand strut down to the desk behind the frame — faded on pickup */}
+        <mesh ref={kickRef} position={[0, -0.14, -0.22]} rotation={[0.267, 0, 0]}>
+          <boxGeometry args={[0.09, 0.63, 0.016]} />
+          <meshStandardMaterial {...WOOD} />
+        </mesh>
+      </group>
+    </>
   )
 }
