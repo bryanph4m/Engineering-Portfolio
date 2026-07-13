@@ -39,10 +39,6 @@ function InlineList({ items }) {
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')
 
-// Which "now" focus links where, so the About article cross-links into the
-// other sections the way a Wikipedia article links related topics.
-const NOW_LINKS = { 'canard rockets': 'research', drones: 'projects', 'AI tooling': 'projects' }
-
 /**
  * Article definitions, keyed by section id. Each is a function of `go` (the
  * navigation callback) so bodies can carry internal cross-links. Every string
@@ -71,8 +67,8 @@ function buildArticles(go) {
               {profile.roles.map((r, i) => (
                 <li key={i}>
                   {r.lead}
-                  {r.emphasis === 'Mission Launch Rocketry'
-                    ? link(r.emphasis, 'research')
+                  {r.section
+                    ? link(r.emphasis, r.section)
                     : <strong>{r.emphasis}</strong>}
                 </li>
               ))}
@@ -88,7 +84,7 @@ function buildArticles(go) {
                 Current work spans{' '}
                 <InlineList
                   items={profile.now.map((n) =>
-                    NOW_LINKS[n] ? link(n, NOW_LINKS[n]) : n,
+                    n.section ? link(n.label, n.section) : n.label,
                   )}
                 />.
               </p>
@@ -218,7 +214,7 @@ function buildArticles(go) {
 const SEARCH_INDEX = [
   {
     section: 'about', anchor: 'roles', label: 'About',
-    text: `${profile.name} ${profile.location} ${profile.roles.map((r) => r.lead + r.emphasis).join(' ')} ${profile.motto} ${profile.now.join(' ')}`,
+    text: `${profile.name} ${profile.location} ${profile.roles.map((r) => r.lead + r.emphasis).join(' ')} ${profile.motto} ${profile.now.map((n) => n.label).join(' ')}`,
   },
   ...projects.map((p) => ({
     section: 'projects', anchor: p.id, label: p.name,

@@ -1,5 +1,6 @@
 import { useSceneStore } from '../store/useSceneStore'
 import { byId } from '../documents/registry'
+import { profile } from '../content/portfolio'
 
 /** Flat UI chrome: the title block and a context-aware nav hint. */
 export default function HudHints() {
@@ -18,8 +19,8 @@ export default function HudHints() {
   return (
     <div className="hud">
       <div className="hud__title">
-        <h1>BRYAN PHAM</h1>
-        <p>mechanical engineering · rocketry · ai</p>
+        <h1>{profile.name.toUpperCase()}</h1>
+        <p>{profile.disciplines.join(' · ')}</p>
       </div>
       <div className="hud__hint" style={{ opacity: focusedId ? 0.8 : 0.85 }}>
         {hint}

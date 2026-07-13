@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { profile } from '../content/portfolio'
 
 /**
  * The entry sheet shown before any site mode mounts — a drafted cover page
@@ -20,6 +21,12 @@ const MODES = [
     note: 'quick read for recruiters',
   },
 ]
+
+/** "Bryan Pham" → "B. PHAM", drafting-title-block style. */
+const draftedBy = (name) => {
+  const parts = name.split(' ')
+  return `${parts[0][0]}. ${parts.slice(1).join(' ')}`.toUpperCase()
+}
 
 /** Hand-wobbled ellipse, like a pencil circling a word a couple of times. */
 function ScribbleRing() {
@@ -65,7 +72,7 @@ export default function StartScreen({ onEnter }) {
 
         <p className="start__cover">portfolio · drawing set</p>
 
-        <h1 className="start__name">BRYAN PHAM</h1>
+        <h1 className="start__name">{profile.name.toUpperCase()}</h1>
         <svg className="start__underline" viewBox="0 0 420 14" fill="none" aria-hidden="true">
           <path
             d="M6 9 C 80 4, 180 3, 250 7 C 320 11, 380 9, 414 6"
@@ -74,7 +81,7 @@ export default function StartScreen({ onEnter }) {
             strokeLinecap="round"
           />
         </svg>
-        <p className="start__sub">mechanical engineering · rocketry · ai</p>
+        <p className="start__sub">{profile.disciplines.join(' · ')}</p>
 
         <div className="start__modes">
           {MODES.map((m) => (
@@ -95,7 +102,7 @@ export default function StartScreen({ onEnter }) {
         <dl className="start__titleblock" aria-label="drawing title block">
           <div>
             <dt>drawn by</dt>
-            <dd>B. PHAM</dd>
+            <dd>{draftedBy(profile.name)}</dd>
           </div>
           <div>
             <dt>sheet</dt>

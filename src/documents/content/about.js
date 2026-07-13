@@ -32,12 +32,11 @@ function paintAbout(ctx, W, H, rnd) {
   ctx.lineWidth = 5
   handLine(ctx, 100, 308, 540, 302, rnd, 4)
 
-  const lines = profile.roles.map((r) => [r.lead, r.emphasis])
   let y = 445
-  for (const [head, tail] of lines) {
-    const w1 = text(ctx, head, 110, y, { font: HAND, size: 56 })
-    const w2 = text(ctx, tail, 110 + w1, y, { font: HAND, size: 56, weight: 'bold' })
-    if (tail === 'UCLA') {
+  for (const r of profile.roles) {
+    const w1 = text(ctx, r.lead, 110, y, { font: HAND, size: 56 })
+    const w2 = text(ctx, r.emphasis, 110 + w1, y, { font: HAND, size: 56, weight: 'bold' })
+    if (r.circled) {
       ctx.strokeStyle = 'rgba(179,86,63,0.8)'
       ctx.lineWidth = 4
       handEllipse(ctx, 110 + w1 + w2 / 2, y - 18, w2 / 2 + 34, 44, rnd)
@@ -56,7 +55,7 @@ function paintAbout(ctx, W, H, rnd) {
   ctx.strokeStyle = 'rgba(122,90,47,0.9)'
   ctx.lineWidth = 4
   handArrow(ctx, 470, H - 165, 545, H - 118, rnd)
-  text(ctx, `now: ${profile.now.join(' · ')}`, 565, H - 100, {
+  text(ctx, `now: ${profile.now.map((n) => n.label).join(' · ')}`, 565, H - 100, {
     font: HAND, size: 42, color: '#7a5a2f',
   })
 }

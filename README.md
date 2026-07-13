@@ -43,19 +43,56 @@ npm run preview  # serve the build
 
 ```
 src/
+  content/     portfolio.js — the single source of truth for all site content
   desk/        3D scene: Desk, DeskLamp, Clutter, Document, props, camera, DeskScene
-  documents/   registry.js + content/ (About, Projects, Research, Resume, Contact)
-  ui/          DOM chrome: ContentOverlay, HudHints, Loader
-  lib/         procedural canvas textures
+  documents/   registry.js + content/ (desk page painters for About, Projects, …)
+  simple/      the flat Wikipedia-style recruiter mode
+  ui/          DOM chrome: StartScreen, HudHints, Loader
+  lib/         procedural canvas textures + page-flow pagination
   store/       Zustand scene state
 public/assets/ fonts (bundled TTFs) + textures/ (drop-in real photos)
 ```
+
+## Editing the content (the only file you should need)
+
+**All portfolio content lives in one file: `src/content/portfolio.js`.** Both
+site modes — the 3D desk and the simple/Wikipedia view — import from it and
+own zero copy of their own. To update the site: edit that file, commit, push.
+Vercel rebuilds and both modes update together. No cache-busting is needed —
+Vite content-hashes every bundle on build.
+
+What each export feeds:
+
+| Export        | Desk mode                                        | Simple mode                   |
+| ------------- | ------------------------------------------------ | ----------------------------- |
+| `profile`     | start screen, HUD title, About index card        | About article, header brand   |
+| `projects`    | the clipped drawing stack (one sheet per entry)  | Projects article sections     |
+| `research`    | the blueprint roll (one sheet per `sheets` entry)| Research article sections     |
+| `resume`      | the folded resume sheet + PDF link               | Resume article + PDF link     |
+| `contact`     | the envelope's addressee links                   | Contact article               |
+| `sections`    | —                                                | sidebar nav order             |
+
+Notes:
+
+- Content is stored as plain data (strings/arrays), presentation-agnostic.
+  The desk's ALL-CAPS drafting look is applied by the painters on the way
+  out — store text in natural case.
+- Small data flags drive desk decorations: `roles[].circled` draws the
+  pencil ellipse on the About card, `projects[].highlight` names the
+  substring of `summary` the drawing sheet circles in red, and `section` on
+  a role or `now` entry is where the simple mode cross-links it.
+- Projects and Research sheets paginate automatically (`src/lib/pageFlow.js`)
+  — longer entries flow onto extra flip-pages without touching desk code.
+- The one intentional exception: the `<title>`/`<meta description>` in
+  `index.html` are static HTML (they can't import JS) — update them by hand
+  if the name or tagline changes.
 
 ## Swapping in your own material
 
 - **Textures / photos:** see `public/assets/textures/README.md`.
 - **Resume PDF:** replace `public/assets/Bryan-Pham-Resume.pdf`.
-- **Content:** edit the components in `src/documents/content/`. Add or remove a
-  document by editing `src/documents/registry.js` (set `pages` > 1 for a stack).
+- **Words:** edit `src/content/portfolio.js` (see above). Add or remove a
+  desk document by editing `src/documents/registry.js` and giving it a
+  painter in `src/documents/content/`.
 - **Feel of the desk:** camera, lighting poses, and the pickup pose are all in
   `src/desk/constants.js`.

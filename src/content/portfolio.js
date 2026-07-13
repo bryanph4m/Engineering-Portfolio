@@ -21,14 +21,21 @@ export const profile = {
   location: 'Los Angeles, CA',
   // the one-line billing used on the cover sheet and as the article subtitle
   disciplines: ['mechanical engineering', 'rocketry', 'ai'],
-  // each role is a lead phrase (with its connector) plus the emphasized org
+  // each role is a lead phrase (with its connector) plus the emphasized org.
+  // `circled: true` gets the hand-drawn ellipse on the desk's index card;
+  // `section` cross-links the org in the simple mode's About article.
   roles: [
-    { lead: 'Mechanical Engineering Student @ ', emphasis: 'UCLA' },
+    { lead: 'Mechanical Engineering Student @ ', emphasis: 'UCLA', circled: true },
     { lead: 'Founding Engineer — ', emphasis: 'Aria AI' },
-    { lead: 'Co-founder & President — ', emphasis: 'Mission Launch Rocketry' },
+    { lead: 'Co-founder & President — ', emphasis: 'Mission Launch Rocketry', section: 'research' },
   ],
   motto: 'design it on paper first — let the wind tunnel argue back.',
-  now: ['canard rockets', 'drones', 'AI tooling'],
+  // current focus; `section` is where the simple mode's About article links each one
+  now: [
+    { label: 'canard rockets', section: 'research' },
+    { label: 'drones', section: 'projects' },
+    { label: 'AI tooling', section: 'projects' },
+  ],
 }
 
 export const projects = [
@@ -49,6 +56,8 @@ export const projects = [
     name: 'AsideAI',
     category: 'Software',
     summary: 'CalHacks 2026 · 1st place — Deepgram track',
+    // substring of `summary` the desk sheet circles in red; must appear verbatim
+    highlight: '1st place',
     specs: [
       { lead: 'Real-time speech via Deepgram', sub: 'transcription while you talk' },
       { lead: 'Low-latency, hands-free loop', sub: 'capture intent, turn it into action' },

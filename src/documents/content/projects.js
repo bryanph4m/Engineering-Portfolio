@@ -74,19 +74,22 @@ const droneFigure = figure(324, 274, (ctx, W, H, y, rnd) => {
   text(ctx, '7in', qx - 350, qy + 22, { font: HAND, size: 38, color: '#7a5a2f' })
 })
 
-/* ---- sheet 2: AsideAI ---- */
-const asideHeadExtra = (ctx, W, y, rnd) => {
-  // circle the win in the subtitle
+// Circle a phrase in the subtitle — positions are measured from the shared
+// summary text itself, so rewording it in portfolio.js moves the ellipse too.
+const circleHighlight = (summary, highlight) => (ctx, W, y, rnd) => {
+  const idx = summary.toUpperCase().indexOf(highlight.toUpperCase())
+  if (idx < 0) return
   ctx.save()
   ctx.font = `29px ${MONO}`
-  const pre = ctx.measureText('CALHACKS 2026 · ').width
-  const word = ctx.measureText('1ST PLACE').width
+  const pre = ctx.measureText(summary.toUpperCase().slice(0, idx)).width
+  const word = ctx.measureText(highlight.toUpperCase()).width
   ctx.restore()
   ctx.strokeStyle = 'rgba(179,86,63,0.8)'
   ctx.lineWidth = 3.5
   handEllipse(ctx, 130 + pre + word / 2, y + 236, word / 2 + 26, 34, rnd)
 }
 
+/* ---- sheet 2: AsideAI ---- */
 const asideFigure = figure(384, 266, (ctx, W, H, y, rnd) => {
   // mic → waveform → action, sketched
   const my = y + 134
@@ -153,18 +156,17 @@ const reccoFigure = figure(554, 508, (ctx, W, H, y, rnd) => {
   text(ctx, 'signal → recommendation → loop', ox + 60, oy + 52, { font: HAND, size: 34, color: '#7a5a2f' })
 })
 
-// Per-project drawing figure and the one-off header flourish, keyed by the
-// shared project id. Everything else on the sheet — the drawing number, the
-// title, the spec bullets — is derived from src/content/portfolio.js so the
-// desk and the simple mode read from the same copy. The desk's ALL-CAPS
-// drafting look is just an uppercase of that shared text.
+// Per-project drawing figure, keyed by the shared project id. Everything
+// else on the sheet — the drawing number, the title, the spec bullets, the
+// circled highlight — is derived from src/content/portfolio.js so the desk
+// and the simple mode read from the same copy. The desk's ALL-CAPS drafting
+// look is just an uppercase of that shared text.
 const FIGURES = {
   'autonomous-drone': droneFigure,
   'asideai': asideFigure,
   'asideai-v2': asideV2Figure,
   'recco': reccoFigure,
 }
-const HEAD_EXTRAS = { 'asideai': asideHeadExtra }
 
 const sheets = projects.map((p, i) => ({
   decor,
@@ -174,7 +176,7 @@ const sheets = projects.map((p, i) => ({
       `DRAWING 0${i + 1} — ${p.category.toUpperCase()}`,
       p.name.toUpperCase(),
       p.summary.toUpperCase(),
-      HEAD_EXTRAS[p.id],
+      p.highlight ? circleHighlight(p.summary, p.highlight) : undefined,
     ),
     FIGURES[p.id],
     ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),

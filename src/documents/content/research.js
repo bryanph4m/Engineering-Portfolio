@@ -23,9 +23,9 @@ function titleBlock(ctx, W, H, rnd, sheet, count) {
   ctx.lineWidth = 3
   ctx.strokeRect(bx, by, 520, 190)
   ctx.beginPath(); ctx.moveTo(bx, by + 66); ctx.lineTo(bx + 520, by + 66); ctx.stroke()
-  text(ctx, 'MISSION LAUNCH ROCKETRY', bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
+  text(ctx, research.program.toUpperCase(), bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
   text(ctx, `DWG MLR-001 · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
-  text(ctx, 'SCALE: NTS · UCLA', bx + 24, by + 160, { size: 28, color: DIM })
+  text(ctx, `SCALE: NTS · ${research.org.toUpperCase()}`, bx + 24, by + 160, { size: 28, color: DIM })
 }
 
 const decor = (ctx, W, H, rnd, page, count) => {
