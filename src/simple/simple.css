@@ -311,6 +311,13 @@
 .wiki__lead p {
   margin: 0 0 10px;
 }
+/* Longer-form article body shown after the lead (simple mode only). */
+.wiki__extended {
+  margin: 0 0 6px;
+}
+.wiki__extended p {
+  margin: 0 0 12px;
+}
 .wiki__h2 {
   clear: none;
   margin: 26px 0 10px;

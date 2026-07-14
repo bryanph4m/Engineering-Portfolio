@@ -52,6 +52,20 @@ export const profile = {
     // REVIEW: "Aria AI" unsupported by résumé/repos — see note on profile.roles above.
     { label: 'embedded systems', section: 'resume' },
   ],
+  // Extended About prose for the simple/recruiter mode ONLY. The simple mode
+  // renders this as the article body after the generated lead; the desk's index
+  // card never reads it (there's no room on the card) and keeps to the fields
+  // above as its single source. Structure: an array of paragraph strings, one
+  // string per paragraph — matching the `detail`/`body` convention below. Leave
+  // empty to render just the lead.
+  // TODO: write the fuller About narrative here as an array of paragraph strings.
+  extended: [Thanks for taking the time to check out my portfolio! Feel free to check out the interactive render of the site afterward.
+    I am currently attending the University of California, Los Angeles as a Mechanical Engineering major after graduating with a few AS degrees
+    from Mission College. During my time at Mission College, I found an interest in amateur rocketry and embedded systems, which led me to found
+    Mission Launch Rocketry, the only project-based engineering club on campus at the time, where I served as president. The following Summer,
+    I was convinced to attend my first hackathon at UC Berkeley, where I realized I enjoyed both the hardware and software aspects of engineering.
+    I am excited to see where the future takes me and how UCLA can help me grow as an engineer. I am currently looking for internship opportunities.
+  ],
 }
 
 export const projects = [
@@ -257,6 +271,13 @@ export const research = {
   lead: 'SolidWorks airframe → SimScale CFD → an active tilt/roll control system for a high-powered model rocket.',
   // full-sentence attribution the simple mode appends to the lead
   credit: 'Built at Mission College as a Design & Manufacturing Engineering intern.',
+  // Extended Research prose for the simple/recruiter mode ONLY. The simple mode
+  // renders this as the article body after the lead; the desk blueprint never
+  // reads it and keeps to `lead`/`credit` plus the per-sheet notes below.
+  // Structure: an array of paragraph strings, one string per paragraph. Leave
+  // empty to render just the lead.
+  // TODO: write the fuller Research narrative here as an array of paragraph strings.
+  extended: [],
   sheets: [
     {
       id: 'vehicle',

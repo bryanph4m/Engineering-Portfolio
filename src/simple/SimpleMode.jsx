@@ -58,6 +58,9 @@ function buildArticles(go) {
           {profile.location}, working across {andList(disciplineLabels)}.
         </p>
       ),
+      // Longer-form body prose the simple mode shows after the lead. Desk mode
+      // never reads this; see profile.extended in portfolio.js.
+      extended: profile.extended,
       subsections: [
         {
           id: 'roles',
@@ -135,6 +138,9 @@ function buildArticles(go) {
           {research.lead} {research.credit}
         </p>
       ),
+      // Longer-form body prose the simple mode shows after the lead. Desk mode
+      // never reads this; see research.extended in portfolio.js.
+      extended: research.extended,
       subsections: research.sheets.map((s) => ({
         id: s.id,
         heading: s.title,
@@ -319,6 +325,13 @@ function Article({ article }) {
       <h1 className="wiki__title">{article.title}</h1>
       <Toc items={article.subsections} />
       <div className="wiki__lead">{article.lead}</div>
+      {/* Optional longer-form body prose (simple mode only). Renders after the
+          lead like a Wikipedia intro; absent or empty just leaves the lead. */}
+      {article.extended?.length ? (
+        <div className="wiki__extended">
+          {article.extended.map((para, i) => <p key={i}>{para}</p>)}
+        </div>
+      ) : null}
       {article.subsections.map((s) => (
         <section key={s.id} id={s.id} className="wiki__section">
           <h2 className="wiki__h2">{s.heading}</h2>
