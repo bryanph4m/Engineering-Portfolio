@@ -38,15 +38,19 @@ export const profile = {
   // `section` cross-links the org in the simple mode's About article.
   roles: [
     { lead: 'Mechanical Engineering Student @ ', emphasis: 'UCLA', circled: true },
-    { lead: 'Founding Engineer, ', emphasis: 'Aria AI' },
+    // REVIEW: "Aria AI" (Founding Engineer) is not on Bryan-Pham-Resume.pdf and
+    // has no backing repo under github.com/bryanph4m. Resume Experience lists only
+    // the Mission College intern + senator roles. Confirm this role and add it to
+    // the résumé, or remove it from the site. (flagged by /sync-content)
     { lead: 'Design & Manufacturing Engineering Intern, ', emphasis: 'Mission College' },
     { lead: 'Founder & President, ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
   ],
   motto: 'design it on paper first & let the airframe speak for itself.',
   // current focus; `section` is where the simple mode's About article links each one
   now: [
-    { label: 'active-control rocketry', section: 'research' },
-    { label: 'voice AI hardware at Aria AI', section: 'resume' },
+    { label: 'tilt/roll-control rocketry', section: 'research' },
+    // REVIEW: "Aria AI" unsupported by résumé/repos — see note on profile.roles above.
+    { label: 'embedded systems', section: 'resume' },
   ],
 }
 
@@ -187,6 +191,17 @@ export const projects = [
     name: 'Engineering Portfolio',
     category: 'Software',
     summary: 'this site, a 3D desk & a wiki view from one shared content source',
+    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
+    // hand-edit; manual editorial fields live outside this sub-object.
+    github: {
+      repo: 'Engineering-Portfolio',
+      url: 'https://github.com/bryanph4m/Engineering-Portfolio',
+      language: 'JavaScript',
+      stars: 0,
+      description: null,
+      createdAt: '2026-07-02T03:25:29Z',
+      pushedAt: '2026-07-13T22:00:02Z',
+    },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
       { lead: 'Wikipedia-style simple mode', sub: 'same content, a few KB of DOM' },
@@ -235,7 +250,7 @@ export const gallery = {
 }
 
 export const research = {
-  title: 'Active-Control Rocket',
+  title: 'Tilt/Roll-Control Rocket',
   program: 'Mission College',
   org: 'Santa Clara, CA',
   // the article lead; the vehicle → flight pipeline in one line
@@ -245,7 +260,7 @@ export const research = {
   sheets: [
     {
       id: 'vehicle',
-      title: 'Active-Control Rocket',
+      title: 'Tilt/Roll-Control Rocket',
       sub: 'High-powered model rocket · tilt & roll control · SolidWorks',
       // rendered verbatim (hand-lettered) on the desk, so stored verbatim
       lead: 'objective: structural integrity with active tilt/roll control on board.',
@@ -299,10 +314,7 @@ export const resume = {
           title: 'Mission College, Design & Manufacturing Engineering Intern',
           sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
-        {
-          title: 'Aria AI, Founding Engineer',
-          sub: 'June 2026 – present · Deepgram (YC W16) Startup Program · voice AI hardware',
-        },
+
         {
           title: 'Mission College, Associated Student Government Senator',
           sub: 'Aug 2025 – May 2026 · student advocacy with campus leadership',
