@@ -275,9 +275,13 @@ export const research = {
   // renders this as the article body after the lead; the desk blueprint never
   // reads it and keeps to `lead`/`credit` plus the per-sheet notes below.
   // Structure: an array of paragraph strings, one string per paragraph. Leave
-  // empty to render just the lead.
-  // TODO: write the fuller Research narrative here as an array of paragraph strings.
-  extended: [],
+  // empty to render just the lead. Sourced from the Avionics-Bay project README
+  // (github.com/Thrust-Stack/Avionics-Bay).
+  extended: [
+    'This is the avionics and control side of the tilt/roll-control rocket, an active system that keeps the airframe from spinning up in flight. Most rockets pick up roll from tiny fin misalignments, and left alone that roll builds through boost. The vehicle carries movable canards that deflect to generate a roll moment, and the job of the avionics bay is to read how fast the airframe is rolling and drive those canards to hold it near zero roll rate through boost and coast. It is built to fly on an AeroTech H219.',
+    'The bay runs on an ESP32 that handles both the sensors and the actuators. There is an IMU for angular rate and acceleration, a barometric altimeter for altitude, and a GPS, plus the two mirrored canard servos and an optional LoRa radio for telemetry. A Raspberry Pi 5 takes care of onboard camera capture. Instead of closing the whole loop on the ESP32, I run it hardware-in-the-loop: the board streams sensor data out at a fixed rate, a Python controller on a laptop works out the canard deflection, and the command comes back to the ESP32 to move the servos. That kept the flight code quick to iterate on and easy to log.',
+    'The flight controller estimates roll rate with a Kalman filter and fuses GPS, accelerometer, and barometer readings to track vertical velocity. It schedules its gain against that velocity so control authority scales with dynamic pressure rather than overreacting at low speed, and it only commands the canards when altitude, tilt, and telemetry freshness all check out, falling back to neutral otherwise. A second, more aggressive controller exists for restrained bench testing and deliberately skips the flight safety gates. At the moment roll control is the part that is actually implemented and tested on the bench. Tilt is estimated from the accelerometer but not yet actively controlled, and the rocket has not flown under power, so validating the loop in flight is the next step. The airframe and bay are modeled in SolidWorks.',
+  ],
   sheets: [
     {
       id: 'vehicle',
