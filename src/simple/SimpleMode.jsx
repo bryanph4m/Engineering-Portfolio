@@ -153,6 +153,11 @@ function buildArticles(go) {
                 {s.notes.map((n, i) => <li key={i}>{n}</li>)}
               </ul>
             ) : null}
+            {s.extended?.length ? (
+              <div className="wiki__extended">
+                {s.extended.map((para, i) => <p key={i}>{para}</p>)}
+              </div>
+            ) : null}
           </>
         ),
       })),

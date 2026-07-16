@@ -282,6 +282,13 @@ export const research = {
     'The bay runs on an ESP32 that handles both the sensors and the actuators. There is an IMU for angular rate and acceleration, a barometric altimeter for altitude, and a GPS, plus the two mirrored canard servos and an optional LoRa radio for telemetry. A Raspberry Pi 5 takes care of onboard camera capture. Instead of closing the whole loop on the ESP32, I run it hardware-in-the-loop: the board streams sensor data out at a fixed rate, a Python controller on a laptop works out the canard deflection, and the command comes back to the ESP32 to move the servos. That kept the flight code quick to iterate on and easy to log.',
     'The flight controller estimates roll rate with a Kalman filter and fuses GPS, accelerometer, and barometer readings to track vertical velocity. It schedules its gain against that velocity so control authority scales with dynamic pressure rather than overreacting at low speed, and it only commands the canards when altitude, tilt, and telemetry freshness all check out, falling back to neutral otherwise. A second, more aggressive controller exists for restrained bench testing and deliberately skips the flight safety gates. At the moment roll control is the part that is actually implemented and tested on the bench. Tilt is estimated from the accelerometer but not yet actively controlled, and the rocket has not flown under power, so validating the loop in flight is the next step. The airframe and bay are modeled in SolidWorks.',
   ],
+  // Per-sheet `sub`/`lead`/`notes` are the desk blueprint's copy (desk mode reads
+  // only those; see src/documents/content/research.js). Each sheet's `extended`
+  // is longer-form prose for the simple/recruiter mode ONLY — the simple mode
+  // renders it under that subsection's bullets, the desk never reads it. Same
+  // shape as research.extended above: an array of paragraph strings, one per
+  // paragraph. Sourced from the Avionics-Bay README
+  // (github.com/Thrust-Stack/Avionics-Bay); leave empty to render just the bullets.
   sheets: [
     {
       id: 'vehicle',
@@ -290,6 +297,9 @@ export const research = {
       // rendered verbatim (hand-lettered) on the desk, so stored verbatim
       lead: 'objective: structural integrity with active tilt/roll control on board.',
       notes: [],
+      extended: [
+        'This is the vehicle the whole program is built around, a high-powered model rocket from Thrust-Stack meant to fly on an AeroTech H219 and stay pointed straight instead of spinning up under thrust. The airframe pairs fixed airfoil fins at the tail with two movable canards up near the nose, and those canards are the only surfaces the system actually drives. I modeled the full rocket in SolidWorks: the body tubes, nose cone, and couplers, the top and bottom avionics bay plates, and the mechanical bits around them like the servo mounts, bearings, the static fin and lower bearing mount, and a fin jig for repeatable alignment. The bay also carries a Raspberry Pi 5 and a Pi Camera Module 3 on their own mount for onboard video. The real motor is left out of the model and stands in as an inert fake-motor part used only for mass and fit, since the project keeps no thrust curve on hand. Despite the tilt-and-roll name, the built vehicle only actively controls roll for now, with tilt read off the accelerometer but not yet driven.',
+      ],
     },
     {
       id: 'cfd',
@@ -300,6 +310,14 @@ export const research = {
         'Airframe design informed by 3000+ hours of CFD',
         'Simulated prior to fabrication',
       ],
+      // TODO: The Avionics-Bay README documents a dedicated CFD model variant and
+      // STEP export but records no CFD setup or results (no drag/pressure/stability
+      // numbers, mesh, or the "3000+ hours" figure the bullets cite). The paragraph
+      // below sticks to what the README supports; confirm the quantitative claims in
+      // the bullets against a primary source before treating them as verified.
+      extended: [
+        'Before anything got fabricated, the airframe went through CFD to check that the aerodynamics held up. The repo keeps a dedicated CFD variant of the SolidWorks assembly, cleaned up and exported to STEP so it drops into the solver without the mechanical detail that would choke a mesh, and the motor is stubbed out with an inert fake-motor part so it still contributes mass and fit without standing in as a real thrust source. I ran the aerodynamic work in SimScale. The point was to understand how the airframe and canards sit in the flow before committing to cut parts, so the fin and canard geometry could be settled on the model rather than discovered on the pad.',
+      ],
     },
     {
       id: 'control',
@@ -309,6 +327,9 @@ export const research = {
         'Micro-servos actuate the tilt/roll control system',
         'IMU and altimeter feed live data from the avionics bay',
         'Components integrated in the vehicle without compromising structure',
+      ],
+      extended: [
+        'The control system is what makes the rocket active, and it runs hardware-in-the-loop rather than closing everything on the board. The ESP32 streams sensor frames over USB serial at 115200, tagging IMU data at 20 Hz and ground-zeroed altitude at 10 Hz while passing the GPS NMEA through untouched. On the laptop, a logger called GPSReader records all of it to SQLite and rebroadcasts the packets on a local UDP port; the controller listens there, computes a canard angle, and sends back a short ROLL command on a second UDP port, which GPSReader relays to the board over the serial link it already owns. The ESP32 takes that single signed angle and drives both mirrored canards around a 90 degree neutral with direct PWM, clamped to plus or minus 15 degrees of travel. The flight controller keeps its own command tighter, near 7.5 degrees, and scales that authority with speed so it is not overreacting at low dynamic pressure. There is no hardware arm switch or pyro interlock anywhere in the firmware, so arming is entirely software gating in the host code, and the canards jump to neutral the instant the board boots.',
       ],
     },
   ],
