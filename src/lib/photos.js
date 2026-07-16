@@ -43,19 +43,28 @@ export function polaroidFrame() {
 // text that follows one) never touch the frame, in texture px.
 const PHOTO_GAP = 46
 
+/** Polaroid footprint for a paper, in texture px. */
+function polaroidPx(paper) {
+  const { W, H } = texDims(paper)
+  const f = polaroidFrame()
+  return { wpx: (f.w / paper.w) * W, hpx: (f.h / paper.h) * H }
+}
+
 /**
  * Flow blocks that reserve each photo's polaroid footprint inside `box`,
  * centred horizontally. They paint nothing — the polaroid mesh is drawn on top
  * by Polaroids.jsx — but their declared height makes pageFlow lay out and
  * paginate around them just like a figure. Each block carries the photo and its
  * footprint so pageFlow can report the landing spot as an anchor.
+ *
+ * This is the "own band" placement: the polaroid gets a full-width horizontal
+ * strip to itself, so nothing sits beside it. Use it when a page has little
+ * text or the image is large (open space reads better than a cramped wrap).
+ * For text-wrap-around, see `photoFloat`.
  */
 export function photoBlocks(photos, paper, box) {
   if (!photos?.length) return []
-  const { W, H } = texDims(paper)
-  const f = polaroidFrame()
-  const wpx = (f.w / paper.w) * W
-  const hpx = (f.h / paper.h) * H
+  const { wpx, hpx } = polaroidPx(paper)
   const x = box.x + Math.max(0, (box.w - wpx) / 2)
   return photos.map((photo) => ({
     h: hpx + PHOTO_GAP,
@@ -65,6 +74,40 @@ export function photoBlocks(photos, paper, box) {
     place: { x, w: wpx, h: hpx },
     draw() {}, // the 3D polaroid renders it; nothing lands on the paper texture
   }))
+}
+
+/**
+ * A single photo as a *float*: a polaroid pinned to one side of the content box
+ * with the surrounding text reflowing around it (pageFlow.js reads `float` and
+ * narrows the text column for the rows the photo spans, full width above and
+ * below — a stepped/rectangular exclusion, the wrap-around simplification the
+ * brief allows). Unlike `photoBlocks`, a float does NOT advance the text cursor
+ * on its own: it declares the side column it occupies and lets following blocks
+ * flow beside it. If those blocks outgrow the page they paginate onto the next
+ * sheet exactly as before, so overflow behaviour is unchanged.
+ *
+ * `side` is 'right' by default (the Wikipedia convention, and the only side the
+ * desk painters use — a right float needs no x-translation of the left-anchored
+ * text, only a narrower run). Returns one block; the photo anchor it carries is
+ * reported by pageFlow just like a band photo, so Polaroids.jsx pins the mesh
+ * to the reserved spot.
+ */
+export function photoFloat(photo, paper, box, side = 'right') {
+  const { wpx, hpx } = polaroidPx(paper)
+  const x = side === 'left' ? box.x : box.x + box.w - wpx
+  return {
+    float: true,
+    side,
+    w: wpx,
+    // vertical span the text keeps clear of (frame + breathing room)
+    floatSpan: hpx + PHOTO_GAP,
+    inkH: hpx, // used only for the page-fit check when the float lands
+    h: 0, // a float never advances the cursor; text flows beside it
+    dbg: 'photo-float',
+    photo,
+    place: { x, w: wpx, h: hpx },
+    draw() {}, // the 3D polaroid renders it; nothing lands on the paper texture
+  }
 }
 
 /**

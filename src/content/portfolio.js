@@ -221,7 +221,19 @@ export const projects = [
         ],
       },
     ],
-    photos: [],
+    // REVIEW: placeholder photo slot so every project carries at least one figure
+    // (see the other placeholder entries). Drop a real screenshot at the `src`
+    // path below and replace the TODO title/caption/alt with real copy.
+    photos: [
+      {
+        src: '/assets/photos/recco-app.jpg',
+        title: 'TODO: Recco figure title',
+        caption: 'TODO: one or two sentences describing the Recco screenshot.',
+        date: '2026',
+        credit: '',
+        alt: 'TODO: plain description of the Recco app screenshot for accessibility.',
+      },
+    ],
   },
   {
     id: 'rollaway',
@@ -262,7 +274,17 @@ export const projects = [
         ],
       },
     ],
-    photos: [],
+    // REVIEW: placeholder photo slot (see note on the other placeholder entries).
+    photos: [
+      {
+        src: '/assets/photos/rollaway-app.jpg',
+        title: 'TODO: RollAway figure title',
+        caption: 'TODO: one or two sentences describing the RollAway screenshot.',
+        date: '2026',
+        credit: '',
+        alt: 'TODO: plain description of the RollAway app screenshot for accessibility.',
+      },
+    ],
   },
   {
     id: 'engineering-portfolio',
@@ -306,7 +328,18 @@ export const projects = [
         ],
       },
     ],
-    photos: [],
+    // REVIEW: placeholder photo slot (see note on the other placeholder entries).
+    // A screenshot of the desk scene or the wiki view would fit here.
+    photos: [
+      {
+        src: '/assets/photos/portfolio-desk.jpg',
+        title: 'TODO: Portfolio figure title',
+        caption: 'TODO: one or two sentences describing the portfolio screenshot.',
+        date: '2026',
+        credit: '',
+        alt: 'TODO: plain description of the portfolio screenshot for accessibility.',
+      },
+    ],
   },
 ]
 

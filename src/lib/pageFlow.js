@@ -34,7 +34,43 @@
  *
  * Returns `{ decor, draw }` page painters ready for a registry `pages`
  * array (see docTextures.js for the page contract).
+ *
+ * Floated photos (lib/photos.js `photoFloat`) ride the same flow as an
+ * obstacle: a `float` block reserves a side column but does NOT advance the
+ * cursor, so the blocks after it flow *beside* it. Two things wrap a block
+ * around the float while its rows overlap the photo:
+ *   - a `reflowAround(startY, float)` block (the prose paragraphs) re-wraps
+ *     itself to the narrow run for the lines beside the photo and the full run
+ *     for lines below it (the stepped exclusion), and
+ *   - any other block that lands beside the float is drawn through a narrowed
+ *     content box so its text and rules can't cross under the photo.
+ * A keep-with-next heading is dropped below the float instead of cramped beside
+ * it. When wrapped content still overflows the page it paginates onto the next
+ * sheet exactly as un-floated content does; the float stays on the page it
+ * landed on.
  */
+// Gutter between a floated photo and the text column beside it, in texture px.
+const FLOAT_GUTTER = 30
+
+/** Wrap a block so it paints through a temporarily narrowed content box (the
+ *  column left of a right-side float / right of a left-side float), so its
+ *  text() auto-fit and any box-aware rules stay clear of the photo. */
+function narrowed(block, box, float) {
+  const sub =
+    float.side === 'left'
+      ? { x: float.narrowRight, y: box.y, w: box.x + box.w - float.narrowRight, h: box.h }
+      : { x: box.x, y: box.y, w: float.narrowRight - box.x, h: box.h }
+  return {
+    ...block,
+    draw(ctx, W, H, y, rnd, link) {
+      const prev = ctx._contentBox
+      ctx._contentBox = sub
+      block.draw(ctx, W, H, y, rnd, link)
+      ctx._contentBox = prev
+    },
+  }
+}
+
 export function flowSheets(sheets, box) {
   const flowed = [] // { decor, items: [{ block, y }] }
   const bottom = box.y + box.h
@@ -42,12 +78,61 @@ export function flowSheets(sheets, box) {
   for (const sheet of sheets) {
     let items = []
     let y = box.y
+    let float = null // active float on the current page (one at a time)
     const flush = () => {
       if (items.length) flowed.push({ decor: sheet.decor, items })
       items = []
+      float = null // a float never spans a page break
+    }
+    const breakPage = (carried) => {
+      flush()
+      y = box.y
+      if (sheet.cont) {
+        items.push({ block: sheet.cont, y })
+        y += sheet.cont.h
+      }
+      for (const b of carried) {
+        items.push({ block: b, y })
+        y += b.h
+      }
     }
     for (const block of sheet.blocks) {
-      const inkH = Math.min(block.inkH ?? block.h, block.h)
+      // ---- floated photo: reserve a side column; the cursor does not move ----
+      if (block.float) {
+        const inkH = Math.min(block.inkH ?? block.floatSpan, block.floatSpan)
+        if (y + inkH > bottom && items.length) breakPage([])
+        if (float) {
+          // A second photo can't share the column — fall back to an own-band
+          // reservation (advance the cursor) so the two never overlap.
+          items.push({ block, y })
+          y += block.floatSpan
+        } else {
+          const left = block.side === 'left' ? box.x : box.x + box.w - block.w
+          float = {
+            top: y,
+            bottom: y + block.floatSpan,
+            left,
+            narrowRight: block.side === 'left' ? box.x + box.w : left - FLOAT_GUTTER,
+            side: block.side,
+          }
+          items.push({ block, y }) // carries the photo anchor; paints nothing
+          // cursor stays put — following blocks flow beside the photo
+        }
+        continue
+      }
+
+      // A heading (keep-with-next) beside a float reads badly cramped in the
+      // narrow column — drop it below the photo so it spans full width above
+      // its body text.
+      if (float && y < float.bottom && block.keepWithNext && !block.reflowAround) {
+        y = float.bottom
+      }
+
+      const beside = float && y < float.bottom
+      // Lay the block out for its slot: prose reflows around the float; anything
+      // else keeps its declared height (only its draw is later narrowed).
+      let placed = beside && block.reflowAround ? block.reflowAround(y, float) : block
+      const inkH = Math.min(placed.inkH ?? placed.h, placed.h)
       if (import.meta.env.DEV && inkH > box.h) {
         console.warn(`[pageFlow] a block is taller (${inkH}px) than the content box (${box.h}px) — it will be clipped`)
       }
@@ -62,19 +147,17 @@ export function flowSheets(sheets, box) {
         while (items.length && items[items.length - 1].block.keepWithNext) {
           carried.unshift(items.pop().block)
         }
-        flush()
-        y = box.y
-        if (sheet.cont) {
-          items.push({ block: sheet.cont, y })
-          y += sheet.cont.h
-        }
-        for (const b of carried) {
-          items.push({ block: b, y })
-          y += b.h
-        }
+        breakPage(carried)
+        // Fresh page has no float yet — re-lay the block full width.
+        placed = block
       }
-      items.push({ block, y })
-      y += block.h
+      // A non-reflow block still sitting beside the float paints through a
+      // narrowed box so it can't run under the photo.
+      if (float && y < float.bottom && !block.reflowAround) {
+        placed = narrowed(placed, box, float)
+      }
+      items.push({ block: placed, y })
+      y += placed.h
     }
     flush()
   }

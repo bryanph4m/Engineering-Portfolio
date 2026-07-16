@@ -3,7 +3,7 @@ import {
   gridBase, handLine, handEllipse, handArrow, text, pageGeom,
 } from '../../lib/docTextures'
 import { flowSheets } from '../../lib/pageFlow'
-import { photoBlocks, placedPhotos } from '../../lib/photos'
+import { photoBlocks, photoFloat, placedPhotos } from '../../lib/photos'
 import { projects } from '../../content/portfolio'
 
 // A clipped stack of technical drawings — one project per sheet, authored as
@@ -79,6 +79,9 @@ const wrapMono = (str, size, maxW) => {
   return lines
 }
 
+/** Max monospace chars that fit a text run of `w` px at the body size. */
+const bodyChars = (w) => Math.max(1, Math.floor(w / (BODY_SIZE * MONO_ADV)))
+
 /** Small section heading inside a drawing — a mono kicker + hand underline. */
 const subhead = (title) => ({
   h: 92,
@@ -89,24 +92,67 @@ const subhead = (title) => ({
     text(ctx, title.toUpperCase(), BODY_X, y + 46, { font: TYPE, size: 36, spacing: 2 })
     ctx.strokeStyle = 'rgba(51,41,29,0.42)'
     ctx.lineWidth = 3
-    handLine(ctx, BODY_X, y + 64, BODY_X + Math.min(560, title.length * 28), y + 60, rnd, 2)
+    // Cap the underline at the content-box right edge so it never runs past the
+    // safe area — and, when the box is narrowed beside a float, under the photo.
+    const b = ctx._contentBox
+    const cap = b ? b.x + b.w - 8 : Infinity
+    const x2 = Math.min(BODY_X + Math.min(560, title.length * 28), cap)
+    handLine(ctx, BODY_X, y + 64, x2, y + 60, rnd, 2)
   },
 })
 
-/** One prose paragraph, pre-wrapped so its height is known before layout. */
+/** Paint a set of pre-wrapped lines from the block's top edge `y`. */
+const drawLines = (lines) => (ctx, W, H, y) => {
+  for (const ln of lines) {
+    text(ctx, ln.text, BODY_X, y + ln.dy + BODY_SIZE, { size: BODY_SIZE, color: BODY_COLOR })
+  }
+}
+
+/**
+ * One prose paragraph. Pre-wrapped to the full run so its height is known
+ * before layout, but also `reflowAround`-able: when a photo floats beside it,
+ * pageFlow asks it to re-wrap to the narrow column for the lines that sit next
+ * to the photo and the full column for the lines below it (a stepped wrap —
+ * never mid-word). The paragraph stays one block, so page breaks still fall
+ * only between paragraphs.
+ */
 const para = (str) => {
-  const lines = wrapMono(str, BODY_SIZE, BODY_MAXW)
-  const inkH = lines.length * BODY_LINE
-  return {
-    h: inkH + 20, // trailing breathing room between paragraphs
-    inkH,
-    dbg: 'para',
-    draw(ctx, W, H, y, rnd) {
-      let yy = y + BODY_SIZE
-      for (const ln of lines) {
-        text(ctx, ln, BODY_X, yy, { size: BODY_SIZE, color: BODY_COLOR })
-        yy += BODY_LINE
+  const words = str.split(' ')
+  // Greedy wrap where the available width may change from line to line: given a
+  // function of the current line's top offset → text run width in px.
+  const wrapStepped = (widthAt) => {
+    const lines = []
+    let idx = 0
+    let dy = 0
+    while (idx < words.length) {
+      const maxChars = bodyChars(widthAt(dy))
+      let line = ''
+      while (idx < words.length) {
+        const probe = line ? `${line} ${words[idx]}` : words[idx]
+        if (line && probe.length > maxChars) break
+        line = probe
+        idx++
       }
+      lines.push({ text: line, dy })
+      dy += BODY_LINE
+    }
+    return lines
+  }
+  const fullLines = wrapStepped(() => BODY_MAXW)
+  const block = (lines) => ({
+    h: lines.length * BODY_LINE + 20, // trailing breathing room between paragraphs
+    inkH: lines.length * BODY_LINE,
+    dbg: 'para',
+    draw: drawLines(lines),
+  })
+  return {
+    ...block(fullLines),
+    // Re-wrap around a float landing at absolute `startY`: lines whose top sits
+    // within the float's vertical span use the narrow run, the rest the full run.
+    reflowAround(startY, float) {
+      const narrowW = float.narrowRight - BODY_X
+      const lines = wrapStepped((dy) => (startY + dy < float.bottom ? narrowW : BODY_MAXW))
+      return block(lines)
     },
   }
 }
@@ -286,6 +332,38 @@ const FIGURES = {
   'engineering-portfolio': portfolioFigure,
 }
 
+/**
+ * Weave a project's photos into its prose. Sensible-placement heuristic, driven
+ * only by how much prose there is (no per-project special-casing):
+ *   - If the project has narrative paragraphs AND they're tall enough to wrap
+ *     the photo's height, the FIRST photo becomes a float (photoFloat) inserted
+ *     just before the first paragraph, so the body text reflows around it and
+ *     more content fits per page. Any remaining photos flow as own-band blocks.
+ *   - Otherwise (little/no prose, e.g. a specs-only project) every photo stays
+ *     an own-band block sitting in open space — the earlier behaviour, which
+ *     reads better than a cramped wrap.
+ * Either way photos come after the prose in the block order, so pagination and
+ * overflow to the next flip-page are unchanged.
+ */
+const detailWithPhotos = (p) => {
+  const detail = detailBlocks(p.detail)
+  const photos = p.photos ?? []
+  if (!photos.length) return detail
+
+  const firstPara = detail.findIndex((b) => b.dbg === 'para')
+  const proseInk = detail.reduce((sum, b) => sum + (b.inkH ?? b.h), 0)
+  const flt = photoFloat(photos[0], PROJECTS_PAPER, box)
+  const wrap = firstPara >= 0 && proseInk >= flt.floatSpan
+
+  if (!wrap) return [...detail, ...photoBlocks(photos, PROJECTS_PAPER, box)]
+  return [
+    ...detail.slice(0, firstPara),
+    flt,
+    ...detail.slice(firstPara),
+    ...photoBlocks(photos.slice(1), PROJECTS_PAPER, box),
+  ]
+}
+
 const sheets = projects.map((p, i) => ({
   decor,
   cont: cont(p.name.toUpperCase()),
@@ -298,10 +376,7 @@ const sheets = projects.map((p, i) => ({
     ),
     FIGURES[p.id],
     ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),
-    ...detailBlocks(p.detail),
-    // Photos flow last, so a photo on an already-full drawing spills onto a
-    // continuation sheet instead of crowding the text (see lib/photos.js).
-    ...photoBlocks(p.photos, PROJECTS_PAPER, box),
+    ...detailWithPhotos(p),
   ],
 }))
 
