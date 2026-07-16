@@ -52,7 +52,7 @@ src/
   documents/   registry.js + content/ (desk page painters for About, Projects, …)
   simple/      the flat Wikipedia-style recruiter mode
   ui/          DOM chrome: StartScreen, HudHints, Loader
-  lib/         procedural canvas textures + page-flow pagination
+  lib/         procedural canvas textures + page-flow pagination + photo layout
   store/       Zustand scene state
 public/assets/ fonts (bundled TTFs) + textures/ (drop-in real photos)
 ```
@@ -146,9 +146,53 @@ If a listed file hasn't been added yet, the frame falls back to a painted
 the scene. (Captions are stored in the data and available to the frame; they
 don't render on the picture itself by default.)
 
+## Photos (section figures + polaroids)
+
+Separate from the framed album, individual content **sections** can carry
+photos, drawn from one shared list per section so both modes read the same
+entries — and each mode presents them its own way.
+
+1. **Drop image files** in `public/assets/photos/` (see that folder's README).
+   A file at `public/assets/photos/mlr-launch-day.jpg` is referenced as
+   `/assets/photos/mlr-launch-day.jpg`.
+2. **List them** in the matching `photos: []` array in
+   `src/content/portfolio.js`. Each entry carries everything both modes need:
+
+   ```js
+   {
+     src:     '/assets/photos/mlr-launch-day.jpg',
+     title:   'Launch day',                        // simple mode caption title
+     caption: 'The two-stage rocket on the pad.',  // simple mode description
+     date:    '2026',                              // optional, muted meta
+     credit:  'Mission Launch Rocketry',           // optional attribution
+     alt:     'A model rocket on a launch rail.',  // <img> alt text (a11y)
+   }
+   ```
+
+   The arrays live on `profile.photos` (About), each `projects[i].photos`,
+   `research.photos` (article intro), and each `research.sheets[i].photos`.
+3. **Simple / Wikipedia mode** renders each photo as a proper floated figure:
+   a bordered thumbnail with a **bold title**, a muted caption, a muted
+   `date · credit` line, and real `alt` text on the image.
+4. **Desk mode** pins the **bare photo only** to the page as a polaroid — white
+   frame, a little tilt, a drop shadow — with *no* title, caption or other text
+   anywhere near it. Only `projects[].photos` and `research.sheets[].photos`
+   become polaroids (they attach to a paginated document's pages);
+   `profile.photos` and `research.photos` are simple-mode figures only, since
+   the desk's index card and blueprint intro have no room for one.
+
+Desk polaroids **ride the same pagination as the text** (`src/lib/photos.js` +
+`src/lib/pageFlow.js`): a photo on an already-full drawing flows onto the next
+sheet, several photos on one section stack without overlapping, and the polaroid
+is raycast-transparent so a page-flip still works even where one sits near an
+edge. As with the album, any not-yet-added file shows a clear placeholder in
+both modes rather than breaking.
+
 ## Swapping in your own material
 
 - **Photos in the frame:** see "Photo frame album" above.
+- **Section photos (figures + polaroids):** see "Photos" above and
+  `public/assets/photos/README.md`.
 - **Textures:** see `public/assets/textures/README.md`.
 - **Resume PDF:** replace `public/assets/Bryan-Pham-Resume.pdf`.
 - **Words:** edit `src/content/portfolio.js` (see above). Add or remove a

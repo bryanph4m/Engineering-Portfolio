@@ -85,6 +85,19 @@ export function flowSheets(sheets, box) {
     // widow/orphan checks and the debug harness can inspect pagination without
     // re-deriving the flow. Purely metadata; the painters never read it.
     kinds: items.map((it) => it.block.dbg ?? '?'),
+    // Photo anchors: any block that carries a `photo` (see lib/photos.js) reports
+    // where it landed on this page — its footprint rect in texture px, `y` from
+    // the flow. Desk mode reads these to pin a 3D polaroid to the reserved spot
+    // (src/desk/Polaroids.jsx). A page with no photos gets an empty list.
+    anchors: items
+      .filter((it) => it.block.photo)
+      .map((it) => ({
+        photo: it.block.photo,
+        x: it.block.place.x,
+        y: it.y,
+        w: it.block.place.w,
+        h: it.block.place.h,
+      })),
     draw: (ctx, W, H, rnd, link) => {
       for (const it of items) it.block.draw(ctx, W, H, it.y, rnd, link)
     },

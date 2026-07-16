@@ -3,6 +3,7 @@ import {
   gridBase, handLine, handEllipse, handArrow, text, pageGeom,
 } from '../../lib/docTextures'
 import { flowSheets } from '../../lib/pageFlow'
+import { photoBlocks, placedPhotos } from '../../lib/photos'
 import { projects } from '../../content/portfolio'
 
 // A clipped stack of technical drawings — one project per sheet, authored as
@@ -298,7 +299,15 @@ const sheets = projects.map((p, i) => ({
     FIGURES[p.id],
     ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),
     ...detailBlocks(p.detail),
+    // Photos flow last, so a photo on an already-full drawing spills onto a
+    // continuation sheet instead of crowding the text (see lib/photos.js).
+    ...photoBlocks(p.photos, PROJECTS_PAPER, box),
   ],
 }))
 
 export const projectPages = flowSheets(sheets, box)
+
+// Placed polaroids for the stack, keyed to the page each photo landed on.
+// Consumed by the desk registry → Polaroids.jsx. Simple mode reads the raw
+// `projects[].photos` instead (it wants the titles/captions too).
+export const projectPhotos = placedPhotos(projectPages)

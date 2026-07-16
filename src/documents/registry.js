@@ -1,7 +1,7 @@
 import { restHeightFor } from '../desk/layout'
 import { aboutPages } from './content/about'
-import { projectPages, PROJECTS_PAPER } from './content/projects'
-import { researchPages, RESEARCH_PAPER } from './content/research'
+import { projectPages, projectPhotos, PROJECTS_PAPER } from './content/projects'
+import { researchPages, researchPhotos, RESEARCH_PAPER } from './content/research'
 import { resumePages } from './content/resume'
 import { contactPages } from './content/contact'
 
@@ -39,6 +39,9 @@ export const DOCUMENTS = [
     title: 'Projects',
     kind: 'stack',
     pages: projectPages,
+    // Polaroids pinned to the pages their photos flowed onto (Polaroids.jsx).
+    // Absent/empty on a document simply means no photos.
+    photos: projectPhotos,
     paper: PROJECTS_PAPER,
     rest: rest('stack', 1.8, 1.05, -0.12),
   },
@@ -47,6 +50,7 @@ export const DOCUMENTS = [
     title: 'Rocketry',
     kind: 'blueprint',
     pages: researchPages,
+    photos: researchPhotos,
     paper: RESEARCH_PAPER,
     rest: rest('blueprint', 0.75, -1.7, 0.05),
   },

@@ -6,6 +6,7 @@ import { useSceneStore } from '../store/useSceneStore'
 import { docLinks } from '../lib/docTextures'
 import { softShadowTexture } from '../lib/textures'
 import { DocProp } from './props'
+import Polaroids from './Polaroids'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT } from './constants'
 
 // Camera-to-sheet distance at the focused pose; fixed because both poses are.
@@ -240,6 +241,10 @@ export default function Document({ doc }) {
         onClick={onClick}
       >
         <DocProp doc={doc} />
+        {/* bare polaroids pinned to the pages their photos flowed onto; they
+            ride this group's pickup/scale and are raycast-transparent so they
+            never block a page flip (src/desk/Polaroids.jsx) */}
+        <Polaroids doc={doc} />
       </group>
     </>
   )

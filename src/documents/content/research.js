@@ -3,6 +3,7 @@ import {
   blueprintBase, handLine, handArrow, text, pageGeom,
 } from '../../lib/docTextures'
 import { flowSheets } from '../../lib/pageFlow'
+import { photoBlocks, placedPhotos } from '../../lib/photos'
 import { research } from '../../content/portfolio'
 
 // Blueprint roll — the active-control rocket program, authored as block
@@ -247,7 +248,15 @@ const sheets = research.sheets.map((s) => {
   // Notes flow below the figure, into the vertical band the title block sits
   // in — cap their run so a long line auto-fits instead of running under it.
   for (const n of s.notes ?? []) blocks.push(note(`· ${n.toUpperCase()}`, { maxW: NOTE_MAXW }))
+  // Photos flow last so they paginate onto a fresh sheet rather than colliding
+  // with the drawing or the title block (see lib/photos.js).
+  blocks.push(...photoBlocks(s.photos, RESEARCH_PAPER, box))
   return { decor, cont: cont(s.title.toUpperCase()), blocks }
 })
 
 export const researchPages = flowSheets(sheets, box)
+
+// Placed polaroids for the blueprint roll, keyed to the page each landed on.
+// Consumed by the desk registry → Polaroids.jsx (simple mode reads the raw
+// per-sheet `photos` for the captions).
+export const researchPhotos = placedPhotos(researchPages)

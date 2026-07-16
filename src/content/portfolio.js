@@ -26,6 +26,34 @@
  * exact, lossless transform. Anything the desk renders verbatim (subtitles,
  * hand-written notes, resume entries, contact links) is stored here exactly
  * as it should appear so both layers stay identical.
+ *
+ * Photos: several sections carry a `photos: []` array. Each entry is one photo,
+ * shared by both faces but presented differently and NEVER duplicated:
+ *
+ *   {
+ *     src:     '/assets/photos/name.jpg', // path under /public ('' → placeholder)
+ *     title:   'Short figure title',       // simple mode: bold caption lead-in
+ *     caption: 'One or two sentences.',    // simple mode: figure description
+ *     date:    'June 2026',                // simple mode: optional, muted meta
+ *     credit:  'Photo by …',               // simple mode: optional attribution
+ *     alt:     'Plain description …',       // simple mode: <img> alt text (a11y)
+ *   }
+ *
+ *   - Simple / Wikipedia mode renders every field as a floated figure with a
+ *     bordered frame, a title, a muted caption and a muted date · credit line.
+ *   - Desk mode pulls ONLY `src` and pins the bare photo to the page as a
+ *     polaroid (white frame, a little tilt, a drop shadow) — no title, caption
+ *     or other text is ever shown on or near it there. Desk polaroids ride the
+ *     same pagination as the text (each photo reserves space and flows onto the
+ *     next page if the current one is full), so they only appear on the
+ *     paginated documents: `projects[].photos` and `research.sheets[].photos`.
+ *     Article-level `profile.photos` and `research.photos` are simple-mode
+ *     figures only (like the `extended` prose — the desk card/roll has no room).
+ *
+ * Drop image files in /public/assets/photos/ (see that folder's README and the
+ * repo README's "Photos" section). Until a listed file exists, both modes show
+ * a clear placeholder in its place, so a not-yet-added image never breaks
+ * either view. Leave a section's `photos` empty ([]) for none.
  */
 
 export const profile = {
@@ -66,6 +94,12 @@ export const profile = {
     'The following summer, I was convinced to attend my first hackathon at UC Berkeley, where I realized I enjoyed both the hardware and software aspects of engineering.',
     'I am excited to see where the future takes me and how UCLA can help me grow as an engineer. I am currently looking for internship opportunities.',
   ],
+  // Simple-mode-only figures for the About article (the desk index card has no
+  // room for a polaroid). Add entries in the shape documented at the top of
+  // this file, e.g.:
+  // { src: '/assets/photos/bryan-portrait.jpg', title: 'Bryan Pham',
+  //   caption: 'At the UCLA machine shop.', date: '2026', alt: 'Portrait of Bryan Pham.' },
+  photos: [],
 }
 
 export const projects = [
@@ -108,6 +142,16 @@ export const projects = [
         ],
       },
     ],
+    photos: [
+      {
+        src: '/assets/photos/aside-ai-device.jpg',
+        title: 'The Aside AI prototype',
+        caption: 'The clip-on camera and mic that narrates surroundings, built at the Berkeley AI Hackathon.',
+        date: 'June 2026',
+        credit: '',
+        alt: 'A small clip-on device with a camera and microphone resting on a table.',
+      },
+    ],
   },
   {
     id: 'mission-launch-rocketry',
@@ -119,6 +163,24 @@ export const projects = [
       { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery (drogue + main)' },
       { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
       { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
+    ],
+    photos: [
+      {
+        src: '/assets/photos/mlr-launch-day.jpg',
+        title: 'Launch day',
+        caption: 'The two-stage high-power rocket on the pad before flight.',
+        date: '2026',
+        credit: 'Mission Launch Rocketry',
+        alt: 'A high-power model rocket standing on a launch rail in a desert field.',
+      },
+      {
+        src: '/assets/photos/mlr-team.jpg',
+        title: 'The team',
+        caption: 'Members of the 52-person club at a build session.',
+        date: '2026',
+        credit: '',
+        alt: 'A group of college students gathered around a workbench with rocket parts.',
+      },
     ],
   },
   {
@@ -159,6 +221,7 @@ export const projects = [
         ],
       },
     ],
+    photos: [],
   },
   {
     id: 'rollaway',
@@ -199,6 +262,7 @@ export const projects = [
         ],
       },
     ],
+    photos: [],
   },
   {
     id: 'engineering-portfolio',
@@ -242,6 +306,7 @@ export const projects = [
         ],
       },
     ],
+    photos: [],
   },
 ]
 
@@ -282,6 +347,10 @@ export const research = {
     'The bay runs on an ESP32 that handles both the sensors and the actuators. There is an IMU for angular rate and acceleration, a barometric altimeter for altitude, and a GPS, plus the two mirrored canard servos and an optional LoRa radio for telemetry. A Raspberry Pi 5 takes care of onboard camera capture. Instead of closing the whole loop on the ESP32, I run it hardware-in-the-loop: the board streams sensor data out at a fixed rate, a Python controller on a laptop works out the canard deflection, and the command comes back to the ESP32 to move the servos. That kept the flight code quick to iterate on and easy to log.',
     'The flight controller estimates roll rate with a Kalman filter and fuses GPS, accelerometer, and barometer readings to track vertical velocity. It schedules its gain against that velocity so control authority scales with dynamic pressure rather than overreacting at low speed, and it only commands the canards when altitude, tilt, and telemetry freshness all check out, falling back to neutral otherwise. A second, more aggressive controller exists for restrained bench testing and deliberately skips the flight safety gates. At the moment roll control is the part that is actually implemented and tested on the bench. Tilt is estimated from the accelerometer but not yet actively controlled, and the rocket has not flown under power, so validating the loop in flight is the next step. The airframe and bay are modeled in SolidWorks.',
   ],
+  // Simple-mode-only figures for the Research article intro (rendered after the
+  // lead, like `extended`). Per-page desk polaroids live on `sheets[].photos`
+  // below, not here. Same entry shape documented at the top of this file.
+  photos: [],
   // Per-sheet `sub`/`lead`/`notes` are the desk blueprint's copy (desk mode reads
   // only those; see src/documents/content/research.js). Each sheet's `extended`
   // is longer-form prose for the simple/recruiter mode ONLY — the simple mode
@@ -299,6 +368,16 @@ export const research = {
       notes: [],
       extended: [
         'This is the vehicle the whole program is built around, a high-powered model rocket from Thrust-Stack meant to fly on an AeroTech H219 and stay pointed straight instead of spinning up under thrust. The airframe pairs fixed airfoil fins at the tail with two movable canards up near the nose, and those canards are the only surfaces the system actually drives. I modeled the full rocket in SolidWorks: the body tubes, nose cone, and couplers, the top and bottom avionics bay plates, and the mechanical bits around them like the servo mounts, bearings, the static fin and lower bearing mount, and a fin jig for repeatable alignment. The bay also carries a Raspberry Pi 5 and a Pi Camera Module 3 on their own mount for onboard video. The real motor is left out of the model and stands in as an inert fake-motor part used only for mass and fit, since the project keeps no thrust curve on hand. Despite the tilt-and-roll name, the built vehicle only actively controls roll for now, with tilt read off the accelerometer but not yet driven.',
+      ],
+      photos: [
+        {
+          src: '/assets/photos/rocket-airframe.jpg',
+          title: 'The airframe',
+          caption: 'The high-power airframe with its movable canards, modeled in SolidWorks.',
+          date: '2026',
+          credit: '',
+          alt: 'A slender model rocket airframe with small control canards near the nose.',
+        },
       ],
     },
     {
@@ -318,6 +397,7 @@ export const research = {
       extended: [
         'Before anything got fabricated, the airframe went through CFD to check that the aerodynamics held up. The repo keeps a dedicated CFD variant of the SolidWorks assembly, cleaned up and exported to STEP so it drops into the solver without the mechanical detail that would choke a mesh, and the motor is stubbed out with an inert fake-motor part so it still contributes mass and fit without standing in as a real thrust source. I ran the aerodynamic work in SimScale. The point was to understand how the airframe and canards sit in the flow before committing to cut parts, so the fin and canard geometry could be settled on the model rather than discovered on the pad.',
       ],
+      photos: [],
     },
     {
       id: 'control',
@@ -331,6 +411,7 @@ export const research = {
       extended: [
         'The control system is what makes the rocket active, and it runs hardware-in-the-loop rather than closing everything on the board. The ESP32 streams sensor frames over USB serial at 115200, tagging IMU data at 20 Hz and ground-zeroed altitude at 10 Hz while passing the GPS NMEA through untouched. On the laptop, a logger called GPSReader records all of it to SQLite and rebroadcasts the packets on a local UDP port; the controller listens there, computes a canard angle, and sends back a short ROLL command on a second UDP port, which GPSReader relays to the board over the serial link it already owns. The ESP32 takes that single signed angle and drives both mirrored canards around a 90 degree neutral with direct PWM, clamped to plus or minus 15 degrees of travel. The flight controller keeps its own command tighter, near 7.5 degrees, and scales that authority with speed so it is not overreacting at low dynamic pressure. There is no hardware arm switch or pyro interlock anywhere in the firmware, so arming is entirely software gating in the host code, and the canards jump to neutral the instant the board boots.',
       ],
+      photos: [],
     },
   ],
 }

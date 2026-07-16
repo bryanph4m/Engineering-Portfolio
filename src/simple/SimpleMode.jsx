@@ -40,6 +40,51 @@ function InlineList({ items }) {
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')
 
 /**
+ * A Wikipedia-style figure: a bordered, right-floated thumbnail with a bold
+ * title lead-in, a muted caption, and a muted "date · credit" line beneath —
+ * all pulled from a shared photo entry (src/content/portfolio.js). Real `alt`
+ * text rides the image for accessibility. If the file isn't in
+ * /public/assets/photos/ yet (or fails to load) the frame shows a labelled
+ * placeholder instead of a broken image, so an unadded photo never looks broken.
+ */
+function WikiFigure({ photo }) {
+  const [failed, setFailed] = useState(!photo.src)
+  const meta = [photo.date, photo.credit].filter(Boolean).join(' · ')
+  return (
+    <figure className="wiki__figure">
+      {failed ? (
+        <div
+          className="wiki__figure-ph"
+          role="img"
+          aria-label={photo.alt || photo.title || 'Photo placeholder'}
+        >
+          photo
+        </div>
+      ) : (
+        <img
+          className="wiki__figure-img"
+          src={photo.src}
+          alt={photo.alt || photo.caption || photo.title || ''}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      )}
+      <figcaption className="wiki__figure-cap">
+        {photo.title ? <span className="wiki__figure-title">{photo.title}</span> : null}
+        {photo.caption ? <span className="wiki__figure-desc">{photo.caption}</span> : null}
+        {meta ? <span className="wiki__figure-meta">{meta}</span> : null}
+      </figcaption>
+    </figure>
+  )
+}
+
+/** Render a section's photo list as a stack of floated figures, or nothing. */
+function Figures({ photos }) {
+  if (!photos?.length) return null
+  return photos.map((p, i) => <WikiFigure key={i} photo={p} />)
+}
+
+/**
  * Article definitions, keyed by section id. Each is a function of `go` (the
  * navigation callback) so bodies can carry internal cross-links. Every string
  * here comes straight from the shared portfolio data.
@@ -61,6 +106,8 @@ function buildArticles(go) {
       // Longer-form body prose the simple mode shows after the lead. Desk mode
       // never reads this; see profile.extended in portfolio.js.
       extended: profile.extended,
+      // Article-level figures (simple mode only), floated beside the intro.
+      photos: profile.photos,
       subsections: [
         {
           id: 'roles',
@@ -109,6 +156,7 @@ function buildArticles(go) {
       subsections: projects.map((p) => ({
         id: p.id,
         heading: p.name,
+        photos: p.photos,
         render: () => (
           <>
             <p className="wiki__meta">{p.category} · {p.summary}</p>
@@ -141,9 +189,13 @@ function buildArticles(go) {
       // Longer-form body prose the simple mode shows after the lead. Desk mode
       // never reads this; see research.extended in portfolio.js.
       extended: research.extended,
+      // Article-level figures (simple mode only). Per-sheet figures live on the
+      // subsections below; the desk polaroids come from those, not from here.
+      photos: research.photos,
       subsections: research.sheets.map((s) => ({
         id: s.id,
         heading: s.title,
+        photos: s.photos,
         render: () => (
           <>
             <p className="wiki__meta">{s.sub}</p>
@@ -235,7 +287,7 @@ const SEARCH_INDEX = [
   },
   ...projects.map((p) => ({
     section: 'projects', anchor: p.id, label: p.name,
-    text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')} ${(p.detail ?? []).map((d) => `${d.heading ?? ''} ${d.body.join(' ')}`).join(' ')}`,
+    text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')} ${(p.detail ?? []).map((d) => `${d.heading ?? ''} ${d.body.join(' ')}`).join(' ')} ${(p.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
   })),
   {
     section: 'research', anchor: research.sheets[0].id, label: 'Research',
@@ -243,7 +295,7 @@ const SEARCH_INDEX = [
   },
   ...research.sheets.map((s) => ({
     section: 'research', anchor: s.id, label: s.title,
-    text: `${s.title} ${s.sub} ${s.lead ?? ''} ${(s.notes ?? []).join(' ')}`,
+    text: `${s.title} ${s.sub} ${s.lead ?? ''} ${(s.notes ?? []).join(' ')} ${(s.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
   })),
   ...resume.sections.map((sec) => ({
     section: 'resume', anchor: `resume-${slug(sec.label)}`, label: `Resume · ${sec.label}`,
@@ -329,6 +381,8 @@ function Article({ article }) {
     <article className="wiki__article">
       <h1 className="wiki__title">{article.title}</h1>
       <Toc items={article.subsections} />
+      {/* Article-level figures float beside the intro (simple mode only). */}
+      <Figures photos={article.photos} />
       <div className="wiki__lead">{article.lead}</div>
       {/* Optional longer-form body prose (simple mode only). Renders after the
           lead like a Wikipedia intro; absent or empty just leaves the lead. */}
@@ -340,6 +394,8 @@ function Article({ article }) {
       {article.subsections.map((s) => (
         <section key={s.id} id={s.id} className="wiki__section">
           <h2 className="wiki__h2">{s.heading}</h2>
+          {/* Per-subsection figures float right; text wraps beside them. */}
+          <Figures photos={s.photos} />
           {s.render()}
         </section>
       ))}

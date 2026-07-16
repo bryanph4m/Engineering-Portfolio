@@ -390,6 +390,64 @@
   text-decoration: underline;
 }
 
+/* ---- Wikipedia-style figures (floated thumbnails) ------------------- */
+/* A bordered thumb floated to the right, text wrapping beside it, with a     */
+/* muted caption block below — Wikipedia's `thumb tright` convention. `clear` */
+/* keeps consecutive figures stacked instead of colliding.                    */
+.wiki__figure {
+  float: right;
+  clear: right;
+  width: 250px;
+  max-width: 42%;
+  margin: 6px 0 14px 22px;
+  padding: 4px;
+  border: 1px solid var(--wiki-border);
+  background: var(--wiki-panel);
+  font-family: var(--wiki-chrome-font);
+  font-size: 13px;
+}
+.wiki__figure-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--wiki-border-light);
+  background: #fff;
+}
+/* Placeholder shown until the image file is dropped in (or if it fails). */
+.wiki__figure-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--wiki-border-light);
+  background:
+    repeating-linear-gradient(-45deg, #eee 0, #eee 8px, #f4f4f4 8px, #f4f4f4 16px);
+  color: var(--wiki-muted);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.wiki__figure-cap {
+  padding: 6px 4px 2px;
+  line-height: 1.4;
+  color: var(--wiki-muted);
+}
+.wiki__figure-title {
+  display: block;
+  font-weight: 700;
+  color: var(--wiki-text);
+}
+.wiki__figure-desc {
+  display: block;
+}
+.wiki__figure-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--wiki-muted);
+}
+
 /* ---- Contents box (collapsible, floated like Wikipedia's) ----------- */
 .wiki__toc {
   float: right;
@@ -559,6 +617,15 @@
     width: auto;
     max-width: none;
     margin-left: 0;
+  }
+  .wiki__figure {
+    float: none;
+    width: auto;
+    max-width: 320px;
+    margin-left: 0;
+  }
+  .wiki__figure-ph {
+    aspect-ratio: 5 / 4; /* wider placeholder reads better when unfloated */
   }
 }
 
