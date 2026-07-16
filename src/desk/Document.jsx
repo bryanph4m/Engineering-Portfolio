@@ -46,7 +46,10 @@ export default function Document({ doc }) {
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const hoveredId = useSceneStore((s) => s.hoveredId)
-  const pageIndex = useSceneStore((s) => s.pageIndex)
+  // pageIndex is read on demand inside hotspotAt (a pointer handler), not
+  // subscribed: a page flip only concerns the one focused document, so
+  // subscribing here would re-render all five documents on every turn for
+  // nothing. The prop mesh reads pageIndex through its own subscription.
   const focus = useSceneStore((s) => s.focus)
   const setHovered = useSceneStore((s) => s.setHovered)
   const nextPage = useSceneStore((s) => s.nextPage)
@@ -143,6 +146,7 @@ export default function Document({ doc }) {
     if (e.object?.name !== 'page-face' || !e.uv) return null
     const u = e.uv.x
     const v = 1 - e.uv.y // canvas space: v runs top -> bottom
+    const pageIndex = useSceneStore.getState().pageIndex
     for (const l of docLinks(doc, pageIndex)) {
       if (u >= l.u0 && u <= l.u1 && v >= l.v0 && v <= l.v1) {
         return { type: 'link', href: l.href }

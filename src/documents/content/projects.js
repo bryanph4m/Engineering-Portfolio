@@ -21,6 +21,8 @@ const decor = (ctx, W, H, rnd) => gridBase(ctx, W, H, rnd)
 const head = (kicker, title, sub, extra) => ({
   h: 290,
   inkH: 262,
+  dbg: 'head',
+  keepWithNext: true,
   draw(ctx, W, H, y, rnd) {
     text(ctx, kicker, 130, y + 69, { size: 27, color: FAINT, spacing: 5 })
     text(ctx, title, 126, y + 172, { font: TYPE, size: 80 })
@@ -36,6 +38,7 @@ const head = (kicker, title, sub, extra) => ({
 const bullet = ([lead, sub]) => ({
   h: sub ? 116 : 72,
   inkH: sub ? 84 : 40,
+  dbg: 'bullet',
   draw(ctx, W, H, y, rnd) {
     text(ctx, '›', 130, y + 30, { size: 38, color: RED })
     text(ctx, lead, 172, y + 30, { font: TYPE, size: 34 })
@@ -79,6 +82,8 @@ const wrapMono = (str, size, maxW) => {
 const subhead = (title) => ({
   h: 92,
   inkH: 68,
+  dbg: 'subhead',
+  keepWithNext: true,
   draw(ctx, W, H, y, rnd) {
     text(ctx, title.toUpperCase(), BODY_X, y + 46, { font: TYPE, size: 36, spacing: 2 })
     ctx.strokeStyle = 'rgba(51,41,29,0.42)'
@@ -94,6 +99,7 @@ const para = (str) => {
   return {
     h: inkH + 20, // trailing breathing room between paragraphs
     inkH,
+    dbg: 'para',
     draw(ctx, W, H, y, rnd) {
       let yy = y + BODY_SIZE
       for (const ln of lines) {
@@ -115,6 +121,7 @@ const detailBlocks = (detail = []) =>
 const cont = (title) => ({
   h: 96,
   inkH: 56,
+  dbg: 'cont',
   draw(ctx, W, H, y, rnd) {
     text(ctx, `${title} · CONT'D`, 130, y + 40, { size: 27, color: FAINT, spacing: 5 })
     ctx.strokeStyle = 'rgba(51,41,29,0.4)'
@@ -123,7 +130,7 @@ const cont = (title) => ({
   },
 })
 
-const figure = (h, inkH, draw) => ({ h, inkH, draw })
+const figure = (h, inkH, draw) => ({ h, inkH, draw, dbg: 'figure' })
 
 // Circle a phrase in the subtitle — positions are measured from the shared
 // summary text itself, so rewording it in portfolio.js moves the ellipse too.

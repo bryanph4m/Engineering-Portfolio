@@ -11,13 +11,24 @@ import { research } from '../../content/portfolio'
 // content area, and renumbers itself as pagination changes.
 
 export const RESEARCH_PAPER = { w: 3.2, h: 2.0 }
-const { box } = pageGeom(RESEARCH_PAPER, true)
+const { W: TEX_W, box } = pageGeom(RESEARCH_PAPER, true)
 
 const WHITE = '#e9f1fb'
 const DIM = 'rgba(233,241,251,0.75)'
 
+// The drafting title block is decor pinned to the bottom-right of every sheet.
+// It overlaps the measured content box (there's no room to sit it fully below
+// the box in a 1280px texture), so the flowed annotation notes below the figure
+// have to be kept clear of it or a long line runs straight through the DWG
+// block. NOTE_X is where notes are lettered from; NOTE_MAXW is the run that
+// stops a gutter short of the title block's left edge, so text() auto-fits any
+// over-long note down to fit rather than colliding.
+const TITLE_BLOCK_LEFT = TEX_W - 660
+const NOTE_X = 124
+const NOTE_MAXW = TITLE_BLOCK_LEFT - 48 - NOTE_X
+
 function titleBlock(ctx, W, H, rnd, sheet, count) {
-  const bx = W - 660
+  const bx = TITLE_BLOCK_LEFT
   const by = H - 290
   ctx.strokeStyle = WHITE
   ctx.lineWidth = 3
@@ -37,6 +48,8 @@ const decor = (ctx, W, H, rnd, page, count) => {
 const head = (title, sub) => ({
   h: 210,
   inkH: 180,
+  dbg: 'head',
+  keepWithNext: true,
   draw(ctx, W, H, y, rnd) {
     text(ctx, title, 120, y + 94, { font: TYPE, size: 92, color: WHITE, spacing: 4 })
     ctx.strokeStyle = DIM
@@ -50,8 +63,9 @@ const head = (title, sub) => ({
 const note = (str, opts = {}) => ({
   h: 60,
   inkH: 44,
+  dbg: 'note',
   draw(ctx, W, H, y, rnd) {
-    text(ctx, str, 124, y + 24, { size: 33, color: WHITE, ...opts })
+    text(ctx, str, NOTE_X, y + 24, { size: 33, color: WHITE, ...opts })
   },
 })
 
@@ -59,6 +73,7 @@ const note = (str, opts = {}) => ({
 const cont = (title) => ({
   h: 96,
   inkH: 56,
+  dbg: 'cont',
   draw(ctx, W, H, y, rnd) {
     text(ctx, `${title} · CONT'D`, 124, y + 40, { font: TYPE, size: 34, color: DIM, spacing: 4 })
     ctx.strokeStyle = DIM
@@ -67,7 +82,7 @@ const cont = (title) => ({
   },
 })
 
-const figure = (h, inkH, draw) => ({ h, inkH, draw })
+const figure = (h, inkH, draw) => ({ h, inkH, draw, dbg: 'figure' })
 
 /* ---- sheet A: vehicle overview ---- */
 const rocketFigure = figure(794, 782, (ctx, W, H, y, rnd) => {
@@ -229,7 +244,9 @@ const sheets = research.sheets.map((s) => {
     blocks.push(note(s.lead, { font: HAND, size: 40, color: '#cfe0f4' }))
   }
   blocks.push(FIGURES[s.id])
-  for (const n of s.notes ?? []) blocks.push(note(`· ${n.toUpperCase()}`))
+  // Notes flow below the figure, into the vertical band the title block sits
+  // in — cap their run so a long line auto-fits instead of running under it.
+  for (const n of s.notes ?? []) blocks.push(note(`· ${n.toUpperCase()}`, { maxW: NOTE_MAXW }))
   return { decor, cont: cont(s.title.toUpperCase()), blocks }
 })
 

@@ -224,14 +224,17 @@ function Calculator({ position, yaw = 0 }) {
         <cylinderGeometry args={[0.026, 0.026, 0.012, 14]} />
         <meshStandardMaterial color={TI_BODY} roughness={0.5} />
       </mesh>
-      {/* inert labelled key caps — no handlers, so r3f never raycasts them */}
+      {/* Inert labelled key caps — no handlers, so r3f never raycasts them.
+          One material per cap, not the old six: keyLabelTexture already paints
+          the whole cap (base colour, domed highlight, centred glyph) so the top
+          face reads exactly as before, while the near-invisible embedded side
+          slivers show the texture's base-colour border. That drops each cap
+          from six draw calls (a 6-material box) to one — ~200 draws saved
+          across the pad, the biggest single draw-call cut on the desk. */}
       {calcKeys.map(({ id, label, x, z, w, d, h, color, ink }) => (
         <mesh key={id} castShadow position={[x, SHELL_TOP + h / 2 - KEY_EMBED, z]}>
           <boxGeometry args={[w, h, d]} />
-          {[0, 1, 3, 4, 5].map((i) => (
-            <meshStandardMaterial key={i} attach={`material-${i}`} color={color} roughness={0.45} />
-          ))}
-          <meshStandardMaterial attach="material-2" map={keyLabelTexture(label, color, ink)} roughness={0.45} />
+          <meshStandardMaterial map={keyLabelTexture(label, color, ink)} roughness={0.45} />
         </mesh>
       ))}
     </group>

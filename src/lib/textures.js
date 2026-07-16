@@ -420,10 +420,17 @@ export function softShadowTexture() {
  */
 export function pennantTexture() {
   if (cache.pennant) return cache.pennant
+  // The pennant is a small prop lying in the desk clutter — it never renders
+  // more than a couple hundred px on screen, so a 512×256 raster is already
+  // oversampled. The felt art is authored in a 1024×512 space; we scale the
+  // context down so it rasterizes into a quarter-size canvas (a quarter of the
+  // texture memory) with no change to the drawing code or the look.
   const W = 1024
   const H = 512
-  const c = canvas(W, H)
+  const S = 0.5
+  const c = canvas(W * S, H * S)
   const ctx = c.getContext('2d')
+  ctx.scale(S, S)
 
   const UCLA_BLUE = '#2774AE'
   const UCLA_BLUE_DK = '#1b5a8a'

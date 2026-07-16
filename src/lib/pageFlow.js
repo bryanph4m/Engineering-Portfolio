@@ -23,6 +23,12 @@
  *   h:    advance height in texture px (how far the cursor moves)
  *   inkH: painted height, if less than `h` — trailing breathing room does
  *         not count against the page bottom
+ *   keepWithNext?: true  a header that must never be the last block on a page.
+ *                        When a page break falls right after a run of these,
+ *                        they are carried onto the next page with the block
+ *                        that triggered the break, so a heading is never
+ *                        stranded above content that flowed to the next sheet
+ *                        (widow/orphan control).
  *   draw(ctx, W, H, y, rnd, link)      paint with the block's top edge at y
  * }
  *
@@ -46,11 +52,25 @@ export function flowSheets(sheets, box) {
         console.warn(`[pageFlow] a block is taller (${inkH}px) than the content box (${box.h}px) — it will be clipped`)
       }
       if (y + inkH > bottom && items.length) {
+        // Widow/orphan control: never let a trailing run of keep-with-next
+        // headers be the last thing on the page. Pull them off the page just
+        // being flushed and carry them onto the next page as a unit with the
+        // block that triggered the break, so a heading always sits above its
+        // content. (The remaining items still flush as their own page; if the
+        // page was *only* headers, flush drops it rather than mint a blank.)
+        const carried = []
+        while (items.length && items[items.length - 1].block.keepWithNext) {
+          carried.unshift(items.pop().block)
+        }
         flush()
         y = box.y
         if (sheet.cont) {
           items.push({ block: sheet.cont, y })
           y += sheet.cont.h
+        }
+        for (const b of carried) {
+          items.push({ block: b, y })
+          y += b.h
         }
       }
       items.push({ block, y })
@@ -61,6 +81,10 @@ export function flowSheets(sheets, box) {
 
   return flowed.map(({ decor, items }) => ({
     decor,
+    // dev-only: the ordered kinds of the blocks that landed on this page, so
+    // widow/orphan checks and the debug harness can inspect pagination without
+    // re-deriving the flow. Purely metadata; the painters never read it.
+    kinds: items.map((it) => it.block.dbg ?? '?'),
     draw: (ctx, W, H, rnd, link) => {
       for (const it of items) it.block.draw(ctx, W, H, it.y, rnd, link)
     },

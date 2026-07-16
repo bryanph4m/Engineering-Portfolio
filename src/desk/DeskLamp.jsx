@@ -63,7 +63,10 @@ export default function DeskLamp() {
         intensity={95}
         color={COLORS.lampWarm}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        // 1024² is plenty for a desk-sized pool of soft contact shadows, and
+        // the map is baked once (ShadowBake in DeskScene) then frozen — so this
+        // size is a one-time cost and a quarter of the memory of the old 2048².
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
       />
       {/* tiny point light so the bulb itself reads as a glow source */}

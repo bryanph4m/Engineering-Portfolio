@@ -1,5 +1,5 @@
 import { Suspense, useRef } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { PerspectiveCamera, AdaptiveDpr, Preload } from '@react-three/drei'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
@@ -30,6 +30,30 @@ function FirstFramesGate() {
 }
 
 /**
+ * Bakes the shadow map once, then freezes it. The desk is a static set — the
+ * lamp and every shadow-casting prop are fixed, and the documents deliberately
+ * cast no shadow (Document.jsx grounds them with an animated contact plane).
+ * So the shadow map is identical every frame; re-rendering all ~110 casters
+ * into the 1024² depth map on every frame is pure waste. We let it auto-update
+ * for the first frames (covering the async font-swap texture repaints and the
+ * scene settling under Suspense), then force one final bake and switch
+ * autoUpdate off. Nothing in the scene ever invalidates it afterward.
+ */
+function ShadowBake({ frames = 20 }) {
+  const gl = useThree((s) => s.gl)
+  const n = useRef(0)
+  useFrame(() => {
+    if (!gl.shadowMap.autoUpdate) return
+    n.current += 1
+    if (n.current >= frames) {
+      gl.shadowMap.needsUpdate = true // one last bake this frame…
+      gl.shadowMap.autoUpdate = false // …then never again
+    }
+  })
+  return null
+}
+
+/**
  * The single Canvas for the whole site. Everything lives under here and is
  * swapped by internal state — the Canvas never remounts. Lighting is a warm
  * lamp key (in DeskLamp) plus a low ambient/hemisphere fill.
@@ -39,11 +63,20 @@ export default function DeskScene() {
     <Canvas
       className="scene-canvas"
       shadows
-      dpr={[1, 2]}
+      // The readable paper textures are 1280px tall and a focused sheet fills
+      // ~850 CSS px, so beyond ~1.5x device pixels we're only upsampling a
+      // fixed-res canvas — more fragments, no sharper text. Cap the ratio at
+      // 1.5 (AdaptiveDpr still drops it further while the camera moves). The
+      // scene is fill-rate bound, so this is the single biggest perf lever.
+      dpr={[1, 1.5]}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
-      onCreated={({ gl }) => {
+      onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping
         gl.toneMappingExposure = 1.05
+        if (import.meta.env.DEV && typeof window !== 'undefined') {
+          window.__gl = gl
+          window.__scene = scene
+        }
       }}
     >
       <color attach="background" args={['#160f07']} />
@@ -69,6 +102,7 @@ export default function DeskScene() {
       </Suspense>
 
       <FirstFramesGate />
+      <ShadowBake />
       {import.meta.env.DEV && <DevLayoutAudit />}
       <AdaptiveDpr pixelated />
     </Canvas>
