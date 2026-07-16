@@ -63,7 +63,7 @@ export const profile = {
     'Thanks for taking the time to check out my portfolio! Feel free to check out the interactive render of the site afterward.',
     'I am currently attending the University of California, Los Angeles as a Mechanical Engineering major after graduating with a few AS degrees from Mission College.',
     'During my time at Mission College, I found an interest in amateur rocketry and embedded systems, which led me to found Mission Launch Rocketry, the only project-based engineering club on campus at the time, where I served as president.',
-    'The following Summer, I was convinced to attend my first hackathon at UC Berkeley, where I realized I enjoyed both the hardware and software aspects of engineering.',
+    'The following summer, I was convinced to attend my first hackathon at UC Berkeley, where I realized I enjoyed both the hardware and software aspects of engineering.',
     'I am excited to see where the future takes me and how UCLA can help me grow as an engineer. I am currently looking for internship opportunities.',
   ],
 }
