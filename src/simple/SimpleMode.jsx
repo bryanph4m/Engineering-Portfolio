@@ -37,8 +37,6 @@ function InlineList({ items }) {
   })
 }
 
-const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-
 /**
  * A Wikipedia-style figure: a bordered, right-floated thumbnail with a bold
  * title lead-in, a muted caption, and a muted "date · credit" line beneath —
@@ -82,6 +80,41 @@ function WikiFigure({ photo }) {
 function Figures({ photos }) {
   if (!photos?.length) return null
   return photos.map((p, i) => <WikiFigure key={i} photo={p} />)
+}
+
+/**
+ * The resume, embedded inline — simple mode's whole Resume article.
+ *
+ * This view deliberately shows the real PDF rather than a re-typed transcript:
+ * the resume file (public/assets/Bryan-Pham-Resume.pdf, `resume.pdf` in the
+ * shared content) is authoritative, so a recruiter reads exactly what they'd get
+ * from the download instead of a copy that can drift from it. The desk mode is
+ * unaffected — its folded resume sheet still paints `resume.sections` verbatim
+ * (src/documents/content/resume.js), so that data stays the single source for
+ * the sheet.
+ *
+ * `<object>` (not `<iframe>`) so browsers with no inline PDF viewer render the
+ * children as a real fallback instead of a blank box; the download link above
+ * the frame is always there regardless.
+ */
+function ResumePreview() {
+  return (
+    <div className="wiki__pdf">
+      <object
+        className="wiki__pdf-frame"
+        data={`${resume.pdf}#view=FitH`}
+        type="application/pdf"
+        aria-label={`${resume.name} — resume (PDF)`}
+      >
+        <div className="wiki__pdf-fallback">
+          <p>This browser can&rsquo;t display the PDF inline.</p>
+          <a className="wiki__download" href={resume.pdf} target="_blank" rel="noreferrer">
+            Download resume (PDF) ↗
+          </a>
+        </div>
+      </object>
+    </div>
+  )
 }
 
 /**
@@ -215,10 +248,18 @@ function buildArticles(go) {
       })),
     },
 
+    // The resume PDF, embedded — this article IS the preview. It carries no
+    // subsections: the Education / Experience / Projects / Skills breakdown is
+    // in the PDF itself, so re-typing it here would only be a second copy that
+    // can drift from the authoritative file. Desk mode still renders those
+    // sections from `resume.sections` on its folded sheet.
     resume: {
       title: 'Resume',
       lead: (
         <>
+          <p>
+            The full resume for <strong>{resume.name}</strong>, shown below.
+          </p>
           <p>
             <a
               className="wiki__download"
@@ -226,31 +267,20 @@ function buildArticles(go) {
               target="_blank"
               rel="noreferrer"
             >
-              Download resume (PDF) ↗
+              Open or download the PDF ↗
             </a>
           </p>
-          <p>A plain-text version follows.</p>
         </>
       ),
-      subsections: resume.sections.map((sec) => ({
-        id: `resume-${slug(sec.label)}`,
-        heading: sec.label,
-        render: () => (
-          <ul className="wiki__list">
-            {sec.entries.map((e, i) => (
-              <li key={i}>
-                <span className="wiki__spec-lead">{e.title}</span>
-                {e.sub ? <> · <span className="wiki__spec-sub">{e.sub}</span></> : null}
-              </li>
-            ))}
-          </ul>
-        ),
-      })),
+      body: () => <ResumePreview />,
+      subsections: [],
     },
 
     contact: {
       title: 'Contact',
-      lead: <p>Reach {contact.name} directly:</p>,
+      // Simple-mode-only lead copy; see `contact.intro` in portfolio.js. The
+      // desk's envelope never reads it.
+      lead: <p>{contact.intro}</p>,
       subsections: [
         {
           id: 'contact-links',
@@ -297,18 +327,140 @@ const SEARCH_INDEX = [
     section: 'research', anchor: s.id, label: s.title,
     text: `${s.title} ${s.sub} ${s.lead ?? ''} ${(s.notes ?? []).join(' ')} ${(s.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
   })),
-  ...resume.sections.map((sec) => ({
-    section: 'resume', anchor: `resume-${slug(sec.label)}`, label: `Resume · ${sec.label}`,
-    text: sec.entries.map((e) => `${e.title} ${e.sub}`).join(' '),
-  })),
+  // The Resume article is the embedded PDF, so it has no subsections to index.
+  // Its one entry still searches the resume's own words (the section labels and
+  // entries desk mode paints) so a query like "SolidWorks" or "Skills" lands on
+  // the preview — the document that actually answers it.
+  {
+    section: 'resume', anchor: null, label: 'Resume (PDF)',
+    text: resume.sections
+      .map((sec) => `${sec.label} ${sec.entries.map((e) => `${e.title} ${e.sub}`).join(' ')}`)
+      .join(' '),
+  },
   {
     section: 'contact', anchor: 'contact-links', label: 'Contact',
-    text: contact.links.map((l) => `${l.kind} ${l.label}`).join(' '),
+    text: `${contact.intro} ${contact.links.map((l) => `${l.kind} ${l.label}`).join(' ')}`,
   },
 ].map((e, i) => ({ ...e, key: i, haystack: `${e.label} ${e.text}`.toLowerCase() }))
 
 function scrollToAnchor(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+/* ------------------------------------------------------------------ */
+/* Appearance settings — SIMPLE MODE ONLY                              */
+/* ------------------------------------------------------------------ */
+/**
+ * Wikipedia's Appearance panel: text size, content width, and colour mode,
+ * applied live and remembered across reloads.
+ *
+ * Everything here is scoped to the simple mode and cannot reach the desk:
+ * the settings are applied as data attributes on the `.wiki` root element and
+ * every rule that reads them is a `.wiki[data-…]` selector in simple.css, which
+ * only ships in the lazily-loaded simple-mode chunk. Nothing touches <html>,
+ * <body>, or any global state, so the 3D scene's styling is untouched whether or
+ * not a visitor has ever opened this panel. (App.jsx hard-forks the two modes,
+ * so `.wiki` doesn't even exist while the desk is mounted.)
+ */
+const APPEARANCE_KEY = 'wiki:appearance'
+const APPEARANCE_DEFAULTS = { text: 'standard', width: 'standard', color: 'automatic' }
+// value → label, in the order Wikipedia lists them.
+const APPEARANCE_OPTIONS = {
+  text: [['small', 'Small'], ['standard', 'Standard'], ['large', 'Large']],
+  width: [['standard', 'Standard'], ['wide', 'Wide']],
+  color: [['automatic', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']],
+}
+
+/** Read saved settings, keeping only values the CSS actually has a rule for —
+ *  a stale or hand-edited entry falls back to the default for that field
+ *  instead of wedging the view into an unstyled state. */
+function loadAppearance() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(APPEARANCE_KEY) ?? 'null')
+    const next = { ...APPEARANCE_DEFAULTS }
+    for (const key of Object.keys(APPEARANCE_DEFAULTS)) {
+      if (APPEARANCE_OPTIONS[key].some(([v]) => v === saved?.[key])) next[key] = saved[key]
+    }
+    return next
+  } catch {
+    return APPEARANCE_DEFAULTS // storage blocked or unparseable — use defaults
+  }
+}
+
+function useAppearance() {
+  const [appearance, setAppearance] = useState(loadAppearance)
+  // The OS preference, tracked live so 'Automatic' resolves to a real theme and
+  // follows a system change without a reload.
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches,
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e) => setSystemDark(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance))
+    } catch {
+      // Storage unavailable (private mode / blocked cookies). The settings still
+      // apply for this session; only persistence is lost.
+    }
+  }, [appearance])
+
+  const set = (key, value) => setAppearance((a) => ({ ...a, [key]: value }))
+  // 'automatic' is stored as the preference but never applied as-is — the DOM
+  // always carries a concrete light/dark so the CSS needs no media query.
+  const resolvedColor =
+    appearance.color === 'automatic' ? (systemDark ? 'dark' : 'light') : appearance.color
+
+  return { appearance, set, resolvedColor }
+}
+
+// An appearance/contrast glyph on the WikimediaUI 20×20 grid: a ring with its
+// right half filled, the standard "theme" mark.
+function AppearanceIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path fill="currentColor" d="M10 2a8 8 0 0 1 0 16z" />
+    </svg>
+  )
+}
+
+/** The docked Appearance panel. Each control writes straight to state, so the
+ *  change lands on the next render — no apply button, no reload. */
+function AppearancePanel({ appearance, set }) {
+  const group = (key, legend) => (
+    <fieldset className="wiki__appearance-group">
+      <legend className="wiki__appearance-legend">{legend}</legend>
+      {APPEARANCE_OPTIONS[key].map(([value, label]) => (
+        <label className="wiki__appearance-opt" key={value}>
+          <input
+            type="radio"
+            name={`wiki-appearance-${key}`}
+            value={value}
+            checked={appearance[key] === value}
+            onChange={() => set(key, value)}
+          />
+          <span>{label}</span>
+        </label>
+      ))}
+    </fieldset>
+  )
+  return (
+    <aside className="wiki__appearance" aria-label="Appearance">
+      <div className="wiki__appearance-inner">
+        <p className="wiki__appearance-title">Appearance</p>
+        {group('text', 'Text')}
+        {group('width', 'Width')}
+        {group('color', 'Color')}
+      </div>
+    </aside>
+  )
 }
 
 // WikimediaUI "menu" icon — the exact three-bar glyph Vector 2022 uses for
@@ -391,6 +543,9 @@ function Article({ article }) {
           {article.extended.map((para, i) => <p key={i}>{para}</p>)}
         </div>
       ) : null}
+      {/* Optional custom article body (the Resume article's embedded PDF), shown
+          between the prose and any subsections. Most articles omit it. */}
+      {article.body?.()}
       {article.subsections.map((s) => (
         <section key={s.id} id={s.id} className="wiki__section">
           <h2 className="wiki__h2">{s.heading}</h2>
@@ -417,6 +572,9 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
   // Below Wikipedia's 1120px header breakpoint the search bar collapses to an
   // icon-only button; tapping it expands search across the whole bar.
   const [searchOpen, setSearchOpen] = useState(false)
+  // Appearance panel: closed until the header toggle opens it, like Wikipedia's.
+  const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const { appearance, set: setAppearance, resolvedColor } = useAppearance()
   const mainRef = useRef(null)
   const searchInputRef = useRef(null)
 
@@ -458,7 +616,12 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
 
   return (
     <div
-      className={`wiki${navOpen ? '' : ' wiki--nav-closed'}${searchOpen ? ' wiki--search-open' : ''}`}
+      className={`wiki${navOpen ? '' : ' wiki--nav-closed'}${searchOpen ? ' wiki--search-open' : ''}${appearanceOpen ? ' wiki--appearance-open' : ''}`}
+      // The appearance settings ride the root element as data attributes; every
+      // rule that reads them is scoped to `.wiki` (see useAppearance above).
+      data-text-size={appearance.text}
+      data-width={appearance.width}
+      data-color={resolvedColor}
     >
       {/*
         Header replicating Wikipedia's Vector 2022 top bar structure:
@@ -548,6 +711,19 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
           <SearchIcon />
         </button>
 
+        {/* Appearance toggle, in Wikipedia's slot: the last control before the
+            top-right cluster (here the clock). Shows and hides the docked panel. */}
+        <button
+          type="button"
+          className="wiki__appearance-toggle"
+          aria-label="Appearance"
+          aria-expanded={appearanceOpen}
+          title="Appearance"
+          onClick={() => setAppearanceOpen((v) => !v)}
+        >
+          <AppearanceIcon />
+        </button>
+
         <HeaderClock />
       </header>
 
@@ -580,6 +756,8 @@ export default function SimpleMode({ onExit, onEnterDesk }) {
       <main className="wiki__main" ref={mainRef}>
         {article && <Article article={article} />}
       </main>
+
+      {appearanceOpen && <AppearancePanel appearance={appearance} set={setAppearance} />}
     </div>
   )
 }

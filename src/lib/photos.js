@@ -43,11 +43,18 @@ export function polaroidFrame() {
 // text that follows one) never touch the frame, in texture px.
 const PHOTO_GAP = 46
 
-/** Polaroid footprint for a paper, in texture px. */
-function polaroidPx(paper) {
+/**
+ * Polaroid footprint for a paper, in texture px, at an optional uniform scale.
+ *
+ * `scale` shrinks the physical polaroid, not just its reservation: Polaroids.jsx
+ * sizes the mesh from the rect reserved here, so the two can't disagree. The
+ * paginated documents leave it at 1; the index card uses it because a full-size
+ * polaroid on a small card would take a third of its width (see about.js).
+ */
+function polaroidPx(paper, scale = 1) {
   const { W, H } = texDims(paper)
   const f = polaroidFrame()
-  return { wpx: (f.w / paper.w) * W, hpx: (f.h / paper.h) * H }
+  return { wpx: ((f.w * scale) / paper.w) * W, hpx: ((f.h * scale) / paper.h) * H }
 }
 
 /**
@@ -62,9 +69,9 @@ function polaroidPx(paper) {
  * text or the image is large (open space reads better than a cramped wrap).
  * For text-wrap-around, see `photoFloat`.
  */
-export function photoBlocks(photos, paper, box) {
+export function photoBlocks(photos, paper, box, scale = 1) {
   if (!photos?.length) return []
-  const { wpx, hpx } = polaroidPx(paper)
+  const { wpx, hpx } = polaroidPx(paper, scale)
   const x = box.x + Math.max(0, (box.w - wpx) / 2)
   return photos.map((photo) => ({
     h: hpx + PHOTO_GAP,
@@ -92,8 +99,8 @@ export function photoBlocks(photos, paper, box) {
  * reported by pageFlow just like a band photo, so Polaroids.jsx pins the mesh
  * to the reserved spot.
  */
-export function photoFloat(photo, paper, box, side = 'right') {
-  const { wpx, hpx } = polaroidPx(paper)
+export function photoFloat(photo, paper, box, side = 'right', scale = 1) {
+  const { wpx, hpx } = polaroidPx(paper, scale)
   const x = side === 'left' ? box.x : box.x + box.w - wpx
   return {
     float: true,
@@ -108,6 +115,37 @@ export function photoFloat(photo, paper, box, side = 'right') {
     place: { x, w: wpx, h: hpx },
     draw() {}, // the 3D polaroid renders it; nothing lands on the paper texture
   }
+}
+
+/**
+ * Reserve a polaroid column on a document that is NOT block-flowed — the
+ * hand-painted, single-page sheets whose art is placed at absolute coordinates
+ * (the index card). Those have no cursor for `photoBlocks` / `photoFloat` to
+ * ride, but they still owe the photo the same guarantee the flowed documents
+ * get: the copy must be measured against a box that already excludes the photo,
+ * so text can never land under it.
+ *
+ * So instead of a flow block this returns the two things such a painter needs:
+ *   - `rect`: the reserved footprint in texture px, pinned to `side` of `box`
+ *     with its top at `y` — the same rect shape pageFlow reports as an anchor,
+ *     so `Polaroids.jsx` consumes it identically.
+ *   - `textBox`: `box` narrowed to the column beside the photo (minus the same
+ *     PHOTO_GAP breathing room the flowed photos reserve). A painter sets it as
+ *     `ctx._contentBox` while painting the runs that sit alongside the photo, and
+ *     docTextures' per-line auto-fit then measures them against that narrowed
+ *     run — the existing bounding-box machinery, pointed at a smaller box.
+ *
+ * Pagination is a no-op here by construction: these documents are one page, so
+ * the photo always lands on page 0 and there is no next sheet to flow onto.
+ */
+export function photoSlot(photo, paper, box, { scale = 1, y = box.y, side = 'right' } = {}) {
+  const { wpx, hpx } = polaroidPx(paper, scale)
+  const x = side === 'left' ? box.x : box.x + box.w - wpx
+  const textBox =
+    side === 'left'
+      ? { x: x + wpx + PHOTO_GAP, y: box.y, w: box.x + box.w - (x + wpx + PHOTO_GAP), h: box.h }
+      : { x: box.x, y: box.y, w: x - PHOTO_GAP - box.x, h: box.h }
+  return { photo, rect: { x, y, w: wpx, h: hpx }, textBox }
 }
 
 /**

@@ -1,5 +1,5 @@
 import { restHeightFor } from '../desk/layout'
-import { aboutPages } from './content/about'
+import { aboutPages, aboutPhotos, ABOUT_PAPER } from './content/about'
 import { projectPages, projectPhotos, PROJECTS_PAPER } from './content/projects'
 import { researchPages, researchPhotos, RESEARCH_PAPER } from './content/research'
 import { resumePages } from './content/resume'
@@ -31,7 +31,8 @@ export const DOCUMENTS = [
     title: 'About',
     kind: 'card',
     pages: aboutPages,
-    paper: { w: 1.7, h: 1.15 },
+    photos: aboutPhotos,
+    paper: ABOUT_PAPER,
     rest: rest('card', -2.45, 1.3, 0.18),
   },
   {

@@ -57,6 +57,21 @@ function rectCentreLocal(rect, paper) {
   }
 }
 
+/**
+ * How big to build this polaroid, as a multiple of the base frame — read back
+ * out of the footprint the layout actually reserved rather than assumed to be 1.
+ *
+ * The reservation is the single source of truth for the polaroid's size: if a
+ * document asked lib/photos.js for a scaled slot (the index card does), the mesh
+ * has to match, or the photo would overhang the space the text was kept out of.
+ * The flowed documents reserve at 1:1, so this returns 1 for them and nothing
+ * about their polaroids changes.
+ */
+function frameScale(rect, paper) {
+  const { W } = texDims(paper)
+  return (rect.w / W) * paper.w / FRAME.w
+}
+
 /** Loads each placed photo's image into a texture, falling back to the painted
  *  placeholder for any slot whose file isn't in /public/assets/photos/ yet. */
 function usePhotoTextures(photos) {
@@ -110,6 +125,9 @@ function Polaroid({ doc, placed, tex, index }) {
   const pos = useMemo(() => rectCentreLocal(placed.rect, doc.paper), [placed, doc.paper])
   const z = useMemo(() => topSheetZ(doc) + Z_LIFT, [doc])
   const tilt = TILTS[index % TILTS.length]
+  // Uniform scale, so the frame, the photo opening and the chin offset all keep
+  // their proportions at any reserved size.
+  const s = useMemo(() => frameScale(placed.rect, doc.paper), [placed, doc.paper])
 
   const [{ vis }, visApi] = useSpring(() => ({
     vis: 1,
@@ -136,8 +154,8 @@ function Polaroid({ doc, placed, tex, index }) {
   return (
     <group ref={groupRef} position={[pos.x, pos.y, z]} rotation={[0, 0, tilt]} visible={showing}>
       {/* soft drop shadow, nudged down-right and set just under the frame */}
-      <mesh position={[0.03, -0.035, -0.006]} raycast={() => null}>
-        <planeGeometry args={[FRAME.w * 1.06, FRAME.h * 1.06]} />
+      <mesh position={[0.03 * s, -0.035 * s, -0.006]} raycast={() => null}>
+        <planeGeometry args={[FRAME.w * 1.06 * s, FRAME.h * 1.06 * s]} />
         <meshBasicMaterial
           ref={shadowMat}
           map={softShadowTexture()}
@@ -148,12 +166,12 @@ function Polaroid({ doc, placed, tex, index }) {
       </mesh>
       {/* white polaroid frame */}
       <mesh raycast={() => null}>
-        <planeGeometry args={[FRAME.w, FRAME.h]} />
+        <planeGeometry args={[FRAME.w * s, FRAME.h * s]} />
         <meshStandardMaterial ref={frameMat} color="#f7f5ee" roughness={0.85} transparent />
       </mesh>
       {/* the photo — desk mode uses the image only, never the caption/title */}
-      <mesh position={[0, PHOTO_OFFSET_Y, 0.002]} raycast={() => null}>
-        <planeGeometry args={[POLAROID.photoW, POLAROID.photoH]} />
+      <mesh position={[0, PHOTO_OFFSET_Y * s, 0.002]} raycast={() => null}>
+        <planeGeometry args={[POLAROID.photoW * s, POLAROID.photoH * s]} />
         <meshStandardMaterial ref={photoMat} map={tex} roughness={0.55} transparent />
       </mesh>
     </group>

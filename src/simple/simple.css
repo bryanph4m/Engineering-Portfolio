@@ -5,6 +5,10 @@
 /* article column, a collapsible Contents box, underlined section      */
 /* headers, and standard blue hyperlinks.                              */
 /* ------------------------------------------------------------------ */
+/* Every colour below is a token rather than a literal, because the Appearance  */
+/* panel's dark mode is implemented by re-pointing these same variables on      */
+/* `.wiki[data-color='dark']` (see "appearance" further down). A hardcoded hex  */
+/* anywhere in this file is a spot that would stay light-mode in the dark theme.*/
 .wiki {
   --wiki-border: #a2a9b1;
   --wiki-border-light: #c8ccd1;
@@ -14,14 +18,29 @@
   --wiki-muted: #54595d;
   --wiki-link: #3366cc;
   --wiki-link-visited: #795cb2;
+  --wiki-icon: #404244; /* quiet header glyphs (hamburger, search, appearance) */
+  --wiki-hover: #eaecf0;
+  --wiki-active: #dadde3;
+  --wiki-rule: #eaecf0; /* hairline between nav rows */
+  --wiki-input-border: #72777d;
+  --wiki-ph-a: #eeeeee; /* photo-placeholder hatching */
+  --wiki-ph-b: #f4f4f4;
   --wiki-chrome-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --wiki-serif: Georgia, 'Times New Roman', 'Linux Libertine', serif;
+
+  /* Layout knobs the Appearance panel and the hamburger drive. Keeping the two
+     collapsible columns as variables means the grid template is declared once
+     here instead of once per open/closed combination. */
+  --wiki-side-w: 210px;
+  --wiki-aside-w: 0px;
+  --wiki-article-size: 16px;
+  --wiki-article-max: 860px;
 
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-areas: 'top top' 'side main';
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-areas: 'top top top' 'side main aside';
+  grid-template-columns: var(--wiki-side-w) minmax(0, 1fr) var(--wiki-aside-w);
   grid-template-rows: auto 1fr;
   background: var(--wiki-bg);
   color: var(--wiki-text);
@@ -59,14 +78,14 @@
   border: 0;
   border-radius: 2px;
   background: none;
-  color: #404244;
+  color: var(--wiki-icon);
   cursor: pointer;
 }
 .wiki__menu:hover {
-  background: #eaecf0;
+  background: var(--wiki-hover);
 }
 .wiki__menu:active {
-  background: #dadde3;
+  background: var(--wiki-active);
 }
 .wiki__menu svg {
   display: block;
@@ -136,7 +155,7 @@
   width: 100%;
   height: 32px;
   padding: 4px 8px 4px 34px;
-  border: 1px solid #72777d;
+  border: 1px solid var(--wiki-input-border);
   border-radius: 2px 0 0 2px;
   font: inherit;
   font-size: 14px;
@@ -152,13 +171,13 @@
   flex: none;
   margin-left: -1px; /* share the border with the input, like Codex's attached button */
   padding: 0 12px;
-  border: 1px solid #72777d;
+  border: 1px solid var(--wiki-input-border);
   border-radius: 0 2px 2px 0;
   background: var(--wiki-panel);
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-  color: #404244;
+  color: var(--wiki-icon);
   cursor: pointer;
 }
 .wiki__search-btn:hover {
@@ -167,8 +186,39 @@
 .wiki__search-toggle {
   display: none; /* icon-only search entry point, compact widths only */
 }
-.wiki__clock {
+/* Appearance toggle: the last control before the top-right cluster, which is
+   where Vector 2022 puts it. It owns the flex `auto` margin (the clock used to),
+   so it and the clock travel together against the right gutter. */
+.wiki__appearance-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--wiki-icon);
+  cursor: pointer;
+}
+.wiki__appearance-toggle:hover {
+  background: var(--wiki-hover);
+}
+.wiki__appearance-toggle:active {
+  background: var(--wiki-active);
+}
+.wiki__appearance-toggle[aria-expanded='true'] {
+  background: var(--wiki-hover);
+  color: var(--wiki-text);
+}
+.wiki__appearance-toggle svg {
+  display: block;
+}
+.wiki__clock {
+  margin-left: 12px;
   font-size: 14px;
   color: var(--wiki-text);
   font-variant-numeric: tabular-nums;
@@ -221,7 +271,7 @@
 
 /* ---- hamburger-collapsed sidebar ------------------------------------- */
 .wiki--nav-closed {
-  grid-template-columns: 0 minmax(0, 1fr);
+  --wiki-side-w: 0px;
 }
 .wiki--nav-closed .wiki__side {
   display: none;
@@ -250,7 +300,7 @@
   padding: 0;
 }
 .wiki__nav li + li {
-  border-top: 1px solid #eaecf0;
+  border-top: 1px solid var(--wiki-rule);
 }
 .wiki__nav-link {
   display: block;
@@ -290,9 +340,9 @@
   padding: 22px clamp(16px, 4vw, 44px) 80px;
 }
 .wiki__article {
-  max-width: 860px;
+  max-width: var(--wiki-article-max);
   font-family: var(--wiki-serif);
-  font-size: 16px;
+  font-size: var(--wiki-article-size);
   line-height: 1.6;
   color: var(--wiki-text);
 }
@@ -411,7 +461,7 @@
   width: 100%;
   height: auto;
   border: 1px solid var(--wiki-border-light);
-  background: #fff;
+  background: var(--wiki-bg);
 }
 /* Placeholder shown until the image file is dropped in (or if it fails). */
 .wiki__figure-ph {
@@ -421,7 +471,7 @@
   aspect-ratio: 4 / 5;
   border: 1px solid var(--wiki-border-light);
   background:
-    repeating-linear-gradient(-45deg, #eee 0, #eee 8px, #f4f4f4 8px, #f4f4f4 16px);
+    repeating-linear-gradient(-45deg, var(--wiki-ph-a) 0, var(--wiki-ph-a) 8px, var(--wiki-ph-b) 8px, var(--wiki-ph-b) 16px);
   color: var(--wiki-muted);
   font-size: 12px;
   letter-spacing: 1px;
@@ -514,6 +564,133 @@
   outline-offset: 1px;
 }
 
+/* ---- embedded resume PDF (the whole Resume article) ------------------ */
+/* The <object> renders the real file inline; its children only surface when a  */
+/* browser has no inline PDF viewer, so the fallback is styled as a real card,  */
+/* not a hidden afterthought. `clear` keeps the frame below any floated figure. */
+.wiki__pdf {
+  clear: both;
+  margin: 14px 0 10px;
+  padding: 4px;
+  border: 1px solid var(--wiki-border);
+  background: var(--wiki-panel);
+}
+.wiki__pdf-frame {
+  display: block;
+  width: 100%;
+  /* Tall enough to read a page at a glance, capped so the viewer's own scrollbar
+     — not the article's — carries the rest. */
+  height: clamp(480px, 78vh, 1100px);
+  border: 0;
+  background: var(--wiki-bg);
+}
+.wiki__pdf-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  font-family: var(--wiki-chrome-font);
+  font-size: 14px;
+  color: var(--wiki-muted);
+  text-align: center;
+}
+.wiki__pdf-fallback p {
+  margin: 0;
+}
+
+/* ---- appearance panel (simple mode only) ---------------------------- */
+/* Wikipedia's Appearance menu: a panel docked on the far side of the article,  */
+/* shown and hidden by the header toggle. Opening it just widens the grid's     */
+/* third column, so the article reflows beside the panel instead of being       */
+/* overlapped by it. Every setting below is applied via a `data-` attribute on  */
+/* the `.wiki` root — see the `data-text-size` / `data-width` / `data-color`    */
+/* rules underneath — which is what keeps all of this off the desk mode.        */
+.wiki--appearance-open {
+  --wiki-aside-w: 248px;
+}
+.wiki__appearance {
+  grid-area: aside;
+  overflow-y: auto;
+  border-left: 1px solid var(--wiki-border-light);
+  background: var(--wiki-bg);
+}
+.wiki__appearance-inner {
+  padding: 20px 16px 24px;
+}
+.wiki__appearance-title {
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--wiki-text);
+  border-bottom: 1px solid var(--wiki-border-light);
+}
+.wiki__appearance-group {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+}
+.wiki__appearance-legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wiki-muted);
+}
+.wiki__appearance-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 2px;
+  font-size: 14px;
+  color: var(--wiki-text);
+  cursor: pointer;
+}
+.wiki__appearance-opt input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--wiki-link);
+  cursor: pointer;
+}
+
+/* Text size — Wikipedia's small / standard / large steps. */
+.wiki[data-text-size='small'] {
+  --wiki-article-size: 14px;
+}
+.wiki[data-text-size='large'] {
+  --wiki-article-size: 18px;
+}
+
+/* Width — 'wide' lets the article column fill the space it's given. */
+.wiki[data-width='wide'] {
+  --wiki-article-max: none;
+}
+
+/* Colour — dark re-points the tokens declared at the top of this file. The
+   attribute always carries a resolved light/dark (never 'automatic'): the
+   'Automatic' setting is resolved against prefers-color-scheme in JS, so there
+   is exactly one place a theme is decided. */
+.wiki[data-color='dark'] {
+  --wiki-border: #54595d;
+  --wiki-border-light: #404244;
+  --wiki-bg: #101418;
+  --wiki-panel: #27292d;
+  --wiki-text: #f8f9fa;
+  --wiki-muted: #a2a9b1;
+  --wiki-link: #6e85d8;
+  --wiki-link-visited: #a679d2;
+  --wiki-icon: #c8ccd1;
+  --wiki-hover: #27292d;
+  --wiki-active: #404244;
+  --wiki-rule: #27292d;
+  --wiki-input-border: #72777d;
+  --wiki-ph-a: #2e3136;
+  --wiki-ph-b: #27292d;
+  color-scheme: dark; /* form controls, scrollbars and the embedded PDF chrome */
+}
+
 /* ---- compact header (< 1120px, Wikipedia's own header breakpoint) ---- */
 /* Vector 2022 measured at 1000/720/500px: padding drops to 8px 24px, the  */
 /* hamburger grows to a 44×44 touch target (flush-left −12px), the search  */
@@ -548,17 +725,24 @@
     border: 0;
     border-radius: 2px;
     background: none;
-    color: #404244;
+    color: var(--wiki-icon);
     cursor: pointer;
   }
   .wiki__search-toggle:hover {
-    background: #eaecf0;
+    background: var(--wiki-hover);
   }
   .wiki__search-toggle:active {
-    background: #dadde3;
+    background: var(--wiki-active);
   }
   .wiki__search-toggle svg {
     display: block;
+  }
+  /* The search toggle takes over the flex `auto` margin here, so the appearance
+     button simply follows it instead of competing for the same free space. */
+  .wiki__appearance-toggle {
+    width: 44px;
+    height: 44px;
+    margin-left: 0;
   }
   .wiki__clock {
     margin-left: 12px;
@@ -567,6 +751,7 @@
   .wiki--search-open .wiki__menu,
   .wiki--search-open .wiki__brand,
   .wiki--search-open .wiki__search-toggle,
+  .wiki--search-open .wiki__appearance-toggle,
   .wiki--search-open .wiki__clock {
     display: none;
   }
@@ -577,13 +762,34 @@
 
 /* ---- narrow screens: stack the nav above the article ---------------- */
 @media (max-width: 800px) {
+  /* One column: the nav and the appearance panel stack above the article rather
+     than docking beside it. Both rows collapse to nothing when closed, since
+     neither element is rendered then. */
   .wiki {
-    grid-template-areas: 'top' 'side' 'main';
+    grid-template-areas: 'top' 'side' 'aside' 'main';
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
   }
-  .wiki--nav-closed {
-    grid-template-columns: minmax(0, 1fr);
+  .wiki__appearance {
+    border-left: 0;
+    border-bottom: 1px solid var(--wiki-border-light);
+  }
+  .wiki__appearance-inner {
+    padding: 10px 12px 14px;
+  }
+  /* Lay the three settings out across the bar instead of down a column. */
+  .wiki__appearance-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 28px;
+    align-items: flex-start;
+  }
+  .wiki__appearance-title {
+    flex-basis: 100%;
+    margin-bottom: 6px;
+  }
+  .wiki__appearance-group {
+    margin-bottom: 6px;
   }
   /* Phone widths: drop the date, keep the ticking time. */
   .wiki__clock-date {

@@ -43,6 +43,29 @@ npm run preview  # serve the build
   locked over the sheet — crisp at any zoom, and lazy-loaded on open from
   `src/documents/content/*`.
 
+## The simple / Wikipedia mode
+
+The flat recruiter view (`src/simple/`) reads the same shared content and
+reformats it as encyclopedia articles. Two things there are simple-mode-only by
+design, and neither can reach the desk:
+
+- **The Resume article is the PDF itself.** Rather than re-typing the resume as
+  prose, the article embeds `public/assets/Bryan-Pham-Resume.pdf` inline in an
+  `<object>`, with an open/download link above it and a real fallback for
+  browsers that have no inline PDF viewer. The resume is authoritative, so a
+  recruiter reads exactly what they'd get from the download. The desk's folded
+  sheet still paints `resume.sections` (Education / Experience / Projects) as
+  drafting copy — that data stays the source for the sheet.
+- **The Appearance panel**, matching Wikipedia's: a header toggle opens a docked
+  panel with **Text** (small/standard/large), **Width** (standard/wide), and
+  **Color** (light/dark/automatic). Settings apply immediately and persist in
+  `localStorage` under `wiki:appearance`. `automatic` is resolved against
+  `prefers-color-scheme` in JS, so the DOM always carries a concrete light/dark.
+  All three ride `data-` attributes on the `.wiki` root and every rule that reads
+  them is a `.wiki[data-…]` selector in `simple.css` — which ships only in the
+  lazily-loaded simple-mode chunk. Nothing touches `<html>`, `<body>`, or any
+  global state, so the desk's styling is untouched either way.
+
 ## Project layout
 
 ```
@@ -72,8 +95,8 @@ What each export feeds:
 | `profile`     | start screen, HUD title, About index card        | About article, header brand   |
 | `projects`    | the clipped drawing stack (one sheet per entry)  | Projects article sections     |
 | `research`    | the blueprint roll (one sheet per `sheets` entry)| Research article sections     |
-| `resume`      | the folded resume sheet + PDF link               | Resume article + PDF link     |
-| `contact`     | the envelope's addressee links                   | Contact article               |
+| `resume`      | the folded resume sheet + PDF link               | the embedded PDF preview      |
+| `contact`     | the envelope's addressee links                   | Contact article (lead: `intro`)|
 | `gallery`     | the framed photo album (PhotoFrame.jsx)          | —                             |
 | `sections`    | —                                                | sidebar nav order             |
 
@@ -176,10 +199,12 @@ entries — and each mode presents them its own way.
    `date · credit` line, and real `alt` text on the image.
 4. **Desk mode** pins the **bare photo only** to the page as a polaroid — white
    frame, a little tilt, a drop shadow — with *no* title, caption or other text
-   anywhere near it. Only `projects[].photos` and `research.sheets[].photos`
-   become polaroids (they attach to a paginated document's pages);
-   `profile.photos` and `research.photos` are simple-mode figures only, since
-   the desk's index card and blueprint intro have no room for one.
+   anywhere near it. `projects[].photos` and `research.sheets[].photos` become
+   polaroids on a paginated document's pages, and the **first** entry of
+   `profile.photos` becomes one on the About index card (reserved at 0.78× — a
+   full-size polaroid would swallow a card that small). Any further
+   `profile.photos`, and all of `research.photos`, are simple-mode figures only:
+   the card has room for one and the blueprint's intro has room for none.
 
 Desk polaroids **ride the same pagination as the text** (`src/lib/photos.js` +
 `src/lib/pageFlow.js`): a photo on an already-full drawing flows onto the next
@@ -187,6 +212,14 @@ sheet, several photos on one section stack without overlapping, and the polaroid
 is raycast-transparent so a page-flip still works even where one sits near an
 edge. As with the album, any not-yet-added file shows a clear placeholder in
 both modes rather than breaking.
+
+The index card is the one document that isn't block-flowed (its art is placed at
+absolute coordinates), so it reserves its polaroid with `photoSlot` instead: that
+returns the footprint **and** the content box narrowed to the column beside it,
+which `about.js` paints the roles through — so the same bounding-box measuring
+that keeps flowed text off a photo keeps the card's copy off this one. Whatever
+size a document reserves, `Polaroids.jsx` builds the mesh from that rect, so the
+physical polaroid and the space the text was kept out of can never disagree.
 
 ## Swapping in your own material
 

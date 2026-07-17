@@ -43,12 +43,19 @@
  *     bordered frame, a title, a muted caption and a muted date · credit line.
  *   - Desk mode pulls ONLY `src` and pins the bare photo to the page as a
  *     polaroid (white frame, a little tilt, a drop shadow) — no title, caption
- *     or other text is ever shown on or near it there. Desk polaroids ride the
- *     same pagination as the text (each photo reserves space and flows onto the
- *     next page if the current one is full), so they only appear on the
- *     paginated documents: `projects[].photos` and `research.sheets[].photos`.
- *     Article-level `profile.photos` and `research.photos` are simple-mode
- *     figures only (like the `extended` prose — the desk card/roll has no room).
+ *     or other text is ever shown on or near it there.
+ *
+ * Which lists reach the desk:
+ *   - `projects[].photos` and `research.sheets[].photos` → polaroids that ride
+ *     the same pagination as the text (each photo reserves space and flows onto
+ *     the next page if the current one is full).
+ *   - `profile.photos` → the FIRST entry is a polaroid on the index card,
+ *     pinned to a reserved column the card's copy is measured around
+ *     (src/documents/content/about.js). Any further entries are simple-mode
+ *     figures only — the card has room for one.
+ *   - `research.photos` → simple-mode figures only (like the `extended` prose;
+ *     the blueprint's intro has no room for one). Per-sheet photos go on
+ *     `research.sheets[].photos` instead.
  *
  * Drop image files in /public/assets/photos/ (see that folder's README and the
  * repo README's "Photos" section). Until a listed file exists, both modes show
@@ -94,12 +101,23 @@ export const profile = {
     'The following summer, I was convinced to attend my first hackathon at UC Berkeley, where I realized I enjoyed both the hardware and software aspects of engineering.',
     'I am excited to see where the future takes me and how UCLA can help me grow as an engineer. I am currently looking for internship opportunities.',
   ],
-  // Simple-mode-only figures for the About article (the desk index card has no
-  // room for a polaroid). Add entries in the shape documented at the top of
-  // this file, e.g.:
-  // { src: '/assets/photos/bryan-portrait.jpg', title: 'Bryan Pham',
-  //   caption: 'At the UCLA machine shop.', date: '2026', alt: 'Portrait of Bryan Pham.' },
-  photos: [],
+  // Figures for the About section, in the shape documented at the top of this
+  // file. Unlike `research.photos` (still simple-mode-only), these DO reach the
+  // desk: the simple mode renders each as a Wikipedia figure beside the About
+  // article, and the desk's index card pins the first one as a bare polaroid in
+  // the reserved photo column (src/documents/content/about.js).
+  // REVIEW: placeholder slot — drop the real portrait at the `src` path below
+  // and replace the TODO title/caption/alt with real copy.
+  photos: [
+    {
+      src: '/assets/photos/bryan-portrait.jpg',
+      title: 'TODO: About figure title',
+      caption: 'TODO: one or two sentences introducing the photo of Bryan.',
+      date: '2026',
+      credit: '',
+      alt: 'TODO: plain description of the portrait for accessibility.',
+    },
+  ],
 }
 
 export const projects = [
@@ -459,10 +477,6 @@ export const resume = {
           title: 'UCLA, B.S. Mechanical Engineering',
           sub: 'transfer GPA 4.0 · June 2026 – May 2028 · Los Angeles, CA',
         },
-        {
-          title: 'Relevant coursework',
-          sub: 'circuit analysis, engineering graphics & design, statics, dynamics, MATLAB, materials',
-        },
       ],
     },
     {
@@ -510,6 +524,11 @@ export const resume = {
 
 export const contact = {
   name: 'Bryan Pham',
+  // The Contact article's lead line — simple/recruiter mode ONLY. The desk's
+  // envelope has no lead of its own (it paints the CORRESPONDENCE kicker plus
+  // the addressee block from `links` below), so changing this never touches the
+  // desk. Same simple-mode-only convention as `profile.extended`.
+  intro: 'I would be happy to respond if you have further questions about me!',
   links: [
     { kind: 'Email', label: 'bryanpham2024@gmail.com', href: 'mailto:bryanpham2024@gmail.com' },
     { kind: 'LinkedIn', label: 'linkedin.com/in/bryan-pham2028', href: 'https://www.linkedin.com/in/bryan-pham2028' },
