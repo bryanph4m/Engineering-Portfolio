@@ -184,20 +184,23 @@ export const projects = [
     ],
     photos: [
       {
+        // TODO: the filename says launch day, but the photo is a garage build
+        // shot, no pad or rail in frame. If this was taken the morning of a
+        // launch, say so here and the caption can call that out.
         src: '/assets/photos/mlr-launch-day.jpg',
-        title: 'Launch day',
-        caption: 'The two-stage high-power rocket on the pad before flight.',
+        title: 'The finished airframe',
+        caption: 'The assembled two-stage rocket standing in the garage it was built in, next to the printer, drills, and recovery gear that went into it.',
         date: '2026',
         credit: 'Mission Launch Rocketry',
-        alt: 'A high-power model rocket standing on a launch rail in a desert field.',
+        alt: 'A tall black two-stage model rocket standing upright on a work table in an open garage, with a 3D printer, cordless drills, cardboard boxes, and a spare body tube around it.',
       },
       {
         src: '/assets/photos/mlr-team.jpg',
-        title: 'The team',
-        caption: 'Members of the 52-person club at a build session.',
+        title: 'Recruiting on campus',
+        caption: 'Two of us at the club table on campus, with an airframe stood up behind the sign-up poster and stickers out for anyone who stopped by.',
         date: '2026',
         credit: '',
-        alt: 'A group of college students gathered around a workbench with rocket parts.',
+        alt: 'Two college students sitting at a black table indoors with a Mission Launch Rocketry poster, a large orange and black rocket standing on the table, and stickers spread across it.',
       },
     ],
   },
@@ -239,17 +242,14 @@ export const projects = [
         ],
       },
     ],
-    // REVIEW: placeholder photo slot so every project carries at least one figure
-    // (see the other placeholder entries). Drop a real screenshot at the `src`
-    // path below and replace the TODO title/caption/alt with real copy.
     photos: [
       {
         src: '/assets/photos/recco-app.jpg',
-        title: 'TODO: Recco figure title',
-        caption: 'TODO: one or two sentences describing the Recco screenshot.',
+        title: 'A resolved scan',
+        caption: 'Recco right after it locks onto someone at a hackathon: the card marks them verified, gives their role and the event, links their LinkedIn, and shows the badge text it read to get there.',
         date: '2026',
         credit: '',
-        alt: 'TODO: plain description of the Recco app screenshot for accessibility.',
+        alt: "The Recco iOS app over a live camera view, showing a verified identity card with an attendee's name, role and event, a LinkedIn button, and a detail sheet listing their headline and the raw text read from their badge.",
       },
     ],
   },
@@ -292,15 +292,14 @@ export const projects = [
         ],
       },
     ],
-    // REVIEW: placeholder photo slot (see note on the other placeholder entries).
     photos: [
       {
         src: '/assets/photos/rollaway-app.jpg',
-        title: 'TODO: RollAway figure title',
-        caption: 'TODO: one or two sentences describing the RollAway screenshot.',
+        title: 'Picking a spot and a time',
+        caption: 'Setting up a vending window over the San Francisco map. Once the times are in, RollAway ranks spots and each card gives a good fit or avoid verdict with the travel time and the reasoning behind it.',
         date: '2026',
         credit: '',
-        alt: 'TODO: plain description of the RollAway app screenshot for accessibility.',
+        alt: 'The RollAway web app over a map of San Francisco, with a panel setting a start and end time for a date and a Find spots button, and three ranked spot cards along the bottom showing good fit or avoid verdicts, travel times, and a one-line explanation each.',
       },
     ],
   },
@@ -350,7 +349,7 @@ export const projects = [
       {
         src: '/assets/photos/portfolio-desk.jpg',
         title: 'The desk, in 3D',
-        caption: "The portfolio's desk mode — every document on the drafting desk is a page you pick up and read, rendered in a single Three.js scene.",
+        caption: "The portfolio's desk mode. Every document on the drafting desk is a page you pick up and read, rendered in a single Three.js scene.",
         date: '2026',
         credit: '',
         alt: 'A 3D drafting desk seen from above, with a resume, a rocket blueprint, handwritten project notes, a calculator, gears and a model rocket scattered across the wood.',
@@ -422,10 +421,10 @@ export const research = {
         {
           src: '/assets/photos/rocket-airframe.jpg',
           title: 'The airframe',
-          caption: 'The assembled high-power airframe on the bench beside its avionics — the Raspberry Pi, radio boards and servo being tested against live telemetry and the SolidWorks model.',
+          caption: 'The assembled airframe laid out beside its avionics, with the Raspberry Pi, radio boards, and servo being bench tested against live telemetry and the SolidWorks model.',
           date: '2026',
           credit: '',
-          alt: 'A model rocket airframe with its nose cone laid across a workbench, surrounded by a Raspberry Pi, breadboarded electronics and a servo, with laptops showing flight code, telemetry and a SolidWorks model of the rocket.',
+          alt: 'A model rocket airframe with its nose cone laid diagonally across a round table, surrounded by a Raspberry Pi, breadboarded electronics and a servo, with a monitor and laptops showing flight code, telemetry, and a SolidWorks model of the rocket.',
         },
       ],
     },
