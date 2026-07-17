@@ -17,8 +17,19 @@ import { texDims } from './docTextures'
  * 3D renderer converts to world coordinates.
  *
  * Everything here is presentation-agnostic about the photo's meaning: only the
- * image `src` ever reaches the desk. Titles, captions and credits are simple
- * mode's business.
+ * image `src` and its `link` ever reach the desk. Titles, captions and credits
+ * are simple mode's business.
+ *
+ * Clicking through: a photo carrying a `link` (src/content/portfolio.js) makes
+ * its polaroid a click-through. The polaroid mesh itself is raycast-transparent,
+ * so rather than give it a competing hit target, the reserving block registers an
+ * ordinary link hotspot over the footprint it already reserved, through the same
+ * `link` callback the painted links use (lib/docTextures.js). The photo's click
+ * then behaves exactly like every other desk link — one path, one allowlist — and
+ * because Document.jsx tests link hotspots before the page-turn corners, a
+ * polaroid parked in a corner takes the click as a link and never also flips the
+ * page. The hotspot rides the reserved rect, so it tracks the polaroid across
+ * pagination for free.
  */
 
 // The polaroid, in world metres. A 4:5 portrait opening (matching the painted
@@ -42,6 +53,20 @@ export function polaroidFrame() {
 // Breathing room reserved below each polaroid so consecutive photos (and the
 // text that follows one) never touch the frame, in texture px.
 const PHOTO_GAP = 46
+
+/**
+ * The `draw` a photo-reserving block hands to pageFlow. It paints nothing — the
+ * 3D polaroid is the image — and does one job: if the photo carries a `link`,
+ * register the reserved footprint as a link hotspot at wherever the flow put it
+ * (`y` is the block's landed top edge, so this stays correct on whichever page
+ * the photo paginated onto). No link, no hotspot, and the sheet behind the
+ * polaroid keeps its ordinary click behaviour.
+ */
+function photoDraw(photo, place) {
+  return (ctx, W, H, y, rnd, link) => {
+    if (photo?.link) link?.(place.x, y, place.w, place.h, photo.link)
+  }
+}
 
 /**
  * Polaroid footprint for a paper, in texture px, at an optional uniform scale.
@@ -73,14 +98,19 @@ export function photoBlocks(photos, paper, box, scale = 1) {
   if (!photos?.length) return []
   const { wpx, hpx } = polaroidPx(paper, scale)
   const x = box.x + Math.max(0, (box.w - wpx) / 2)
-  return photos.map((photo) => ({
-    h: hpx + PHOTO_GAP,
-    inkH: hpx,
-    dbg: 'photo',
-    photo,
-    place: { x, w: wpx, h: hpx },
-    draw() {}, // the 3D polaroid renders it; nothing lands on the paper texture
-  }))
+  return photos.map((photo) => {
+    const place = { x, w: wpx, h: hpx }
+    return {
+      h: hpx + PHOTO_GAP,
+      inkH: hpx,
+      dbg: 'photo',
+      photo,
+      place,
+      // nothing lands on the paper texture; the 3D polaroid renders it, and this
+      // only registers the photo's click-through hotspot (see photoDraw)
+      draw: photoDraw(photo, place),
+    }
+  })
 }
 
 /**
@@ -102,6 +132,7 @@ export function photoBlocks(photos, paper, box, scale = 1) {
 export function photoFloat(photo, paper, box, side = 'right', scale = 1) {
   const { wpx, hpx } = polaroidPx(paper, scale)
   const x = side === 'left' ? box.x : box.x + box.w - wpx
+  const place = { x, w: wpx, h: hpx }
   return {
     float: true,
     side,
@@ -112,8 +143,8 @@ export function photoFloat(photo, paper, box, side = 'right', scale = 1) {
     h: 0, // a float never advances the cursor; text flows beside it
     dbg: 'photo-float',
     photo,
-    place: { x, w: wpx, h: hpx },
-    draw() {}, // the 3D polaroid renders it; nothing lands on the paper texture
+    place,
+    draw: photoDraw(photo, place),
   }
 }
 
@@ -137,6 +168,14 @@ export function photoFloat(photo, paper, box, side = 'right', scale = 1) {
  *
  * Pagination is a no-op here by construction: these documents are one page, so
  * the photo always lands on page 0 and there is no next sheet to flow onto.
+ *
+ * Click-through is NOT wired here, unlike the flow blocks above: this returns a
+ * rect for a painter to place, not a block with a `draw` to hang a hotspot on.
+ * A `link` on a photoSlot photo is therefore inert on the desk (simple mode
+ * still links it). If one ever needs it, the calling painter should register the
+ * hotspot itself through its own `link` callback — and note that these sheets
+ * are the ones docTextures may auto-fit-scale, so it must use the rect the fit
+ * actually landed on, or the hotspot and the polaroid mesh will drift apart.
  */
 export function photoSlot(photo, paper, box, { scale = 1, y = box.y, side = 'right' } = {}) {
   const { wpx, hpx } = polaroidPx(paper, scale)

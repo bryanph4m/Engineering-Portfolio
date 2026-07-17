@@ -37,13 +37,24 @@
  *     date:    'June 2026',                // simple mode: optional, muted meta
  *     credit:  'Photo by …',               // simple mode: optional attribution
  *     alt:     'Plain description …',       // simple mode: <img> alt text (a11y)
+ *     link:    'https://github.com/…',      // both modes: where the photo clicks through to
  *   }
  *
  *   - Simple / Wikipedia mode renders every field as a floated figure with a
  *     bordered frame, a title, a muted caption and a muted date · credit line.
- *   - Desk mode pulls ONLY `src` and pins the bare photo to the page as a
- *     polaroid (white frame, a little tilt, a drop shadow) — no title, caption
- *     or other text is ever shown on or near it there.
+ *   - Desk mode pulls ONLY `src` and `link`, and pins the bare photo to the page
+ *     as a polaroid (white frame, a little tilt, a drop shadow) — no title,
+ *     caption or other text is ever shown on or near it there.
+ *
+ * `link` is the one field both faces read the same way: the photo becomes a
+ * click-through to that URL — an anchor around the simple mode's <img>, and a
+ * link hotspot on the desk sheet under the polaroid's footprint (lib/photos.js),
+ * which opens while the document is held open, just like the desk's other
+ * painted links. It is manual editorial data like the rest of the entry, so it
+ * points at wherever the work actually lives — often someone else's repo, since
+ * team projects are hosted under a teammate's account, and not always GitHub.
+ * A photo with no `link` simply isn't clickable in either mode; leave it off
+ * rather than guess a URL.
  *
  * Which lists reach the desk:
  *   - `projects[].photos` and `research.sheets[].photos` → polaroids that ride
@@ -173,6 +184,7 @@ export const projects = [
         date: 'June 2026',
         credit: '',
         alt: 'Two frames side by side. On the left, two students standing and talking in a university student union lobby. On the right, the Aside AI app in AI vision mode, showing a live camera feed above a thought process list with sees, hears, thinks, and speaks entries.',
+        link: 'https://github.com/Da0t/AsideAI.git',
       },
     ],
   },
@@ -255,6 +267,7 @@ export const projects = [
         date: '2026',
         credit: '',
         alt: "The Recco iOS app over a live camera view, showing a verified identity card with an attendee's name, role and event, a LinkedIn button, and a detail sheet listing their headline and the raw text read from their badge.",
+        link: 'https://github.com/Cheemasukh962/Recco.git',
       },
     ],
   },
@@ -305,6 +318,7 @@ export const projects = [
         date: '2026',
         credit: '',
         alt: 'The RollAway web app over a map of San Francisco, with a panel setting a start and end time for a date and a Find spots button, and three ranked spot cards along the bottom showing good fit or avoid verdicts, travel times, and a one-line explanation each.',
+        link: 'https://github.com/nathansso/RollAway.git',
       },
     ],
   },
@@ -358,6 +372,7 @@ export const projects = [
         date: '2026',
         credit: '',
         alt: 'A 3D drafting desk seen from above, with a resume, a rocket blueprint, handwritten project notes, a calculator, gears and a model rocket scattered across the wood.',
+        link: 'https://github.com/bryanph4m/Engineering-Portfolio.git',
       },
     ],
   },
@@ -430,6 +445,7 @@ export const research = {
           date: '2026',
           credit: '',
           alt: 'A model rocket airframe with its nose cone laid diagonally across a round table, surrounded by a Raspberry Pi, breadboarded electronics and a servo, with a monitor and laptops showing flight code, telemetry, and a SolidWorks model of the rocket.',
+          link: 'https://abgsccc-website.vercel.app/',
         },
       ],
     },

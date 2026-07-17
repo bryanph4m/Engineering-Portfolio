@@ -477,6 +477,33 @@
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+/* A figure whose photo links out (photo.link in src/content/portfolio.js). The
+   anchor wraps only the image, so it hugs it exactly: block-level, no text
+   decoration to inherit, and a hover that dims the photo a touch and warms the
+   thumb border to the link colour — enough to read as clickable without turning
+   a photo into a button. */
+.wiki__figure-link {
+  display: block;
+  cursor: pointer;
+  text-decoration: none;
+}
+.wiki__figure-link:hover {
+  text-decoration: none;
+}
+.wiki__figure-link .wiki__figure-img,
+.wiki__figure-link .wiki__figure-ph {
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+.wiki__figure-link:hover .wiki__figure-img,
+.wiki__figure-link:hover .wiki__figure-ph {
+  opacity: 0.85;
+  border-color: var(--wiki-link);
+}
+.wiki__figure-link:focus-visible {
+  outline: 1px solid var(--wiki-link);
+  outline-offset: 1px;
+}
+
 .wiki__figure-cap {
   padding: 6px 4px 2px;
   line-height: 1.4;
@@ -838,5 +865,9 @@
 @media (prefers-reduced-motion: reduce) {
   .wiki * {
     scroll-behavior: auto !important;
+  }
+  .wiki__figure-link .wiki__figure-img,
+  .wiki__figure-link .wiki__figure-ph {
+    transition: none;
   }
 }

@@ -44,28 +44,44 @@ function InlineList({ items }) {
  * text rides the image for accessibility. If the file isn't in
  * /public/assets/photos/ yet (or fails to load) the frame shows a labelled
  * placeholder instead of a broken image, so an unadded photo never looks broken.
+ *
+ * A photo carrying a `link` clicks through to it in a new tab. Following
+ * Wikipedia, only the image itself is the link — the caption below stays plain
+ * text, since a linked title would read as a second, different destination.
  */
 function WikiFigure({ photo }) {
   const [failed, setFailed] = useState(!photo.src)
   const meta = [photo.date, photo.credit].filter(Boolean).join(' · ')
+  const visual = failed ? (
+    <div
+      className="wiki__figure-ph"
+      role="img"
+      aria-label={photo.alt || photo.title || 'Photo placeholder'}
+    >
+      photo
+    </div>
+  ) : (
+    <img
+      className="wiki__figure-img"
+      src={photo.src}
+      alt={photo.alt || photo.caption || photo.title || ''}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  )
   return (
     <figure className="wiki__figure">
-      {failed ? (
-        <div
-          className="wiki__figure-ph"
-          role="img"
-          aria-label={photo.alt || photo.title || 'Photo placeholder'}
+      {photo.link ? (
+        <a
+          className="wiki__figure-link"
+          href={photo.link}
+          target="_blank"
+          rel="noopener noreferrer"
         >
-          photo
-        </div>
+          {visual}
+        </a>
       ) : (
-        <img
-          className="wiki__figure-img"
-          src={photo.src}
-          alt={photo.alt || photo.caption || photo.title || ''}
-          loading="lazy"
-          onError={() => setFailed(true)}
-        />
+        visual
       )}
       <figcaption className="wiki__figure-cap">
         {photo.title ? <span className="wiki__figure-title">{photo.title}</span> : null}
