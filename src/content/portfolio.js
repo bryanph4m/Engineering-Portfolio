@@ -146,10 +146,10 @@ export const projects = [
       {
         src: '/assets/photos/aside-ai-device.jpg',
         title: 'The Aside AI prototype',
-        caption: 'The clip-on camera and mic that narrates surroundings, built at the Berkeley AI Hackathon.',
+        caption: 'The Aside AI app narrating a live scene from its clip-on camera and mic, built at the Berkeley AI Hackathon.',
         date: 'June 2026',
         credit: '',
-        alt: 'A small clip-on device with a camera and microphone resting on a table.',
+        alt: 'The Aside AI app in AI-vision mode, narrating a live camera feed with its sees / hears / thinks / speaks thought process, next to a photo of it being demoed.',
       },
     ],
   },
@@ -328,16 +328,14 @@ export const projects = [
         ],
       },
     ],
-    // REVIEW: placeholder photo slot (see note on the other placeholder entries).
-    // A screenshot of the desk scene or the wiki view would fit here.
     photos: [
       {
         src: '/assets/photos/portfolio-desk.jpg',
-        title: 'TODO: Portfolio figure title',
-        caption: 'TODO: one or two sentences describing the portfolio screenshot.',
+        title: 'The desk, in 3D',
+        caption: "The portfolio's desk mode — every document on the drafting desk is a page you pick up and read, rendered in a single Three.js scene.",
         date: '2026',
         credit: '',
-        alt: 'TODO: plain description of the portfolio screenshot for accessibility.',
+        alt: 'A 3D drafting desk seen from above, with a resume, a rocket blueprint, handwritten project notes, a calculator, gears and a model rocket scattered across the wood.',
       },
     ],
   },
@@ -406,10 +404,10 @@ export const research = {
         {
           src: '/assets/photos/rocket-airframe.jpg',
           title: 'The airframe',
-          caption: 'The high-power airframe with its movable canards, modeled in SolidWorks.',
+          caption: 'The assembled high-power airframe on the bench beside its avionics — the Raspberry Pi, radio boards and servo being tested against live telemetry and the SolidWorks model.',
           date: '2026',
           credit: '',
-          alt: 'A slender model rocket airframe with small control canards near the nose.',
+          alt: 'A model rocket airframe with its nose cone laid across a workbench, surrounded by a Raspberry Pi, breadboarded electronics and a servo, with laptops showing flight code, telemetry and a SolidWorks model of the rocket.',
         },
       ],
     },
