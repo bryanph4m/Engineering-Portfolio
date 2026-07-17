@@ -61,18 +61,68 @@ html, body, #root {
   font-family: 'Architects Daughter', cursive;
 }
 .loader.is-hidden { opacity: 0; pointer-events: none; }
-.loader__doodle { width: 190px; height: auto; opacity: 0.92; }
-.loader__label { margin-top: 14px; font-size: 22px; letter-spacing: 1px; }
-.loader__dots::after {
-  content: '';
-  animation: dots 1.4s steps(4, end) infinite;
+
+/* A fighter jet flying left→right; its contrail's length is the load progress.
+   `--p` (0..1), written each frame by ui/Loader from the scene's real readiness,
+   drives both the contrail width and the jet's position along the flight path.
+   `--jet` reserves room on the right so the jet's nose lands at the edge — not
+   past it — at 100%. */
+.loader__flight {
+  --p: 0;
+  --jet: 76px;
+  position: relative;
+  width: min(78vw, 600px);
+  height: 120px;
 }
-@keyframes dots {
-  0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; }
-  75% { content: '...'; } 100% { content: ''; }
+/* dashed drafting under-rule, the full length of the flight the jet measures out */
+.loader__rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 61px;
+  height: 0;
+  border-top: 1px dashed rgba(240, 227, 198, 0.16);
 }
-.loader__ink { stroke-dasharray: 480; stroke-dashoffset: 480; animation: draw 2.6s ease forwards infinite; }
-@keyframes draw { to { stroke-dashoffset: 0; } }
+/* the contrail — fresh and bright at the jet, dissipating back toward the start */
+.loader__contrail {
+  position: absolute;
+  left: 0;
+  top: 60px;
+  height: 3px;
+  width: calc(var(--p) * (100% - var(--jet)) + 24px);
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    rgba(240, 227, 198, 0) 0%,
+    rgba(240, 227, 198, 0.14) 14%,
+    rgba(240, 227, 198, 0.6) 68%,
+    rgba(240, 227, 198, 0.95) 100%
+  );
+  box-shadow: 0 0 12px rgba(240, 227, 198, 0.22);
+}
+.loader__jet {
+  position: absolute;
+  top: 43px; /* fuselage centreline lands on the contrail at ~60px */
+  left: calc(var(--p) * (100% - var(--jet)));
+  width: var(--jet);
+  height: auto;
+  color: #f0e3c6;
+  filter: drop-shadow(0 0 5px rgba(240, 227, 198, 0.25));
+}
+.loader__label {
+  margin-top: 10px;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: #e9dcbf;
+}
+.loader__pct {
+  font-family: 'Cutive Mono', monospace;
+  color: #f0e3c6;
+}
+@media (max-width: 480px) {
+  .loader__flight { --jet: 58px; height: 104px; }
+  .loader__label { font-size: 16px; }
+}
 
 /* ------------------------------------------------------------------ */
 /* Start screen — drafted cover sheet shown before a site mode mounts  */
