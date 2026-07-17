@@ -62,50 +62,49 @@ html, body, #root {
 }
 .loader.is-hidden { opacity: 0; pointer-events: none; }
 
-/* A fighter jet flying left→right; its contrail's length is the load progress.
-   `--p` (0..1), written each frame by ui/Loader from the scene's real readiness,
-   drives both the contrail width and the jet's position along the flight path.
-   `--jet` reserves room on the right so the jet's nose lands at the edge — not
-   past it — at 100%. */
+/* A fighter jet on a launch-like arc: it starts large and close, then curves up
+   and away, shrinking into the distance. The whole flight is one SVG whose arc is
+   shared by the contrail and the jet's per-frame placement (ui/Loader). The jet's
+   transform, its opacity, and the contrail's stroke-dashoffset are all written
+   from the scene's real readiness, so the trail's length is the load progress. */
 .loader__flight {
-  --p: 0;
-  --jet: 76px;
-  position: relative;
-  width: min(78vw, 600px);
-  height: 120px;
-}
-/* dashed drafting under-rule, the full length of the flight the jet measures out */
-.loader__rule {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 61px;
-  height: 0;
-  border-top: 1px dashed rgba(240, 227, 198, 0.16);
-}
-/* the contrail — fresh and bright at the jet, dissipating back toward the start */
-.loader__contrail {
-  position: absolute;
-  left: 0;
-  top: 60px;
-  height: 3px;
-  width: calc(var(--p) * (100% - var(--jet)) + 24px);
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    rgba(240, 227, 198, 0) 0%,
-    rgba(240, 227, 198, 0.14) 14%,
-    rgba(240, 227, 198, 0.6) 68%,
-    rgba(240, 227, 198, 0.95) 100%
-  );
-  box-shadow: 0 0 12px rgba(240, 227, 198, 0.22);
-}
-.loader__jet {
-  position: absolute;
-  top: 43px; /* fuselage centreline lands on the contrail at ~60px */
-  left: calc(var(--p) * (100% - var(--jet)));
-  width: var(--jet);
+  width: min(82vw, 620px);
   height: auto;
+  overflow: visible;
+}
+/* dashed drafting under-rule: the full arc, the jet measures itself along it */
+.loader__rule {
+  fill: none;
+  stroke: rgba(240, 227, 198, 0.14);
+  stroke-width: 1;
+  /* pathLength is normalised to 1, so the dash pattern is in path fractions */
+  stroke-dasharray: 0.012 0.016;
+}
+/* soft plume — a wide, faint halo revealed with the core, so the near part of the
+   contrail reads thick and the far part (by the receded jet) thins to nothing */
+.loader__plume {
+  fill: none;
+  stroke: url(#contrailFade);
+  stroke-width: 11;
+  stroke-linecap: round;
+  opacity: 0.28;
+  stroke-dasharray: 1 1; /* pathLength normalised to 1 */
+  stroke-dashoffset: 1; /* JS moves 1 → 0 to reveal the flown fraction */
+  filter: blur(3px);
+}
+/* the contrail core — its revealed length IS the loading progress */
+.loader__contrail {
+  fill: none;
+  stroke: url(#contrailFade);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 5px rgba(240, 227, 198, 0.35));
+}
+/* Placed each frame by ui/Loader via the SVG `transform` presentation attribute
+   (JS setAttribute) — so no CSS `transform` here, which would override it. */
+.loader__jet {
   color: #f0e3c6;
   filter: drop-shadow(0 0 5px rgba(240, 227, 198, 0.25));
 }
@@ -120,7 +119,7 @@ html, body, #root {
   color: #f0e3c6;
 }
 @media (max-width: 480px) {
-  .loader__flight { --jet: 58px; height: 104px; }
+  .loader__flight { width: 88vw; }
   .loader__label { font-size: 16px; }
 }
 
