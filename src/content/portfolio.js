@@ -106,16 +106,18 @@ export const profile = {
   // desk: the simple mode renders each as a Wikipedia figure beside the About
   // article, and the desk's index card pins the first one as a bare polaroid in
   // the reserved photo column (src/documents/content/about.js).
-  // REVIEW: placeholder slot — drop the real portrait at the `src` path below
-  // and replace the TODO title/caption/alt with real copy.
   photos: [
     {
+      // TODO: the photo is clearly a park or campus memorial with a pagoda-topped
+      // stone tower and Chinese characters laid out in white on the lawn, but I
+      // can't tell where or when from the image alone. Name the place in the
+      // caption if you want it called out, and confirm the date below.
       src: '/assets/photos/bryan-portrait.jpg',
-      title: 'TODO: About figure title',
-      caption: 'TODO: one or two sentences introducing the photo of Bryan.',
+      title: 'Away from the desk',
+      caption: 'Standing on the walkway up to a pagoda-topped stone memorial, with the inscription set in white across the lawn on either side.',
       date: '2026',
       credit: '',
-      alt: 'TODO: plain description of the portrait for accessibility.',
+      alt: 'Bryan Pham standing on a stone walkway in a park, wearing a navy zip-up jacket and black pants, in front of a tall stone memorial with a green pagoda roof, with lawns, trees, and large white Chinese characters laid out on the grass behind him.',
     },
   ],
 }
@@ -162,12 +164,15 @@ export const projects = [
     ],
     photos: [
       {
+        // TODO: the filename says device, but neither frame actually shows the
+        // clip-on hardware. If the person on the left is wearing it, say so and
+        // the caption can point at it.
         src: '/assets/photos/aside-ai-device.jpg',
-        title: 'The Aside AI prototype',
-        caption: 'The Aside AI app narrating a live scene from its clip-on camera and mic, built at the Berkeley AI Hackathon.',
+        title: 'AI vision mode, mid-run',
+        caption: 'Two frames from the Berkeley AI Hackathon: the app on the right in AI vision mode, walking through what it sees, what it hears, what it makes of that, and the hype-man line it ends up speaking, next to the demo running in the student union on the left.',
         date: 'June 2026',
         credit: '',
-        alt: 'The Aside AI app in AI-vision mode, narrating a live camera feed with its sees / hears / thinks / speaks thought process, next to a photo of it being demoed.',
+        alt: 'Two frames side by side. On the left, two students standing and talking in a university student union lobby. On the right, the Aside AI app in AI vision mode, showing a live camera feed above a thought process list with sees, hears, thinks, and speaks entries.',
       },
     ],
   },
