@@ -3,8 +3,10 @@ import { useThree } from '@react-three/fiber'
 import { useSceneStore } from '../store/useSceneStore'
 import { pageCountOf } from '../documents/registry'
 import { IS_TOUCH } from '../lib/quality'
+import { disposeDetailTextures } from '../lib/docTextures'
 import { tapWasConsumed } from './tapGuard'
-import { CAMERA_PAN } from './constants'
+import { beginPinch, endPinch, isZoomed, pinchBy, pinchWasActive, resetZoom } from './docZoom'
+import { CAMERA_PAN, DOC_ZOOM } from './constants'
 
 /**
  * Every touch gesture the desk understands, in one place. Mounts only on touch
@@ -17,6 +19,19 @@ import { CAMERA_PAN } from './constants'
  *  - **Swipe left/right on a focused document** to turn the page, the touch
  *    equivalent of the ←/→ keys (ui/KeyControls) and the painted dog-eared
  *    corners, which keep working too.
+ *  - **Pinch a focused document** to magnify it for reading, and drag with both
+ *    fingers to move around the magnified sheet (desk/docZoom). Only ever the
+ *    focused sheet: on the idle desk two fingers do nothing, because the vantage
+ *    there is fixed by design and the edge taps already own moving it.
+ *
+ * The three are told apart by finger count, which is the only signal that is
+ * unambiguous at the moment the gesture starts: one finger is a tap or a swipe,
+ * two are a pinch. The moment a second finger lands the one-finger gesture in
+ * flight is abandoned rather than completed (see `onDown`), so spreading two
+ * fingers can never also turn a page, and lifting them can never also set the
+ * document down — that last one matters because two fingers never leave the
+ * glass together, and the stray final pointerup is a perfectly ordinary tap as
+ * far as everything downstream is concerned (docZoom's guard).
  *
  * Why listeners rather than two invisible DOM divs over the scene: a div would
  * eat every tap in the outer 13% of the screen, including taps meant for the
@@ -54,6 +69,24 @@ const at = (e) => e.timeStamp
 
 export default function TouchControls() {
   const gl = useThree((s) => s.gl)
+  const focusedId = useSceneStore((s) => s.focusedId)
+  const pageIndex = useSceneStore((s) => s.pageIndex)
+  const zoomDetail = useSceneStore((s) => s.zoomDetail)
+
+  // Every arrival at a new sheet starts unzoomed. The store drops `zoomDetail`
+  // on the same transitions (focus/close/page turn); this is the other half of
+  // that reset — the live offsets, which are not store state.
+  useEffect(() => {
+    resetZoom()
+  }, [focusedId, pageIndex])
+
+  // Free the hi-res rasters once nothing is showing one. Keyed on the flag, so
+  // this runs *after* the render that put the base textures back on the paper —
+  // disposing them in the same breath as clearing the flag would pull the map
+  // out from under a material that is still on screen for one more frame.
+  useEffect(() => {
+    if (!zoomDetail) disposeDetailTextures()
+  }, [zoomDetail])
 
   useEffect(() => {
     if (!IS_TOUCH) return
@@ -65,23 +98,120 @@ export default function TouchControls() {
     let startT = 0
     let moved = false
 
+    // Live pinch: the second finger's id, plus the previous span and centroid to
+    // difference each move against.
+    let pinchId = null
+    let lastSpan = 0
+    let lastCx = 0
+    let lastCy = 0
+    const pts = new Map() // pointerId -> {x, y}, only while down
+
+    // The canvas rect, read once when a pinch starts rather than per move:
+    // getBoundingClientRect forces layout, and doing that on every pointermove
+    // of a live gesture is exactly the wrong place to spend a frame. The canvas
+    // fills a fixed viewport and cannot resize mid-pinch.
+    let rectW = 1
+    let rectH = 1
+
+    /**
+     * The two live fingers, as docZoom wants them: `span` stays in raw px —
+     * it is only ever used as a ratio against the previous one, and DOC_ZOOM.slop
+     * is a px threshold — while the centroid is in fractions of the viewport from
+     * its centre, +y up, which is the space docZoom's offsets and anchors live in.
+     */
+    const pinchGeom = () => {
+      const [a, b] = [...pts.values()]
+      return {
+        span: Math.hypot(a.x - b.x, a.y - b.y),
+        cx: (a.x + b.x) / 2 / rectW - 0.5,
+        cy: -((a.y + b.y) / 2 / rectH - 0.5),
+      }
+    }
+
     const onDown = (e) => {
-      if (pointerId !== null) return // a second finger — this is not a tap
-      pointerId = e.pointerId
-      startX = e.clientX
-      startY = e.clientY
-      startT = at(e)
-      moved = false
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (pointerId === null) {
+        pointerId = e.pointerId
+        startX = e.clientX
+        startY = e.clientY
+        startT = at(e)
+        moved = false
+        return
+      }
+
+      // A second finger. Whatever the first one was starting to be, it is not
+      // that any more: mark it moved so it can never resolve as a tap or a
+      // swipe on the way out, and take over as a pinch — but only on a focused
+      // sheet, since there is nothing to magnify on the idle desk.
+      if (pinchId !== null || pts.size !== 2) return
+      moved = true
+      if (useSceneStore.getState().focusedId == null) return
+      pinchId = e.pointerId
+      const rect = el.getBoundingClientRect()
+      rectW = rect.width || 1
+      rectH = rect.height || 1
+      const g = pinchGeom()
+      lastSpan = g.span
+      lastCx = g.cx
+      lastCy = g.cy
+      beginPinch()
     }
 
     const onMove = (e) => {
+      const p = pts.get(e.pointerId)
+      if (p) {
+        p.x = e.clientX
+        p.y = e.clientY
+      }
+
+      if (pinchId !== null && pts.size === 2) {
+        const g = pinchGeom()
+        // Two fingers resting are not a pinch; below the slop the span noise
+        // would jitter the zoom, so only the drag half applies until they move.
+        const factor =
+          lastSpan > 0 && Math.abs(g.span - lastSpan) > DOC_ZOOM.slop ? g.span / lastSpan : 1
+        pinchBy(factor, g.cx, g.cy, g.cx - lastCx, g.cy - lastCy)
+        if (factor !== 1) lastSpan = g.span
+        lastCx = g.cx
+        lastCy = g.cy
+        return
+      }
+
       if (e.pointerId !== pointerId || moved) return
       if (Math.hypot(e.clientX - startX, e.clientY - startY) > TAP_SLOP) moved = true
+    }
+
+    /**
+     * The pinch is over the moment either finger leaves. The magnified sheet
+     * stays exactly where it was left — this only ends the *gesture*.
+     *
+     * The hi-res repaint is deliberately deferred to here rather than done as
+     * the fingers move: a detail raster is a full page repaint plus a GPU
+     * upload, and firing that mid-pinch would stutter the very gesture it is
+     * meant to serve. Nobody reads a sheet while it is still moving, so it lands
+     * the frame after they stop — and only if they actually magnified it enough
+     * for the base raster to show (isZoomed).
+     */
+    const endPinchGesture = () => {
+      if (pinchId === null) return
+      pinchId = null
+      lastSpan = 0
+      endPinch()
+      useSceneStore.getState().setZoomDetail(isZoomed())
     }
 
     // Page turns resolve here, on the gesture itself. Panning deliberately does
     // not (see onClick below).
     const onUp = (e) => {
+      pts.delete(e.pointerId)
+      if (pinchId !== null) {
+        endPinchGesture()
+        // The finger still down is the tail of a pinch, not the start of a
+        // swipe: drop it rather than let it flip a page on its way up.
+        pointerId = null
+        return
+      }
       if (e.pointerId !== pointerId) return
       pointerId = null
       if (!moved) return
@@ -99,9 +229,11 @@ export default function TouchControls() {
       else store.prevPage()
     }
 
-    const onCancel = () => {
+    const onCancel = (e) => {
       // The OS took the gesture (a system edge swipe, an incoming call). Not a
       // tap — drop it rather than acting on wherever the finger happened to be.
+      pts.delete(e.pointerId)
+      endPinchGesture()
       pointerId = null
     }
 
@@ -115,6 +247,7 @@ export default function TouchControls() {
     const onClick = (e) => {
       if (moved) return
       if (at(e) - startT > TAP_MS) return
+      if (pinchWasActive()) return // the tail of a pinch, not a tap (docZoom)
       if (tapWasConsumed()) return // a document took it; it outranks the zone
 
       const store = useSceneStore.getState()

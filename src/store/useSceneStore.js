@@ -23,11 +23,26 @@ export const useSceneStore = create((set) => ({
   // then set back down where the visitor was looking (see CameraRig).
   panStep: 0,
 
+  // The focused sheet is pinched in far enough to want its high-resolution
+  // raster (desk/docZoom, lib/docTextures). The zoom ITSELF is deliberately not
+  // here — it changes every frame of a live pinch and belongs in a ref (see
+  // docZoom's header). This is only the one-bit "which texture should the paper
+  // be showing", which is a real render input and has to re-render the prop.
+  // Always false on a mouse: nothing can set it without a second finger.
+  zoomDetail: false,
+
   setReady: (v = true) => set({ ready: v }),
   setSceneDrawn: (v = true) => set({ sceneDrawn: v }),
 
-  focus: (id) => set({ focusedId: id, pageIndex: 0, flipDir: 0 }),
-  close: () => set({ focusedId: null, hoveredId: null, pageIndex: 0, flipDir: 0 }),
+  setZoomDetail: (v) => set((s) => (s.zoomDetail === v ? s : { zoomDetail: v })),
+
+  // Both entry points to a new sheet drop the zoom flag, so a document always
+  // opens at its readable resting size rather than inheriting the last one's
+  // magnification. desk/TouchControls resets the matching docZoom offsets off
+  // the same transitions.
+  focus: (id) => set({ focusedId: id, pageIndex: 0, flipDir: 0, zoomDetail: false }),
+  close: () =>
+    set({ focusedId: null, hoveredId: null, pageIndex: 0, flipDir: 0, zoomDetail: false }),
 
   setHovered: (id) =>
     set((s) => (s.hoveredId === id ? s : { hoveredId: id })),
@@ -39,16 +54,21 @@ export const useSceneStore = create((set) => ({
       return next === s.panStep ? s : { panStep: next }
     }),
 
+  // A page turn also drops the zoom: the incoming sheet is new content, so it
+  // starts readable rather than pre-magnified into whichever corner the last one
+  // was left in. It also keeps the detail rasters to one page at a time — a flip
+  // that kept the zoom would have to paint the new page's hi-res copy in the
+  // middle of the turn, which is the one moment there is no frame to spare.
   nextPage: (pageCount) =>
     set((s) => {
       if (s.focusedId == null || s.pageIndex >= pageCount - 1) return s
-      return { pageIndex: s.pageIndex + 1, flipDir: 1, flipNonce: s.flipNonce + 1 }
+      return { pageIndex: s.pageIndex + 1, flipDir: 1, flipNonce: s.flipNonce + 1, zoomDetail: false }
     }),
 
   prevPage: () =>
     set((s) => {
       if (s.focusedId == null || s.pageIndex <= 0) return s
-      return { pageIndex: s.pageIndex - 1, flipDir: -1, flipNonce: s.flipNonce + 1 }
+      return { pageIndex: s.pageIndex - 1, flipDir: -1, flipNonce: s.flipNonce + 1, zoomDetail: false }
     }),
 }))
 

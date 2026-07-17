@@ -1,5 +1,10 @@
 import * as THREE from 'three'
 import { QUALITY } from './quality'
+// desk/constants is a leaf module (it imports nothing), so reading the zoom
+// ceiling here cannot cycle. It is imported rather than duplicated because the
+// two numbers are one decision: how far a pinch may magnify a sheet is exactly
+// how many texels that sheet has to have. See DOC_ZOOM.
+import { DOC_ZOOM } from '../desk/constants'
 
 /**
  * Paints every page of every document onto high-resolution canvases and hands
@@ -86,20 +91,43 @@ export function pageGeom(paper, multi) {
   return { ...texDims(paper), box: contentBoxFor(paper, multi) }
 }
 
+/**
+ * Raster multiplier for the on-demand "detail" copy of a page — the one a
+ * pinched-in sheet reads from (desk/docZoom).
+ *
+ * It is the tier's own scale multiplied by how far a pinch may magnify, so the
+ * sheet keeps roughly its resting texel-per-device-pixel ratio all the way to
+ * DOC_ZOOM.max instead of just magnifying the base raster's blur. The hard 1.25
+ * ceiling is a memory bound, and it binds on touch laptops (texScale 1), where
+ * an unclamped 2× would ask for a 4096×2560 sheet — ~56 MB for one page. At
+ * 1.25 the widest page is 2560×1600 (~22 MB) and, on the phone tier this
+ * exists for, 2048×1280 (~14 MB) — one page's worth, held only while it is
+ * focused and zoomed, and disposed on the way back down.
+ */
+const DETAIL_SCALE = Math.min(1.25, QUALITY.texScale * DOC_ZOOM.max)
+
 const texCache = new Map()
 const linkCache = new Map()
 
+// The seed/link key deliberately ignores `detail`: the hand-drawn jitter is
+// seeded from it, so the base and detail rasters of a page must share one key or
+// the strokes would land differently and the sheet would visibly twitch the
+// moment the detail copy swapped in. Same reason the link rects are shared —
+// they are authored-space, so they are identical either way.
 const keyFor = (doc, page) => `${doc.id}:${page}`
+const texKeyFor = (doc, page, detail) => `${keyFor(doc, page)}${detail ? ':hi' : ''}`
 
-export function docTexture(doc, page = 0) {
+export function docTexture(doc, page = 0, detail = false) {
+  const texKey = texKeyFor(doc, page, detail)
+  if (texCache.has(texKey)) return texCache.get(texKey)
   const key = keyFor(doc, page)
-  if (texCache.has(key)) return texCache.get(key)
 
   // W/H are the authored texture-space dimensions every painter and pageFlow
-  // measures against. The raster below may be smaller (mobile), but the drawing
-  // coordinate system is always exactly this.
+  // measures against. The raster below may be smaller (mobile) or larger (a
+  // zoomed detail copy), but the drawing coordinate system is always exactly
+  // this — which is what lets both copies of a page paint identically.
   const { W, H } = texDims(doc.paper)
-  const s = QUALITY.texScale
+  const s = detail ? DETAIL_SCALE : QUALITY.texScale
   const c = document.createElement('canvas')
   c.width = Math.round(W * s)
   c.height = Math.round(H * s)
@@ -113,7 +141,10 @@ export function docTexture(doc, page = 0) {
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = QUALITY.anisotropy
 
-  const links = []
+  // Reuse the page's existing rect list if the other raster already built one:
+  // paint() refills it in place, so base and detail share one array and any
+  // reference Document.jsx is holding stays live.
+  const links = linkCache.get(key) ?? []
   linkCache.set(key, links)
 
   // First paint may fall back to system fonts; repaint once the real faces
@@ -135,8 +166,26 @@ export function docTexture(doc, page = 0) {
       .catch(() => devVerify(c, key))
   }
 
-  texCache.set(key, tex)
+  texCache.set(texKey, tex)
   return tex
+}
+
+/**
+ * Drop every zoomed-in detail copy and its GPU memory.
+ *
+ * Called once a document is no longer both focused and zoomed (desk/Document),
+ * by which point the sheets are already showing their base textures again — so
+ * nothing on screen is holding one of these when it goes. Without this a visitor
+ * who pinched into each page of the blueprint in turn would leave every one of
+ * those ~14-22 MB rasters resident for the session; the base textures are the
+ * cache that is meant to be permanent, these are not.
+ */
+export function disposeDetailTextures() {
+  for (const [k, tex] of texCache) {
+    if (!k.endsWith(':hi')) continue
+    tex.dispose()
+    texCache.delete(k)
+  }
 }
 
 /** Clickable regions of a page, in canvas UV space (u right, v down, 0..1). */
@@ -224,8 +273,16 @@ function paint(c, doc, page, links, W, H) {
   runContent()
 
   // 3. measure against the box; shrink single-page docs, warn on the rest
+  //
+  // The readback below is the most expensive thing on this path (a getImageData
+  // plus a scan of every texel's alpha — tens of ms on a full sheet), so it is
+  // only run when its answer can actually change something. A flowed sheet is
+  // never rescaled: `fit` stays identity whatever the ink measures, so in a
+  // production build the measurement would be computed and thrown away, once
+  // per page turn, purely to reach a `console.warn` that isn't compiled in.
+  // Dev keeps it — that warning is how a mis-declared block height gets caught.
   const fit = { s: 1, tx: 0, ty: 0 }
-  const ink = inkBounds(layer, W, H)
+  const ink = !multi || import.meta.env.DEV ? inkBounds(layer, W, H) : null
   if (ink) {
     const over = Math.max(
       box.x - ink.x,

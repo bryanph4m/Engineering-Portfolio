@@ -66,6 +66,37 @@ export function panRange(aspect) {
   return Math.max(0, CAMERA_PAN.reach - visibleW / 2)
 }
 
+/**
+ * Pinch-to-zoom on a focused document (desk/docZoom + desk/TouchControls).
+ * Touch-only: a mouse has no pinch, and the desktop pose is already sized to
+ * fill the view, so nothing here is reachable with a pointer.
+ *
+ * `min` is 1 because the focus pose already frames the sheet as large as it can
+ * go without running off the viewport (see FOCUS_POSE) — zooming out past that
+ * would only shrink readable paper into dead space, so the floor is "the size it
+ * lands at".
+ *
+ * `max` is 2 for a reason that is really a texture-resolution decision, not a
+ * taste one. A focused sheet covers ~600 device px on a phone, and its paper
+ * texture is rastered at QUALITY.texScale (0.5 → 640 texels tall), so it starts
+ * life at roughly 1 texel per device pixel. Magnifying it is therefore only
+ * worth doing as far as we are willing to re-raster the page: at 2× the sheet
+ * wants ~1200 device px, which `detailScale` below supplies exactly. Raising
+ * `max` without raising `detailScale` would not make the text more readable —
+ * it would make blurry text bigger, which is the whole trap here.
+ */
+export const DOC_ZOOM = {
+  min: 1,
+  max: 2,
+  // Zoom past this and the base raster starts to show, so the focused page is
+  // repainted at `detailScale` (see lib/docTextures). Just above 1 so an
+  // incidental pinch doesn't pay for a repaint.
+  detailAt: 1.08,
+  // Finger-span change, in px, before a two-finger gesture counts as a pinch at
+  // all. Below this it is two fingers resting, and zoom would jitter.
+  slop: 8,
+}
+
 // Resting pose of a picked-up document: floated in front of the camera,
 // tilted back so it reads flat-on. `targetHeight` is the world height each
 // paper is scaled to so large and small documents fill the view evenly.

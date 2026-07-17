@@ -27,9 +27,26 @@ export const stackTopZ = (doc) => doc.pages.length * SHEET_T
 // binary (they cannot fade), which is what made pickup shadows pop. Grounding
 // comes from the animated contact-shadow plane in Document.jsx instead.
 
+/**
+ * True when this document's currently-shown page should be reading from its
+ * high-resolution raster — i.e. a finger has pinched it in far enough that the
+ * base one would go soft (desk/docZoom, lib/docTextures).
+ *
+ * It is a store subscription rather than a docZoom read because, unlike the zoom
+ * itself, this is a real render input: it changes which texture the material
+ * carries, so it has to re-render the prop. It only ever flips when a pinch
+ * settles, which is why the live zoom is kept out of the store and this one bit
+ * is not.
+ */
+function useDetailPage(doc, page) {
+  return useSceneStore(
+    (s) => s.zoomDetail && s.focusedId === doc.id && s.pageIndex === page
+  )
+}
+
 /** A solid sheet with real thickness; the painted content is the +Z face. */
 function BoxSheet({ w, h, doc, back = '#e7dec7' }) {
-  const tex = docTexture(doc, 0)
+  const tex = docTexture(doc, 0, useDetailPage(doc, 0))
   return (
     <mesh name="page-face" receiveShadow>
       <boxGeometry args={[w, h, PAPER_T]} />
@@ -179,6 +196,10 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
       ? pageIndex
       : Math.min(pageIndex + 1, count - 1)
     : page
+  // Only the sheet actually on top is ever worth a hi-res raster — the pile and
+  // the turning leaf are mid-animation or edge-on, and a zoom resets on every
+  // page turn anyway, so `topIndex` is the only page a pinch can be reading.
+  const detail = useDetailPage(doc, topIndex)
   const blanksBelow = Math.max(count - 1 - topIndex, 0)
   const flipping = anim && anim.idx >= 0 && anim.idx < count
 
@@ -225,7 +246,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
       <mesh name="page-face" receiveShadow position={[0, 0, topZ]}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial
-          map={docTexture(doc, topIndex)}
+          map={docTexture(doc, topIndex, detail)}
           roughness={0.9}
           polygonOffset
           polygonOffsetFactor={-2}

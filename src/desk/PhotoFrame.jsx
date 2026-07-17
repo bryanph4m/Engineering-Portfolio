@@ -6,6 +6,7 @@ import { useSceneStore } from '../store/useSceneStore'
 import { photoPlaceholderTexture, softShadowTexture } from '../lib/textures'
 import { loadPhotoTexture } from '../lib/photoTexture'
 import { consumeTap } from './tapGuard'
+import { setSheetExtent, zoomState } from './docZoom'
 import { gallery } from '../content/portfolio'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT, PHOTO_FRAME_ID } from './constants'
 
@@ -31,6 +32,11 @@ const FOCUS_DIST = new THREE.Vector3(...FOCUS_POSE.position).distanceTo(
 
 const _v = new THREE.Vector3()
 const _q = new THREE.Quaternion()
+// Scratch for the pinch-pan's local axes — see the matching block in Document.
+const _ax = new THREE.Vector3()
+const _ay = new THREE.Vector3()
+
+const TAN_HALF_FOV = Math.tan((CAMERA.fov * Math.PI) / 360)
 
 // Physical frame, authored centred on the photo's centre in a local XY plane
 // with the picture facing +Z — exactly like a document prop, so it reuses the
@@ -133,11 +139,22 @@ export default function PhotoFrame() {
   // Scale the frame to the same focus height as a document, but never wider
   // than the viewport can show at the focus distance (matches Document.jsx).
   const { width: vw, height: vh } = useThree((s) => s.size)
-  const visW = 2 * Math.tan((CAMERA.fov * Math.PI) / 360) * FOCUS_DIST * (vw / vh)
+  const visH = 2 * TAN_HALF_FOV * FOCUS_DIST
+  const visW = visH * (vw / vh)
   const focusScale = Math.min(
     FOCUS_POSE.targetHeight / FRAME.H,
     (visW * 0.94) / FRAME.W
   )
+
+  // Publish the album's on-screen size for the pinch pan's clamp, exactly as a
+  // paper document does (desk/docZoom). The frame is a photograph rather than
+  // drafting text, so it has no hi-res raster to swap to — `loadPhotoTexture`
+  // already caps it well above the size it is drawn at — but magnifying and
+  // moving around it works the same.
+  useEffect(() => {
+    if (!isFocused) return
+    setSheetExtent((FRAME.W * focusScale) / visW, (FRAME.H * focusScale) / visH)
+  }, [isFocused, focusScale, visW, visH])
 
   const { restPos, restQuat, focusPos, focusQuat } = useMemo(() => {
     const qLean = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), REST.lean)
@@ -186,14 +203,25 @@ export default function PhotoFrame() {
     const t = open.get()
     const hv = hover.get()
 
-    _v.lerpVectors(restPos, focusPos, t)
-    _v.y += HOVER_LIFT * hv * (1 - t)
-    g.position.copy(_v)
+    // Pinch-to-zoom, identical in every respect to a paper document's
+    // (desk/Document) — the album rides the same focus machinery, so it rides
+    // this too. Flat 1 / 0 / 0 without a second finger.
+    const z = zoomState()
 
     _q.copy(restQuat).slerp(focusQuat, t)
     g.quaternion.copy(_q)
 
-    const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
+    _v.lerpVectors(restPos, focusPos, t)
+    _v.y += HOVER_LIFT * hv * (1 - t)
+    if (z.x !== 0 || z.y !== 0) {
+      _ax.set(1, 0, 0).applyQuaternion(_q)
+      _ay.set(0, 1, 0).applyQuaternion(_q)
+      _v.addScaledVector(_ax, z.x * visW * t)
+      _v.addScaledVector(_ay, z.y * visH * t)
+    }
+    g.position.copy(_v)
+
+    const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale * z.scale, t)
     g.scale.setScalar(s)
 
     // Contact shadow, read from the very same spring as the motion above:

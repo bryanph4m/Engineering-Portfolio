@@ -6,6 +6,7 @@ import { useSceneStore } from '../store/useSceneStore'
 import { docLinks } from '../lib/docTextures'
 import { softShadowTexture } from '../lib/textures'
 import { consumeTap } from './tapGuard'
+import { setSheetExtent, zoomState } from './docZoom'
 import { DocProp } from './props'
 import Polaroids from './Polaroids'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT } from './constants'
@@ -17,6 +18,15 @@ const FOCUS_DIST = new THREE.Vector3(...FOCUS_POSE.position).distanceTo(
 
 const _v = new THREE.Vector3()
 const _q = new THREE.Quaternion()
+// Scratch for the zoom pan's local axes, reused so a pinched sheet allocates
+// nothing per frame.
+const _ax = new THREE.Vector3()
+const _ay = new THREE.Vector3()
+
+// Half the vertical fov, pre-tanned: turns the focus distance into the world
+// height the camera can see there, which is the scale factor between docZoom's
+// viewport-fraction offsets and world metres.
+const TAN_HALF_FOV = Math.tan((CAMERA.fov * Math.PI) / 360)
 
 // Fraction of the sheet, measured from each bottom corner, that acts as the
 // page-turn hotspot on a focused multi-page document. Matches the dog-eared
@@ -66,11 +76,20 @@ export default function Document({ doc }) {
   // would otherwise run off both edges of a portrait phone. The fov is
   // vertical, so height framing is aspect-independent; width is not.
   const { width: vw, height: vh } = useThree((s) => s.size)
-  const visW = 2 * Math.tan((CAMERA.fov * Math.PI) / 360) * FOCUS_DIST * (vw / vh)
+  const visH = 2 * TAN_HALF_FOV * FOCUS_DIST
+  const visW = visH * (vw / vh)
   const focusScale = Math.min(
     FOCUS_POSE.targetHeight / doc.paper.h,
     (visW * 0.94) / doc.paper.w
   )
+
+  // Tell docZoom how much of the view this sheet fills, so a pinch's pan can be
+  // clamped to the paper's own edges. Only the focused sheet's extent matters,
+  // and only one thing is ever focused.
+  useEffect(() => {
+    if (!isFocused) return
+    setSheetExtent((doc.paper.w * focusScale) / visW, (doc.paper.h * focusScale) / visH)
+  }, [isFocused, doc.paper.w, doc.paper.h, focusScale, visW, visH])
 
   // The two orientations as quaternions: flat on the desk (with a yaw spin)
   // and tilted to face the camera when read.
@@ -116,17 +135,37 @@ export default function Document({ doc }) {
     const t = open.get()
     const hv = hover.get()
 
-    // position: lerp rest -> focus, plus a hover lift while resting
-    _v.lerpVectors(restPos, focusPos, t)
-    _v.y += HOVER_LIFT * hv * (1 - t)
-    g.position.copy(_v)
+    // Pinch-to-zoom (touch only). With no second finger this is a flat
+    // {scale: 1, x: 0, y: 0}, so every line below collapses to exactly what it
+    // computed before any of this existed — which is what keeps mouse and
+    // keyboard behaviour unchanged rather than merely similar. Both the scale
+    // and the pan are gated by the pickup progress `t` (the scale through the
+    // lerp below, the pan explicitly), so a sheet that is still on its way up
+    // cannot arrive pre-magnified.
+    const z = zoomState()
 
     // orientation: slerp between the two poses
     _q.copy(restQuat).slerp(focusQuat, t)
     g.quaternion.copy(_q)
 
+    // position: lerp rest -> focus, plus a hover lift while resting
+    _v.lerpVectors(restPos, focusPos, t)
+    _v.y += HOVER_LIFT * hv * (1 - t)
+    // …then slide along the sheet's own plane by the pinch's pan. The sheet is
+    // tilted flat-on to the camera at focus, so its local X/Y read as screen
+    // right/up; docZoom's offsets are fractions of what the camera sees at this
+    // distance, so multiplying by that visible size makes the paper track the
+    // fingers exactly, on any viewport.
+    if (z.x !== 0 || z.y !== 0) {
+      _ax.set(1, 0, 0).applyQuaternion(_q)
+      _ay.set(0, 1, 0).applyQuaternion(_q)
+      _v.addScaledVector(_ax, z.x * visW * t)
+      _v.addScaledVector(_ay, z.y * visH * t)
+    }
+    g.position.copy(_v)
+
     // scale: 1 on the desk -> focusScale in hand, with a tiny hover pop
-    const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
+    const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale * z.scale, t)
     g.scale.setScalar(s)
 
     // Contact shadow, from the very same spring reads as the motion above:

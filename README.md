@@ -39,9 +39,12 @@ npm run preview  # serve the build
   interactive too — pick it up like a document, then click the left/right half
   of the picture (or press **←/→**) to page through the album, with a `2 / 5`
   indicator in the HUD. Its photos are data — see "Photo frame album" below.
-- **Legible content.** Each document's text is real DOM (`src/ui/ContentOverlay.jsx`)
-  locked over the sheet — crisp at any zoom, and lazy-loaded on open from
-  `src/documents/content/*`.
+- **Legible content.** Each document's text is *painted*, not DOM: the page
+  painters in `src/documents/content/*` draw onto a canvas that becomes the
+  sheet's texture (`src/lib/docTextures.js`). The sheet is the only place content
+  renders, which is what lets a page be picked up, tilted and turned as one
+  physical object — and it is why a page has a finite resolution, so magnifying
+  one has to re-raster it rather than just scale it up (see "Phones" below).
 
 ## Phones
 
@@ -67,6 +70,33 @@ input, and both modes get their own render budget.
 - **Swipe** left/right on a focused document to flip, alongside the painted page
   corners and the ←/→ keys. All three ask `pageCountOf()` (`documents/registry.js`)
   so they can't drift.
+- **Pinch a focused document** to magnify it for reading, and drag with both
+  fingers to move around the magnified sheet (`src/desk/docZoom.js`, tuned by
+  `DOC_ZOOM` in `constants.js`). The zoom is anchored at the point between the
+  fingers, so the paper stays under them. It resets on every focus change and
+  every page turn, so a sheet always opens readable rather than inheriting the
+  last one's magnification.
+
+  The three touch gestures are told apart by **finger count**, the only signal
+  that is unambiguous the moment a gesture starts: one finger is a tap or a
+  swipe, two are a pinch. The instant a second finger lands, the one-finger
+  gesture in flight is abandoned rather than completed, so spreading two fingers
+  can never also turn a page. Lifting them can't set the document down either —
+  two fingers never leave the glass together, so the last one up is an ordinary
+  tap as far as r3f is concerned, and `docZoom`'s guard stands it down the same
+  way `tapGuard` stands down the edge-tap pan.
+
+  **`DOC_ZOOM.max` is a resolution decision, not a taste one.** A focused sheet
+  is ~600 device px on a phone and its texture is rastered at `QUALITY.texScale`
+  (640 texels) — about one texel per pixel, so there is nothing spare to magnify
+  into. Zooming past that alone would make blurry text bigger, not readable.
+  So the focused page is re-rastered at `DETAIL_SCALE` (`lib/docTextures.js`) —
+  the same authored coordinate space, a bigger raster, which is exactly the
+  mobile `texScale` trick run the other way. Measured on the phone tier: a
+  projects sheet goes **486×640 → 971×1280** on pinch and back on release. The
+  repaint is deferred to the moment the fingers stop (nobody reads a sheet
+  mid-gesture) and the hi-res copy is disposed when the zoom ends, so the ~14 MB
+  it costs is only ever resident for the one page being read.
 - **Quality tiers** (`src/lib/quality.js`) — the one place "is this a phone?" is
   decided, from a coarse-pointer + small-viewport capability read, never a UA
   sniff. Everything else reads `QUALITY` from there. See the table below.
@@ -90,6 +120,33 @@ Two things are **not** mobile-specific and help both tiers: photos are deferred
 until they're reachable (only page-0 polaroids and the album's first photo load
 up front — 2 images instead of 8), and a document's texture skips its
 font-swap repaint when the faces are already cached.
+
+### Where the desk's frame time actually goes
+
+Worth knowing before optimising anything here, because the intuitive answer is
+wrong and this has now been re-derived more than once:
+
+**The idle desk is not slow.** Measured on an AMD Radeon 860M at 1440×900, it
+holds a locked 60fps (16.6ms median) with ~196 draw calls and ~9.3k triangles,
+and the app's own JS is ~0ms/frame — the shadow map is baked once and frozen
+(`ShadowBake`), nothing re-uploads a texture per frame, and 30 focus/flip/close
+cycles leak no geometries, textures, programs or heap. A scene this small is
+nowhere near a real GPU's limits, so "the desk lags" is almost never about the
+scene's complexity, and shaving draw calls off the clutter buys nothing.
+
+**What people actually feel is the page paint.** Turning to a page for the first
+time paints its whole texture synchronously, on the main thread, inside React's
+commit — a hitch, not a low frame rate. That cost scales with the number of
+pages, which is why it comes back every time the content grows even though
+nothing about the rendering changed.
+
+So: if the desk feels bad, measure a page turn, not the idle scene.
+
+> **Do not measure this in a headless browser.** Headless Chromium falls back to
+> SwiftShader (software rasterisation), where this scene runs at ~4fps and every
+> frame is a 300ms "long task" — the app's JS is 1% of wallclock and *everything*
+> looks GPU-bound. None of it is real. `browse --headed` uses the actual GPU;
+> the numbers above all come from there.
 
 The simple mode's one real mobile branch is the resume: phone browsers have no
 inline PDF viewer and fail *silently* on a plugin `<object>` (never falling
@@ -125,7 +182,8 @@ design, and neither can reach the desk:
 src/
   content/     portfolio.js — the single source of truth for all site content
   desk/        3D scene: Desk, DeskLamp, Clutter, Document, props, camera, DeskScene
-               + TouchControls/tapGuard (touch input: edge-tap pan, swipe)
+               + TouchControls/tapGuard/docZoom (touch input: edge-tap pan,
+                 swipe, pinch-to-zoom)
   documents/   registry.js + content/ (desk page painters for About, Projects, …)
   simple/      the flat Wikipedia-style recruiter mode
   ui/          DOM chrome: StartScreen, HudHints, EdgeHint, Loader
