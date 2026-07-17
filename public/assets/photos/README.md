@@ -11,6 +11,26 @@ matching `photos: []` array in `src/content/portfolio.js`.
   px**) — match that aspect so the polaroid photo isn't stretched. Simple-mode
   figures show the whole image at its own aspect, so any shape works there.
 
+> **Three files here are well over that budget** and are the biggest thing a
+> phone downloads on this site:
+>
+> | File | Now | Budget |
+> | ---- | --- | ------ |
+> | `mlr-team.jpg` | 2160 × 2880, 2.4 MB | ≲ 500 KB |
+> | `mlr-launch-day.jpg` | 2160 × 2880, 1.8 MB | ≲ 500 KB |
+> | `bryan-portrait.jpg` | 2160 × 2720, 1.1 MB | ≲ 500 KB |
+>
+> Re-exporting them at **1000 × 1250** would cut ~4.5 MB off the desk with no
+> visible change: a polaroid is a couple of hundred pixels wide on a phone, and
+> even a picked-up album photo is only ~600. They are left as-is because they
+> are the originals and re-encoding them is lossy — the call belongs to whoever
+> owns the photos.
+>
+> The desk already downscales every photo to a tier-appropriate cap before it
+> reaches the GPU (`src/lib/photoTexture.js`), so the *memory* cost is handled
+> either way. Only the download and decode still scale with what's in this
+> folder, and nothing in the code can fix that from here.
+
 Each photo is one entry shared by both site modes, but used differently:
 
 ```js

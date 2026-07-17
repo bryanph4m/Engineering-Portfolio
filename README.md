@@ -43,6 +43,59 @@ npm run preview  # serve the build
   locked over the sheet — crisp at any zoom, and lazy-loaded on open from
   `src/documents/content/*`.
 
+## Phones
+
+The camera's fov is vertical, so a portrait phone frames barely a quarter of the
+desk's width at the fixed vantage — the desk simply doesn't fit, and dragging to
+orbit isn't available (it fights picking a sheet up). So touch gets its own
+input, and both modes get their own render budget.
+
+- **Edge-tap panning** (`src/desk/TouchControls.jsx`, tuned by `CAMERA_PAN` in
+  `src/desk/constants.js`). Tapping either screen edge trucks the view sideways
+  one step, FNAF-style: camera and look-at target move together, so it's a
+  lateral pan, **not** an orbit — the vantage is as fixed as it is on desktop.
+  It is deliberately **invisible**: no arrows, no buttons, nothing drawn over the
+  scene. `panRange()` derives the clamp per viewport (reach minus what's already
+  on screen), so it self-tunes — a landscape phone already frames the whole desk
+  and its range collapses to zero, and the pan can never reach past the desk.
+  `src/ui/EdgeHint.jsx` shows one line of text, once ever, so it's discoverable.
+- **An object always outranks the zone it overlaps.** The envelope, the projects
+  stack and the photo frame all sit under a pan zone on a phone. Whatever handles
+  a tap says so through `src/desk/tapGuard.js` and the pan stands down. Read that
+  file before changing it — the obvious alternative (raycast the tap yourself)
+  was tried and is subtly wrong.
+- **Swipe** left/right on a focused document to flip, alongside the painted page
+  corners and the ←/→ keys. All three ask `pageCountOf()` (`documents/registry.js`)
+  so they can't drift.
+- **Quality tiers** (`src/lib/quality.js`) — the one place "is this a phone?" is
+  decided, from a coarse-pointer + small-viewport capability read, never a UA
+  sniff. Everything else reads `QUALITY` from there. See the table below.
+
+Measured on the same iPhone-class emulation, before vs after this work: **time to
+ready 8.6s → 6.7s (−22%)**, **GPU texture memory 205 MB → 24 MB (−88%)**, **~5 MB
+less over the wire**.
+
+| Lever | Desktop | Phone | Why |
+| ----- | ------- | ----- | --- |
+| Device pixel ratio | 1.5 | **1.25** | Fill-rate is the scene's bottleneck; cost is the square of this. Still above CSS pixels, so focused paper stays readable. |
+| MSAA | on | **off** | Disproportionately expensive on tile-based mobile GPUs. |
+| Shadow map | 1024² | **512²** | Baked once and frozen (`ShadowBake`), so this buys load time, not frame rate. |
+| Procedural textures | 1× | **0.5×** raster | `canvas()` in `lib/textures.js` pre-scales the 2D context, so art stays authored at its design size. |
+| Document textures | 1× | **0.5×** raster | `lib/docTextures.js`. The 1280px space stays the *coordinate* system — only the raster shrinks, or every page would re-flow. |
+| Photo textures | ≤1600px | **≤768px** | `lib/photoTexture.js`, capped before upload. |
+| Anisotropy | 8 | **2** | The desk slab is viewed at a grazing angle. |
+| Round props | full | **half** segments | `seg()`; background dressing only, nothing focusable. |
+
+Two things are **not** mobile-specific and help both tiers: photos are deferred
+until they're reachable (only page-0 polaroids and the album's first photo load
+up front — 2 images instead of 8), and a document's texture skips its
+font-swap repaint when the faces are already cached.
+
+The simple mode's one real mobile branch is the resume: phone browsers have no
+inline PDF viewer and fail *silently* on a plugin `<object>` (never falling
+through to its own child fallback), so that tier chooses a link card up front
+rather than waiting for a fallback the browser will never trigger.
+
 ## The simple / Wikipedia mode
 
 The flat recruiter view (`src/simple/`) reads the same shared content and
@@ -72,10 +125,12 @@ design, and neither can reach the desk:
 src/
   content/     portfolio.js — the single source of truth for all site content
   desk/        3D scene: Desk, DeskLamp, Clutter, Document, props, camera, DeskScene
+               + TouchControls/tapGuard (touch input: edge-tap pan, swipe)
   documents/   registry.js + content/ (desk page painters for About, Projects, …)
   simple/      the flat Wikipedia-style recruiter mode
-  ui/          DOM chrome: StartScreen, HudHints, Loader
-  lib/         procedural canvas textures + page-flow pagination + photo layout
+  ui/          DOM chrome: StartScreen, HudHints, EdgeHint, Loader
+  lib/         quality.js (the device tier every render lever reads) + procedural
+               canvas textures + page-flow pagination + photo layout/loading
   store/       Zustand scene state
 public/assets/ fonts (bundled TTFs) + textures/ (drop-in real photos)
 ```

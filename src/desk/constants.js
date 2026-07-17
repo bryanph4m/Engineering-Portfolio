@@ -14,6 +14,58 @@ export const PARALLAX = {
   ease: 0.045,
 }
 
+/**
+ * Touch-only edge-tap panning (desk/TouchControls + desk/CameraRig).
+ *
+ * The camera's fov is vertical, so a portrait phone sees roughly a quarter of
+ * the desk's 11-unit width at the fixed vantage — the desk simply does not fit,
+ * and dragging to orbit is not an option (it fights picking a sheet up). So a
+ * tap in either screen edge trucks the vantage sideways one step, FNAF-style:
+ * the camera and its look-at target slide together, which is a lateral pan, NOT
+ * an orbit — the vantage angle is as fixed on a phone as it is on desktop, and
+ * pointer parallax still rides on top of it.
+ *
+ * `reach` is the clamp and the whole safety property: pan can never travel
+ * further from centre than the outermost thing worth seeing, so there is no way
+ * to end up looking at the void past the desk edge. The usable range is derived
+ * from it per-viewport in CameraRig (reach minus half of what's already on
+ * screen), which self-tunes: a landscape phone already frames the whole desk, so
+ * its range collapses to zero and the edge taps quietly do nothing.
+ */
+export const CAMERA_PAN = {
+  // Metres from centre to the outermost desk content: the slide rule sits at
+  // x = -4.4 and the contact envelope's far edge lands near +4.7 (its clutter
+  // neighbours are within this too). The slab itself runs to ±5.5, so this
+  // deliberately stops short of the bare rim.
+  reach: 4.9,
+  steps: 3, // taps from centre to the clamp, each way
+  ease: 0.075, // per-frame approach to the stepped target
+  // Outer fraction of the viewport width that reads as an edge tap. ~13% is
+  // about a thumb's width on a phone without reaching into the desk's middle,
+  // where the documents actually are.
+  zone: 0.13,
+}
+
+/**
+ * How far from centre the view may pan, in metres, for a given viewport aspect.
+ *
+ * It is whatever is left over once the desk that's already on screen is
+ * accounted for: enough to bring the outermost props (CAMERA_PAN.reach) to the
+ * screen edge, and not a metre further. The fov is vertical, so a portrait
+ * phone spans little width and earns a wide range, while anything already
+ * framing the whole desk — every desktop window, a phone turned landscape —
+ * lands at exactly 0 and cannot pan at all. CameraRig clamps to this, and the
+ * first-time hint (ui/EdgeHint) reads it to stay quiet when there is nothing
+ * to look around at.
+ */
+export function panRange(aspect) {
+  const camPos = CAMERA.position
+  const tgt = CAMERA.target
+  const dist = Math.hypot(camPos[0] - tgt[0], camPos[1] - tgt[1], camPos[2] - tgt[2])
+  const visibleW = 2 * Math.tan((CAMERA.fov * Math.PI) / 360) * dist * aspect
+  return Math.max(0, CAMERA_PAN.reach - visibleW / 2)
+}
+
 // Resting pose of a picked-up document: floated in front of the camera,
 // tilted back so it reads flat-on. `targetHeight` is the world height each
 // paper is scaled to so large and small documents fill the view evenly.

@@ -1,22 +1,16 @@
 import { useEffect } from 'react'
 import { useSceneStore } from '../store/useSceneStore'
-import { byId } from '../documents/registry'
-import { PHOTO_FRAME_ID } from '../desk/constants'
-import { gallery } from '../content/portfolio'
+import { pageCountOf } from '../documents/registry'
 
 /** Keyboard chrome for a picked-up document or the photo album: Esc sets it
- *  down, ←/→ flip pages (or step through photos). */
+ *  down, ←/→ flip pages (or step through photos). The touch equivalents (a
+ *  swipe, the painted page corners) live in desk/TouchControls. */
 export default function KeyControls() {
   const focusedId = useSceneStore((s) => s.focusedId)
 
   useEffect(() => {
     if (!focusedId) return
-    // The photo album isn't in the registry; it flips through gallery.photos
-    // via the same store paging as a multi-page document.
-    const count =
-      focusedId === PHOTO_FRAME_ID
-        ? Math.max(1, gallery.photos.length)
-        : byId(focusedId)?.pages.length ?? 0
+    const count = pageCountOf(focusedId)
     const multiPage = count > 1
     const onKey = (e) => {
       const s = useSceneStore.getState()

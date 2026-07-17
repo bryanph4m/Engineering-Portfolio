@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
-import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { texDims } from '../lib/docTextures'
 import { photoPlaceholderTexture, softShadowTexture } from '../lib/textures'
+import { loadPhotoTexture } from '../lib/photoTexture'
 import { POLAROID, polaroidFrame } from '../lib/photos'
 import { PAPER_T, SHEET_T } from './layout'
 
@@ -72,38 +72,53 @@ function frameScale(rect, paper) {
   return (rect.w / W) * paper.w / FRAME.w
 }
 
-/** Loads each placed photo's image into a texture, falling back to the painted
- *  placeholder for any slot whose file isn't in /public/assets/photos/ yet. */
-function usePhotoTextures(photos) {
+/**
+ * Loads each placed photo's image into a texture, falling back to the painted
+ * placeholder for any slot whose file isn't in /public/assets/photos/ yet.
+ *
+ * Only the photos on the resting top sheet (page 0) are fetched up front —
+ * those are the ones actually on screen while the document lies on the desk.
+ * Photos on deeper pages are behind at least a pickup, so they wait for the
+ * document to be opened and are then kept for the session. Every document
+ * mounts at load, so without this split the desk pulls every polaroid on every
+ * page of every document before it can show a first frame — the single largest
+ * front-loaded download on the desk, and the one mobile pays the most for.
+ */
+function usePhotoTextures(photos, docId) {
   const placeholder = useMemo(() => photoPlaceholderTexture(), [])
   const [textures, setTextures] = useState(() => photos.map(() => placeholder))
+
+  // Once opened, stay loaded: setting the document down must not drop photos a
+  // single tap can bring back.
+  const opened = useSceneStore((s) => s.focusedId === docId)
+  const [wantAll, setWantAll] = useState(false)
   useEffect(() => {
-    setTextures(photos.map(() => placeholder))
-    let alive = true
-    const loader = new THREE.TextureLoader()
+    if (opened) setWantAll(true)
+  }, [opened])
+
+  // Aliveness is tracked for the component, not per-effect: `wantAll` flipping
+  // re-runs the effect, and a per-effect flag would strand a page-0 photo that
+  // was still in flight at pickup on its placeholder forever.
+  const aliveRef = useRef(true)
+  useEffect(() => () => { aliveRef.current = false }, [])
+
+  const requested = useRef(new Set())
+  useEffect(() => {
     photos.forEach((p, i) => {
       const src = p.photo?.src
-      if (!src) return
-      loader.load(
-        src,
-        (t) => {
-          if (!alive) return
-          t.colorSpace = THREE.SRGBColorSpace
-          t.anisotropy = 8
-          setTextures((prev) => {
-            const next = prev.slice()
-            next[i] = t
-            return next
-          })
-        },
-        undefined,
-        () => {}, // not dropped in yet — keep the placeholder for this slot
-      )
+      if (!src || requested.current.has(i)) return
+      if (!wantAll && p.page !== 0) return
+      requested.current.add(i)
+      loadPhotoTexture(src, (t) => {
+        if (!aliveRef.current) return
+        setTextures((prev) => {
+          const next = prev.slice()
+          next[i] = t
+          return next
+        })
+      })
     })
-    return () => {
-      alive = false
-    }
-  }, [photos, placeholder])
+  }, [photos, wantAll])
   return textures
 }
 
@@ -180,7 +195,7 @@ function Polaroid({ doc, placed, tex, index }) {
 
 export default function Polaroids({ doc }) {
   const photos = doc.photos ?? []
-  const textures = usePhotoTextures(photos)
+  const textures = usePhotoTextures(photos, doc.id)
   if (!photos.length) return null
   return (
     <group>

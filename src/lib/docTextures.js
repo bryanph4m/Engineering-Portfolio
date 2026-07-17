@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { QUALITY } from './quality'
 
 /**
  * Paints every page of every document onto high-resolution canvases and hands
@@ -35,6 +36,15 @@ import * as THREE from 'three'
  * animation scales every sheet to the same world height: at the focused
  * camera distance a sheet covers ~850 screen px on a 1080p viewport, so 1280
  * texels stay sharp.
+ *
+ * On phones the *raster* is halved on each axis (QUALITY.texScale) while this
+ * 1280px space stays the authored coordinate system — see docTexture(). That
+ * distinction is load-bearing: every margin, font size and page break in
+ * src/lib/pageFlow.js and src/documents/content/* is expressed in these texture
+ * px, so shrinking the coordinate space (rather than just the raster) would
+ * silently re-flow and overflow every page. A focused sheet covers ~600 device
+ * px on a phone at the capped DPR, so 640 texels of paper height still resolve
+ * the drafting hand.
  */
 
 export const HAND = '"Architects Daughter", "Segoe Script", cursive'
@@ -85,30 +95,45 @@ export function docTexture(doc, page = 0) {
   const key = keyFor(doc, page)
   if (texCache.has(key)) return texCache.get(key)
 
+  // W/H are the authored texture-space dimensions every painter and pageFlow
+  // measures against. The raster below may be smaller (mobile), but the drawing
+  // coordinate system is always exactly this.
   const { W, H } = texDims(doc.paper)
+  const s = QUALITY.texScale
   const c = document.createElement('canvas')
-  c.width = W
-  c.height = H
+  c.width = Math.round(W * s)
+  c.height = Math.round(H * s)
+  // Pre-scale once, so every paint() below composites authored px into whatever
+  // raster this tier allocated. Halves each axis on a phone: the five resting
+  // sheets go from ~52 MB of GPU texture to ~13 MB, which is the single biggest
+  // cut to what the desk uploads before it can show a first frame.
+  if (s !== 1) c.getContext('2d').scale(s, s)
 
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 8
+  tex.anisotropy = QUALITY.anisotropy
 
   const links = []
   linkCache.set(key, links)
 
   // First paint may fall back to system fonts; repaint once the real faces
-  // arrive so the drafting look survives a cold cache.
-  paint(c, doc, page, links)
+  // arrive so the drafting look survives a cold cache. On a warm cache the
+  // faces are already in, and the first paint is the real one — repainting
+  // every sheet a second time for an identical result is pure cost, so skip it.
+  paint(c, doc, page, links, W, H)
   tex.needsUpdate = true
   const faces = [`16px ${HAND}`, `16px ${TYPE}`, `16px ${MONO}`]
-  Promise.all(faces.map((f) => document.fonts.load(f)))
-    .then(() => {
-      paint(c, doc, page, links)
-      tex.needsUpdate = true
-      devVerify(c, key)
-    })
-    .catch(() => devVerify(c, key))
+  if (faces.every((f) => document.fonts.check(f))) {
+    devVerify(c, key)
+  } else {
+    Promise.all(faces.map((f) => document.fonts.load(f)))
+      .then(() => {
+        paint(c, doc, page, links, W, H)
+        tex.needsUpdate = true
+        devVerify(c, key)
+      })
+      .catch(() => devVerify(c, key))
+  }
 
   texCache.set(key, tex)
   return tex
@@ -159,14 +184,19 @@ function inkBounds(layer, W, H) {
   return { x: minX * 2 - 2, y: minY * 2 - 2, x2: (maxX + 1) * 2 + 2, y2: (maxY + 1) * 2 + 2 }
 }
 
-function paint(c, doc, page, links) {
+/**
+ * Paints one page. `W`/`H` are the authored texture-space size — passed in
+ * rather than read off `c.width`, because on mobile the canvas raster is
+ * smaller than the coordinate space its context draws in (see docTexture).
+ * Everything downstream — the content box, the fit pass, the measured ink, the
+ * link UVs — is therefore tier-independent and lands identically either way.
+ */
+function paint(c, doc, page, links, W, H) {
   const ctx = c.getContext('2d')
   const spec = doc.pages[page]
   if (!spec) throw new Error(`No page painter for "${doc.id}" page ${page}`)
   const decor = typeof spec === 'function' ? null : spec.decor
   const draw = typeof spec === 'function' ? spec : spec.draw
-  const W = c.width
-  const H = c.height
   const key = keyFor(doc, page)
   const count = doc.pages.length
   const multi = count > 1

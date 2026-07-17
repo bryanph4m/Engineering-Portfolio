@@ -1,10 +1,11 @@
 import { create } from 'zustand'
+import { CAMERA_PAN } from '../desk/constants'
 
 /**
  * Single source of truth for what the desk is doing. Kept deliberately tiny:
- * which document is picked up, which is hovered, and where we are in a
- * multi-page stack. No routing — focus is just internal state so the Canvas
- * never remounts.
+ * which document is picked up, which is hovered, where we are in a multi-page
+ * stack, and how far the view has been panned. No routing — focus is just
+ * internal state so the Canvas never remounts.
  */
 export const useSceneStore = create((set) => ({
   ready: false, // assets + fonts loaded; gates the loading doodle
@@ -15,6 +16,13 @@ export const useSceneStore = create((set) => ({
   flipDir: 0, // -1 / +1 — direction of the last page turn, drives the 3D flip
   flipNonce: 0, // bumps on every turn so the flip animation re-fires
 
+  // How far the view has been panned from centre, in whole edge-taps
+  // (-steps…+steps). Stored as a step rather than a distance because the world
+  // distance a step covers depends on the viewport — CameraRig owns that math.
+  // Deliberately NOT reset by focus/close: a document is read at centre and
+  // then set back down where the visitor was looking (see CameraRig).
+  panStep: 0,
+
   setReady: (v = true) => set({ ready: v }),
   setSceneDrawn: (v = true) => set({ sceneDrawn: v }),
 
@@ -23,6 +31,13 @@ export const useSceneStore = create((set) => ({
 
   setHovered: (id) =>
     set((s) => (s.hoveredId === id ? s : { hoveredId: id })),
+
+  /** Step the view one edge-tap left (-1) or right (+1), clamped to the range. */
+  panBy: (dir) =>
+    set((s) => {
+      const next = Math.max(-CAMERA_PAN.steps, Math.min(CAMERA_PAN.steps, s.panStep + dir))
+      return next === s.panStep ? s : { panStep: next }
+    }),
 
   nextPage: (pageCount) =>
     set((s) => {

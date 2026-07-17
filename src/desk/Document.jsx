@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docLinks } from '../lib/docTextures'
 import { softShadowTexture } from '../lib/textures'
+import { consumeTap } from './tapGuard'
 import { DocProp } from './props'
 import Polaroids from './Polaroids'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT } from './constants'
@@ -207,6 +208,9 @@ export default function Document({ doc }) {
     if (anyFocused) return
     e.stopPropagation()
     document.body.style.cursor = 'auto'
+    // Claim the tap so the edge-tap panning stands down: this document may be
+    // sitting over a pan zone, and picking it up must win (desk/tapGuard).
+    consumeTap()
     focus(doc.id)
   }
 

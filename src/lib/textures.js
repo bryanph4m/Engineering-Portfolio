@@ -1,23 +1,48 @@
 import * as THREE from 'three'
+import { QUALITY } from './quality'
 
 // Procedural canvas textures so the project builds and runs with zero binary
 // assets. Each is memoised — created once, on first use, in the browser.
 // To swap in real photography later, drop a file in /public/assets/textures
 // and load it with useTexture instead (see Desk.jsx for the hook-in point).
+//
+// Mobile resolution is handled entirely by `canvas()` below: every routine in
+// this file keeps drawing at its authored design size, and only the backing
+// raster shrinks. That is the whole mobile texture story for the desk dressing
+// — there is no second, hand-maintained low-res art set to keep in sync.
 
 const cache = {}
 
+/**
+ * An offscreen canvas whose raster is `QUALITY.texScale` of the asked size, with
+ * its 2D context pre-scaled by the same factor. Callers pass — and draw in —
+ * authored coordinates: a routine that fills `0,0,512,512` still fills the whole
+ * canvas whether the raster underneath is 512² (desktop) or 256² (mobile). So
+ * halving mobile texture resolution costs exactly this function, and no drawing
+ * code below has to know the tier exists.
+ */
 function canvas(w, h) {
+  const s = QUALITY.texScale
   const c = document.createElement('canvas')
-  c.width = w
-  c.height = h
+  c.width = Math.max(1, Math.round(w * s))
+  c.height = Math.max(1, Math.round(h * s))
+  // getContext returns the same context object on every later call, so this
+  // transform is still in force when the drawing routine fetches it.
+  if (s !== 1) c.getContext('2d').scale(s, s)
   return c
 }
+
+/**
+ * Scales a "how many flecks/strokes of noise" count with the raster, so a
+ * half-resolution texture costs about half the canvas work instead of drawing
+ * desktop's full fleck count into a quarter of the pixels.
+ */
+const detail = (n) => Math.max(1, Math.round(n * QUALITY.texScale))
 
 function finish(c, { repeat = false } = {}) {
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 8
+  tex.anisotropy = QUALITY.anisotropy
   if (repeat) tex.wrapS = tex.wrapT = THREE.RepeatWrapping
   tex.needsUpdate = true
   return tex
@@ -40,7 +65,7 @@ export function woodTexture() {
   ctx.fillStyle = base
   ctx.fillRect(0, 0, W, H)
 
-  for (let i = 0; i < 700; i++) {
+  for (let i = 0; i < detail(700); i++) {
     const y = Math.random() * H
     ctx.strokeStyle = `rgba(${38 + Math.random() * 46},${24 + Math.random() * 28},12,${0.04 + Math.random() * 0.13})`
     ctx.lineWidth = 0.5 + Math.random() * 2.2
@@ -86,7 +111,7 @@ export function paperTexture(bright = false) {
   const ctx = c.getContext('2d')
   ctx.fillStyle = bright ? '#f8f2e4' : '#efe6d0'
   ctx.fillRect(0, 0, 512, 512)
-  for (let i = 0; i < 1400; i++) {
+  for (let i = 0; i < detail(1400); i++) {
     ctx.fillStyle = `rgba(${120 + Math.random() * 90},${110 + Math.random() * 80},${90 + Math.random() * 70},${Math.random() * 0.05})`
     ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5)
   }
@@ -405,7 +430,7 @@ export function softShadowTexture() {
     ctx.fill()
   }
   const tex = new THREE.CanvasTexture(c)
-  tex.anisotropy = 4
+  tex.anisotropy = Math.min(4, QUALITY.anisotropy)
   cache.softShadow = tex
   return tex
 }
@@ -424,7 +449,9 @@ export function pennantTexture() {
   // more than a couple hundred px on screen, so a 512×256 raster is already
   // oversampled. The felt art is authored in a 1024×512 space; we scale the
   // context down so it rasterizes into a quarter-size canvas (a quarter of the
-  // texture memory) with no change to the drawing code or the look.
+  // texture memory) with no change to the drawing code or the look. This is the
+  // same trick `canvas()` plays for the mobile tier, and the two compose: on a
+  // phone the raster is halved again on each axis off the back of this one.
   const W = 1024
   const H = 512
   const S = 0.5
@@ -464,7 +491,7 @@ export function pennantTexture() {
   ctx.clip()
 
   // felt speckle: fine light/dark flecks so it doesn't read as flat plastic
-  for (let i = 0; i < 9000; i++) {
+  for (let i = 0; i < detail(9000); i++) {
     const x = pad + Math.random() * (tipX - pad)
     const y = topY + Math.random() * (botY - topY)
     ctx.fillStyle =

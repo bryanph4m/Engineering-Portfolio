@@ -4,6 +4,7 @@ import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docTexture } from '../lib/docTextures'
+import { seg } from '../lib/quality'
 import { PAPER_T, SHEET_T } from './layout'
 
 // The physical "prop" for each document, drawn in its own local XY plane
@@ -316,7 +317,11 @@ function paperclipGeometry() {
   pt(-0.034, -0.12, zB)
   pt(-0.034, -0.24, zB)
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal')
-  return new THREE.TubeGeometry(curve, 160, CLIP_R, 8)
+  // The densest single prop on the desk: at desktop tessellation this one wire
+  // is ~2.5k triangles for a clip a few millimetres wide. The curve is what
+  // sells it, not the tube's roundness, so phones keep the path and halve the
+  // sweep (see seg() in src/lib/quality.js).
+  return new THREE.TubeGeometry(curve, seg(160), CLIP_R, seg(8))
 }
 
 /** Folded formal document with a paperclip — the resume. */

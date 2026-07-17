@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { PerspectiveCamera, AdaptiveDpr, Preload } from '@react-three/drei'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
+import { QUALITY } from '../lib/quality'
 import { CAMERA } from './constants'
 import Desk from './Desk'
 import DeskLamp from './DeskLamp'
@@ -11,6 +12,7 @@ import Documents from './Documents'
 import PhotoFrame from './PhotoFrame'
 import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
+import TouchControls from './TouchControls'
 import DevLayoutAudit from './DevLayoutAudit'
 
 /**
@@ -67,9 +69,11 @@ export default function DeskScene() {
       // ~850 CSS px, so beyond ~1.5x device pixels we're only upsampling a
       // fixed-res canvas — more fragments, no sharper text. Cap the ratio at
       // 1.5 (AdaptiveDpr still drops it further while the camera moves). The
-      // scene is fill-rate bound, so this is the single biggest perf lever.
-      dpr={[1, 1.5]}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      // scene is fill-rate bound, so this is the single biggest perf lever —
+      // and the one phones pull hardest on: QUALITY drops the cap to 1.25 and
+      // turns MSAA off there (src/lib/quality.js explains both numbers).
+      dpr={[1, QUALITY.dprCap]}
+      gl={{ antialias: QUALITY.antialias, powerPreference: 'high-performance' }}
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping
         gl.toneMappingExposure = 1.05
@@ -84,6 +88,9 @@ export default function DeskScene() {
 
       <PerspectiveCamera makeDefault position={CAMERA.position} fov={CAMERA.fov} near={0.1} far={100} />
       <CameraRig />
+      {/* touch-only: edge-tap panning + swipe-to-flip. Renders nothing, and is
+          inert on a mouse. */}
+      <TouchControls />
 
       {/* soft, warm fill so shadows never go pure black */}
       <ambientLight intensity={0.35} color="#ffe9c9" />

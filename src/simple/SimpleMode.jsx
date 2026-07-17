@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   profile, projects, research, resume, contact, sections, disciplineLabels,
 } from '../content/portfolio'
+import { IS_MOBILE } from '../lib/quality'
 import './simple.css'
 
 /**
@@ -112,8 +113,30 @@ function Figures({ photos }) {
  * `<object>` (not `<iframe>`) so browsers with no inline PDF viewer render the
  * children as a real fallback instead of a blank box; the download link above
  * the frame is always there regardless.
+ *
+ * Mobile skips the embed entirely and offers the card below instead. This is
+ * not a size or taste judgement — it is that phone browsers have no inline PDF
+ * viewer to embed into: iOS Safari and Android Chrome both refuse to render a
+ * plugin-type `<object>`, and (the part that actually bites) they refuse
+ * *silently*, painting an empty box without ever falling through to the child
+ * content that exists for exactly this case. So the fallback cannot be left to
+ * the browser to trigger — on the tier where it is always needed, it must be
+ * chosen up front. Tapping through hands the file to the OS viewer, which is
+ * where a phone reads a PDF well anyway.
  */
 function ResumePreview() {
+  if (IS_MOBILE) {
+    return (
+      <div className="wiki__pdf wiki__pdf--linked">
+        <div className="wiki__pdf-fallback">
+          <p>The resume is a PDF — phone browsers open it in their own viewer.</p>
+          <a className="wiki__download" href={resume.pdf} target="_blank" rel="noreferrer">
+            Open resume (PDF) ↗
+          </a>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="wiki__pdf">
       <object
@@ -271,7 +294,15 @@ function buildArticles(go) {
     // sections from `resume.sections` on its folded sheet.
     resume: {
       title: 'Resume',
-      lead: (
+      // "shown below" is only true where the PDF actually embeds, and the lead's
+      // download link would be a second copy of the one on mobile's link card
+      // (ResumePreview) — so on that tier the lead just introduces it and lets
+      // the card carry the single call to action.
+      lead: IS_MOBILE ? (
+        <p>
+          The full resume for <strong>{resume.name}</strong>.
+        </p>
+      ) : (
         <>
           <p>
             The full resume for <strong>{resume.name}</strong>, shown below.

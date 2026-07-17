@@ -1,3 +1,4 @@
+import { QUALITY, seg } from '../lib/quality'
 import { COLORS } from './constants'
 
 /**
@@ -10,30 +11,30 @@ export default function DeskLamp() {
     <group position={[-3.9, 0, -1.4]}>
       {/* weighted base */}
       <mesh castShadow position={[0, 0.08, 0]}>
-        <cylinderGeometry args={[0.55, 0.62, 0.16, 32]} />
+        <cylinderGeometry args={[0.55, 0.62, 0.16, seg(32)]} />
         <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
       </mesh>
 
       {/* lower arm */}
       <mesh castShadow position={[0.35, 1.0, 0]} rotation={[0, 0, -0.5]}>
-        <cylinderGeometry args={[0.045, 0.045, 2.0, 16]} />
+        <cylinderGeometry args={[0.045, 0.045, 2.0, seg(16)]} />
         <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
       </mesh>
       {/* elbow */}
       <mesh castShadow position={[0.83, 1.9, 0]}>
-        <sphereGeometry args={[0.1, 16, 16]} />
+        <sphereGeometry args={[0.1, seg(16), seg(16)]} />
         <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
       </mesh>
       {/* upper arm reaching over the desk */}
       <mesh castShadow position={[1.75, 2.15, 0]} rotation={[0, 0, -1.28]}>
-        <cylinderGeometry args={[0.045, 0.045, 2.0, 16]} />
+        <cylinderGeometry args={[0.045, 0.045, 2.0, seg(16)]} />
         <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
       </mesh>
 
       {/* shade */}
       <group position={[2.55, 2.28, 0]} rotation={[0, 0, -2.5]}>
         <mesh castShadow>
-          <coneGeometry args={[0.62, 0.7, 32, 1, true]} />
+          <coneGeometry args={[0.62, 0.7, seg(32), 1, true]} />
           <meshStandardMaterial
             color="#8a6a2f"
             metalness={0.6}
@@ -43,7 +44,7 @@ export default function DeskLamp() {
         </mesh>
         {/* glowing bulb */}
         <mesh position={[0, -0.18, 0]}>
-          <sphereGeometry args={[0.2, 20, 20]} />
+          <sphereGeometry args={[0.2, seg(20), seg(20)]} />
           <meshStandardMaterial
             color={COLORS.lampWarm}
             emissive={COLORS.lampWarm}
@@ -66,7 +67,11 @@ export default function DeskLamp() {
         // 1024² is plenty for a desk-sized pool of soft contact shadows, and
         // the map is baked once (ShadowBake in DeskScene) then frozen — so this
         // size is a one-time cost and a quarter of the memory of the old 2048².
-        shadow-mapSize={[1024, 1024]}
+        // Phones bake at 512²: because the map is frozen rather than re-rendered
+        // each frame, this buys load time (a quarter of the depth rasterisation
+        // over ShadowBake's warm-up frames) rather than frame rate, which is
+        // exactly where the mobile complaint was.
+        shadow-mapSize={[QUALITY.shadowMapSize, QUALITY.shadowMapSize]}
         shadow-bias={-0.0004}
       />
       {/* tiny point light so the bulb itself reads as a glow source */}

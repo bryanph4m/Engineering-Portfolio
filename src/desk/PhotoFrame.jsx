@@ -4,6 +4,8 @@ import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { photoPlaceholderTexture, softShadowTexture } from '../lib/textures'
+import { loadPhotoTexture } from '../lib/photoTexture'
+import { consumeTap } from './tapGuard'
 import { gallery } from '../content/portfolio'
 import { CAMERA, FOCUS_POSE, HOVER_LIFT, PHOTO_FRAME_ID } from './constants'
 
@@ -56,35 +58,52 @@ const SHADOW_HOVER = 0.28 // extra opacity at full hover lift
 const SHADOW_SIZE = [FRAME.W * 1.5, 0.82]
 const SHADOW_POS = [REST.position[0], 0.0012, REST.position[2] + 0.16]
 
-/** Loads each gallery photo into a texture, falling back to the placeholder. */
+/**
+ * Loads gallery photos into textures, falling back to the placeholder.
+ *
+ * Only the first photo — the one resting in the frame on the desk — is fetched
+ * up front. Every other slot is unreachable until the frame is picked up, so
+ * they are deferred to that first pickup and then kept for the session. The
+ * album is the desk's only real image download, and on a phone this is the
+ * difference between blocking the first frame on the whole set and blocking it
+ * on the one picture that's actually visible.
+ */
 function useGalleryTextures() {
   const placeholder = useMemo(() => photoPlaceholderTexture(), [])
   const list = gallery.photos
   const [textures, setTextures] = useState(() => list.map(() => placeholder))
+
+  // Once the album has been opened it stays loaded: setting the frame back down
+  // must not drop photos the visitor can reach again with one tap.
+  const opened = useSceneStore((s) => s.focusedId === PHOTO_FRAME_ID)
+  const [wantAll, setWantAll] = useState(false)
   useEffect(() => {
-    let alive = true
-    const loader = new THREE.TextureLoader()
-    list.forEach((p, i) => {
-      loader.load(
-        p.src,
-        (t) => {
-          if (!alive) return
-          t.colorSpace = THREE.SRGBColorSpace
-          t.anisotropy = 8
-          setTextures((prev) => {
-            const next = prev.slice()
-            next[i] = t
-            return next
-          })
-        },
-        undefined,
-        () => {} // not dropped in yet — keep the placeholder for this slot
-      )
-    })
-    return () => {
-      alive = false
+    if (opened) setWantAll(true)
+  }, [opened])
+  const wanted = wantAll ? list.length : Math.min(1, list.length)
+
+  // Aliveness is tracked for the component, not per-effect: `wanted` growing
+  // re-runs the effect, and a per-effect flag would strand a photo that was
+  // still in flight when the frame was picked up on its placeholder forever.
+  const aliveRef = useRef(true)
+  useEffect(() => () => { aliveRef.current = false }, [])
+
+  const requested = useRef(new Set())
+  useEffect(() => {
+    for (let i = 0; i < wanted; i++) {
+      if (requested.current.has(i)) continue
+      requested.current.add(i)
+      loadPhotoTexture(list[i].src, (t) => {
+        if (!aliveRef.current) return
+        setTextures((prev) => {
+          const next = prev.slice()
+          next[i] = t
+          return next
+        })
+      })
     }
-  }, [list])
+  }, [list, wanted])
+
   // An empty gallery still shows one placeholder photo in the frame.
   return textures.length ? textures : [placeholder]
 }
@@ -236,6 +255,9 @@ export default function PhotoFrame() {
     if (anyFocused) return
     e.stopPropagation()
     document.body.style.cursor = 'auto'
+    // Claim the tap so the edge-tap panning stands down (desk/tapGuard) — the
+    // frame rests well right of centre and lands under a pan zone on a phone.
+    consumeTap()
     focus(PHOTO_FRAME_ID)
   }
 

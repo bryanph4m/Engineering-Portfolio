@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
+import { seg } from '../lib/quality'
 import { COLORS } from './constants'
 import {
   calcScreenTexture,
@@ -24,6 +25,15 @@ import {
  *  - every object rests ON the desk: y = half its own height, nothing sunk
  *  - nothing shares footprint with an interactive document
  * The root group is named "clutter" so the audit can find these meshes.
+ *
+ * Every radial segment count here goes through `seg()` (src/lib/quality.js),
+ * which halves it on phones. Nothing in this file is ever picked up and read —
+ * it is all background dressing a few dozen screen pixels wide on a handset —
+ * so the halved silhouettes are invisible there while the vertex and
+ * shadow-bake cost of the desk's ~60 round props drops with them. `seg` floors
+ * at 6, so the already-minimal props (header pins, resistor leads) are
+ * untouched. Only the counts change: every position, radius and length below is
+ * identical on both tiers, so the layout audit stays valid on either.
  */
 
 const brass = { color: COLORS.brass, metalness: 0.7, roughness: 0.35 }
@@ -34,17 +44,17 @@ function Pencil({ position, rotation, color = '#7a1f24' }) {
   return (
     <group position={position} rotation={rotation}>
       <mesh castShadow>
-        <cylinderGeometry args={[0.045, 0.045, 1.5, 12]} />
+        <cylinderGeometry args={[0.045, 0.045, 1.5, seg(12)]} />
         <meshStandardMaterial color={color} roughness={0.5} metalness={0.2} />
       </mesh>
       {/* knurled grip */}
       <mesh castShadow position={[0, -0.72, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.22, 12]} />
+        <cylinderGeometry args={[0.05, 0.05, 0.22, seg(12)]} />
         <meshStandardMaterial {...graphite} />
       </mesh>
       {/* tip cone */}
       <mesh castShadow position={[0, -0.86, 0]}>
-        <coneGeometry args={[0.035, 0.12, 12]} />
+        <coneGeometry args={[0.035, 0.12, seg(12)]} />
         <meshStandardMaterial color="#c9c9c9" metalness={0.6} roughness={0.3} />
       </mesh>
       {/* clip */}
@@ -69,11 +79,11 @@ function DraftingCompass({ position, yaw = 0 }) {
     <group position={position} rotation={[0, yaw, 0]}>
       {/* hinge barrel + spindle handle, standing proud of the flat legs */}
       <mesh castShadow position={[0, 0.055, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.075, 16]} />
+        <cylinderGeometry args={[0.05, 0.05, 0.075, seg(16)]} />
         <meshStandardMaterial {...brass} />
       </mesh>
       <mesh castShadow position={[0, 0.12, 0]}>
-        <cylinderGeometry args={[0.014, 0.014, 0.08, 10]} />
+        <cylinderGeometry args={[0.014, 0.014, 0.08, seg(10)]} />
         <meshStandardMaterial {...steel} />
       </mesh>
 
@@ -81,24 +91,24 @@ function DraftingCompass({ position, yaw = 0 }) {
         <group key={s} rotation={[0, s * half, 0]}>
           {/* tapered leg lying on the desk, hinge end thicker */}
           <mesh castShadow position={[0, 0.036, leg / 2]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.014, 0.026, leg, 10]} />
+            <cylinderGeometry args={[0.014, 0.026, leg, seg(10)]} />
             <meshStandardMaterial {...steel} />
           </mesh>
           {s < 0 ? (
             // needle point
             <mesh castShadow position={[0, 0.028, leg + 0.045]} rotation={[Math.PI / 2, 0, 0]}>
-              <coneGeometry args={[0.011, 0.09, 8]} />
+              <coneGeometry args={[0.011, 0.09, seg(8)]} />
               <meshStandardMaterial {...steel} />
             </mesh>
           ) : (
             // lead holder: knurled collar + graphite tip
             <group>
               <mesh castShadow position={[0, 0.034, leg - 0.06]} rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.024, 0.024, 0.09, 10]} />
+                <cylinderGeometry args={[0.024, 0.024, 0.09, seg(10)]} />
                 <meshStandardMaterial {...brass} />
               </mesh>
               <mesh castShadow position={[0, 0.028, leg + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
-                <coneGeometry args={[0.013, 0.08, 8]} />
+                <coneGeometry args={[0.013, 0.08, seg(8)]} />
                 <meshStandardMaterial color="#2c2c2e" roughness={0.4} />
               </mesh>
             </group>
@@ -217,11 +227,11 @@ function Calculator({ position, yaw = 0 }) {
           buried in the pad and its face sits a real 0.008 proud — the old
           hairline 0.0005 overlap here is what made the pad flicker */}
       <mesh castShadow position={[0.2, 0.163, -0.1525]}>
-        <cylinderGeometry args={[0.075, 0.08, 0.026, 20]} />
+        <cylinderGeometry args={[0.075, 0.08, 0.026, seg(20)]} />
         <meshStandardMaterial color={TI_BLUE} roughness={0.5} />
       </mesh>
       <mesh position={[0.2, PAD_TOP + 0.002, -0.1525]}>
-        <cylinderGeometry args={[0.026, 0.026, 0.012, 14]} />
+        <cylinderGeometry args={[0.026, 0.026, 0.012, seg(14)]} />
         <meshStandardMaterial color={TI_BODY} roughness={0.5} />
       </mesh>
       {/* Inert labelled key caps — no handlers, so r3f never raycasts them.
@@ -327,12 +337,12 @@ function LooseResistor({ position, yaw = 0 }) {
   return (
     <group position={position} rotation={[0, yaw, 0]}>
       <mesh castShadow position={[0, 0.024, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.024, 0.024, 0.11, 10]} />
+        <cylinderGeometry args={[0.024, 0.024, 0.11, seg(10)]} />
         <meshStandardMaterial color="#d2b48c" roughness={0.6} />
       </mesh>
       {[-0.03, 0, 0.032].map((dx, i) => (
         <mesh key={i} position={[dx, 0.024, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.0255, 0.0255, 0.013, 10]} />
+          <cylinderGeometry args={[0.0255, 0.0255, 0.013, seg(10)]} />
           <meshStandardMaterial color={['#7a3b1f', '#1d1d1d', '#b3402a'][i]} roughness={0.6} />
         </mesh>
       ))}
@@ -422,22 +432,22 @@ function ModelRocket({ position, yaw = 0 }) {
       <group position={[0, AXIS_Y, 0]}>
         {/* body tube */}
         <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.13, 0.13, 1.0, 24]} />
+          <cylinderGeometry args={[0.13, 0.13, 1.0, seg(24)]} />
           <meshStandardMaterial {...ROCKET_WHITE} />
         </mesh>
         {/* a red trim band around the forward body */}
         <mesh castShadow position={[-0.34, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.132, 0.132, 0.09, 24]} />
+          <cylinderGeometry args={[0.132, 0.132, 0.09, seg(24)]} />
           <meshStandardMaterial {...ROCKET_RED} />
         </mesh>
         {/* ogive-ish nose cone at −X (apex points −X after the Z spin) */}
         <mesh castShadow position={[-0.66, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <coneGeometry args={[0.13, 0.32, 24]} />
+          <coneGeometry args={[0.13, 0.32, seg(24)]} />
           <meshStandardMaterial {...ROCKET_RED} />
         </mesh>
         {/* shoulder ring where the nose meets the tube */}
         <mesh position={[-0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.128, 0.128, 0.02, 24]} />
+          <cylinderGeometry args={[0.128, 0.128, 0.02, seg(24)]} />
           <meshStandardMaterial color="#d8cfba" roughness={0.4} />
         </mesh>
 
@@ -448,18 +458,18 @@ function ModelRocket({ position, yaw = 0 }) {
 
         {/* aft motor mount: a recessed dark tube + a flared nozzle exit */}
         <mesh castShadow position={[0.53, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.11, 0.11, 0.12, 20]} />
+          <cylinderGeometry args={[0.11, 0.11, 0.12, seg(20)]} />
           <meshStandardMaterial {...ROCKET_NOZZLE} />
         </mesh>
         <mesh position={[0.6, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.055, 0.095, 0.1, 20, 1, true]} />
+          <cylinderGeometry args={[0.055, 0.095, 0.1, seg(20), 1, true]} />
           <meshStandardMaterial {...ROCKET_NOZZLE} side={THREE.DoubleSide} />
         </mesh>
 
         {/* launch lug: a short straw parallel to the tube, on the upper flank
             between the up fin and one lower fin */}
         <mesh castShadow position={[-0.02, 0.075, 0.13]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.26, 12]} />
+          <cylinderGeometry args={[0.02, 0.02, 0.26, seg(12)]} />
           <meshStandardMaterial color="#cfc7b2" roughness={0.5} />
         </mesh>
       </group>
@@ -555,7 +565,7 @@ export default function Clutter() {
       {/* ---- Vellum roll with a loose tail, rear-right ---- */}
       <group position={[3.55, 0.2, -3.15]}>
         <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.2, 0.2, 2.2, 24]} />
+          <cylinderGeometry args={[0.2, 0.2, 2.2, seg(24)]} />
           <meshStandardMaterial color={COLORS.paperBright} roughness={0.85} />
         </mesh>
         {/* the unrolled tail lying flat on the desk in front of the roll */}
@@ -577,23 +587,23 @@ export default function Clutter() {
       <group position={[3.7, 0, 0.4]}>
         {/* tapered wall, open at the top */}
         <mesh castShadow position={[0, 0.33, 0]}>
-          <cylinderGeometry args={[0.32, 0.28, 0.66, 24, 1, true]} />
+          <cylinderGeometry args={[0.32, 0.28, 0.66, seg(24), 1, true]} />
           <meshStandardMaterial color="#7c3b2a" roughness={0.4} side={THREE.DoubleSide} />
         </mesh>
         {/* rolled rim capping the wall edge */}
         <mesh castShadow position={[0, 0.657, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.318, 0.014, 10, 32]} />
+          <torusGeometry args={[0.318, 0.014, seg(10), seg(32)]} />
           <meshStandardMaterial color="#7c3b2a" roughness={0.4} />
         </mesh>
         {/* the coffee, a hand below the rim; glossy + painted glare so it
             reads as liquid from every parallax angle */}
         <mesh castShadow position={[0, 0.56, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.313, 32]} />
+          <circleGeometry args={[0.313, seg(32)]} />
           <meshStandardMaterial map={coffeeTexture()} roughness={0.12} metalness={0.08} />
         </mesh>
         {/* handle */}
         <mesh castShadow position={[0.36, 0.34, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.16, 0.045, 12, 24]} />
+          <torusGeometry args={[0.16, 0.045, seg(12), seg(24)]} />
           <meshStandardMaterial color="#7c3b2a" roughness={0.4} />
         </mesh>
       </group>
@@ -659,11 +669,11 @@ export default function Clutter() {
           <meshStandardMaterial color="#1b1b1f" roughness={0.5} />
         </mesh>
         <mesh castShadow position={[0.14, 0.079, -0.14]}>
-          <cylinderGeometry args={[0.05, 0.05, 0.11, 14]} />
+          <cylinderGeometry args={[0.05, 0.05, 0.11, seg(14)]} />
           <meshStandardMaterial color="#26375c" roughness={0.45} />
         </mesh>
         <mesh position={[0.14, 0.137, -0.14]}>
-          <cylinderGeometry args={[0.047, 0.047, 0.006, 14]} />
+          <cylinderGeometry args={[0.047, 0.047, 0.006, seg(14)]} />
           <meshStandardMaterial color="#c9ccd2" metalness={0.7} roughness={0.3} />
         </mesh>
         <group position={[0.26, 0, 0.18]} rotation={[0, -0.06, 0]}>
@@ -687,11 +697,11 @@ export default function Clutter() {
           <meshStandardMaterial color="#1b1b1f" roughness={0.5} />
         </mesh>
         <mesh castShadow position={[0.12, 0.052, 0.08]} rotation={[0, 0.3, Math.PI / 2]}>
-          <cylinderGeometry args={[0.028, 0.028, 0.08, 12]} />
+          <cylinderGeometry args={[0.028, 0.028, 0.08, seg(12)]} />
           <meshStandardMaterial {...steel} />
         </mesh>
         <mesh castShadow position={[0.2, 0.05, -0.12]}>
-          <sphereGeometry args={[0.026, 10, 10]} />
+          <sphereGeometry args={[0.026, seg(10), seg(10)]} />
           <meshStandardMaterial color="#c77b3a" roughness={0.6} />
         </mesh>
       </CircuitBoard>
@@ -715,13 +725,13 @@ export default function Clutter() {
       {/* ---- Pushpin dish, front-left corner ---- */}
       <group position={[-3.3, 0, 3.4]}>
         <mesh castShadow position={[0, 0.05, 0]}>
-          <cylinderGeometry args={[0.3, 0.26, 0.1, 24]} />
+          <cylinderGeometry args={[0.3, 0.26, 0.1, seg(24)]} />
           <meshStandardMaterial color="#4a4033" roughness={0.6} metalness={0.2} />
         </mesh>
         {[['#b23b3b', 0.1, 0.05], ['#3b6bb2', -0.08, 0.11], ['#d4a23b', 0.06, -0.09]].map(
           ([c, x, z], i) => (
             <mesh key={i} castShadow position={[x, 0.08, z]}>
-              <sphereGeometry args={[0.05, 10, 10]} />
+              <sphereGeometry args={[0.05, seg(10), seg(10)]} />
               <meshStandardMaterial color={c} roughness={0.4} />
             </mesh>
           )

@@ -860,6 +860,55 @@
   .wiki__figure-ph {
     aspect-ratio: 5 / 4; /* wider placeholder reads better when unfloated */
   }
+  /* No inline PDF viewer on this tier — the article shows a link card instead
+     (ResumePreview in SimpleMode.jsx), which wants no fixed frame height. */
+  .wiki__pdf--linked {
+    padding: 0;
+  }
+}
+
+/* ---- phone widths: stop the header cluster from overflowing ---------- */
+/* The bar is a single non-wrapping flex row, and its parts have desktop     */
+/* metrics: a 140px fixed-width wordmark, two 44px touch targets and a       */
+/* nowrap clock. Together they exceed a 360px viewport and push the clock    */
+/* off the edge, so below 560px the brand becomes the flexible part (it is   */
+/* the only element that can lose width without losing a tap target) and the */
+/* fixed costs shrink around it.                                             */
+@media (max-width: 559px) {
+  .wiki__top {
+    padding: 8px 12px;
+  }
+  .wiki__menu {
+    margin-left: -6px;
+  }
+  /* Was `flex: none` at a fixed 140px — the one part that must give. */
+  .wiki__brand {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-left: 4px;
+  }
+  .wiki__brand-name {
+    overflow: hidden;
+    font-size: 19px;
+    text-overflow: ellipsis;
+  }
+  /* The tagline is the first thing to go: the article title says where you
+     are, so this line is pure decoration at this width. */
+  .wiki__brand-tag {
+    display: none;
+  }
+  .wiki__clock {
+    margin-left: 8px;
+    font-size: 12px;
+  }
+}
+
+/* Narrowest phones: the ticking clock is the last thing worth the width. */
+@media (max-width: 379px) {
+  .wiki__clock {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

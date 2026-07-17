@@ -1,4 +1,6 @@
 import { restHeightFor } from '../desk/layout'
+import { PHOTO_FRAME_ID } from '../desk/constants'
+import { gallery } from '../content/portfolio'
 import { aboutPages, aboutPhotos, ABOUT_PAPER } from './content/about'
 import { projectPages, projectPhotos, PROJECTS_PAPER } from './content/projects'
 import { researchPages, researchPhotos, RESEARCH_PAPER } from './content/research'
@@ -74,3 +76,16 @@ export const DOCUMENTS = [
 ]
 
 export const byId = (id) => DOCUMENTS.find((d) => d.id === id)
+
+/**
+ * How many sheets the focused thing flips through — 0 if nothing is focused,
+ * 1 for a single-sheet document. The photo album isn't a document (it's the
+ * frame's `gallery.photos`, keyed by PHOTO_FRAME_ID) but it rides the same
+ * store paging, so every input that can turn a page — the arrow keys
+ * (ui/KeyControls), a swipe (desk/TouchControls) and the HUD's counter — needs
+ * this exact same answer. It lives here so those three can't drift apart.
+ */
+export const pageCountOf = (id) =>
+  id === PHOTO_FRAME_ID
+    ? Math.max(1, gallery.photos.length)
+    : byId(id)?.pages.length ?? 0

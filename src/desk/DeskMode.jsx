@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import DeskScene from './DeskScene'
 import HudHints from '../ui/HudHints'
+import EdgeHint from '../ui/EdgeHint'
 import KeyControls from '../ui/KeyControls'
 import Loader from '../ui/Loader'
 import { useSceneStore } from '../store/useSceneStore'
@@ -46,6 +47,9 @@ export default function DeskMode() {
     <>
       <DeskScene />
       <HudHints />
+      {/* first-visit-only nudge toward the invisible edge-tap panning; renders
+          nothing on a mouse, or once it has been seen */}
+      <EdgeHint />
       <KeyControls />
       <Loader />
     </>
