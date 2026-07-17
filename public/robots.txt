@@ -1,0 +1,12 @@
+# Personal portfolio — everything here is meant to be found.
+# There are no private, admin, or staging routes on this site: it is a single
+# static page with two client-rendered modes (desk / simple) and no server.
+User-agent: *
+Allow: /
+
+# The repo's own docs ship alongside the assets they describe. They are already
+# public at github.com/bryanph4m/Engineering-Portfolio, so this is tidiness in
+# search results, not concealment.
+Disallow: /assets/photos/README.md
+Disallow: /assets/gallery/README.md
+Disallow: /assets/textures/README.md

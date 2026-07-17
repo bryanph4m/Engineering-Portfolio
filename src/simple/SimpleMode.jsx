@@ -130,7 +130,7 @@ function ResumePreview() {
       <div className="wiki__pdf wiki__pdf--linked">
         <div className="wiki__pdf-fallback">
           <p>The resume is a PDF — phone browsers open it in their own viewer.</p>
-          <a className="wiki__download" href={resume.pdf} target="_blank" rel="noreferrer">
+          <a className="wiki__download" href={resume.pdf} target="_blank" rel="noopener noreferrer">
             Open resume (PDF) ↗
           </a>
         </div>
@@ -147,7 +147,7 @@ function ResumePreview() {
       >
         <div className="wiki__pdf-fallback">
           <p>This browser can&rsquo;t display the PDF inline.</p>
-          <a className="wiki__download" href={resume.pdf} target="_blank" rel="noreferrer">
+          <a className="wiki__download" href={resume.pdf} target="_blank" rel="noopener noreferrer">
             Download resume (PDF) ↗
           </a>
         </div>
@@ -312,7 +312,7 @@ function buildArticles(go) {
               className="wiki__download"
               href={resume.pdf}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               Open or download the PDF ↗
             </a>
@@ -341,7 +341,7 @@ function buildArticles(go) {
                     className="wiki-link"
                     href={l.href}
                     target={l.href.startsWith('mailto:') ? undefined : '_blank'}
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                   >
                     {l.label}
                   </a>
