@@ -123,20 +123,20 @@ export const HOVER_LIFT = 0.14 // metres a document rises on hover
 export const PHOTO_FRAME_ID = 'photos'
 
 /**
- * The rocket model's sections ride the same focus machinery too, but unlike the
- * photo frame there are several of them, so they take a namespaced id rather
- * than a single constant: `rocket:nose`, `rocket:servo-can`, and so on, where
- * the suffix is a part id in `research.vehicle.parts` (src/content/portfolio.js).
+ * The rocket model is picked up whole, exactly like a document or the photo
+ * frame — one id, one focus, one thing on the desk you can pick up. Its parts
+ * are then READ rather than clicked: the focused rocket floats over a component
+ * page, and the store's `pageIndex` steps through `research.vehicle.parts`
+ * (src/content/portfolio.js) the same way it steps a multi-page document's
+ * sheets or the photo album's photos.
  *
- * The prefix is what everything downstream tests against — desk/RocketModel to
- * know which part is open, ui/HudHints to word the hint — so a part can be added
- * to the content file and the model without a third place needing to hear about
- * it. Everything else about focus (the scrim, click-away, Esc, pinch-to-zoom)
- * only cares that `focusedId` is non-null and works unchanged.
+ * It used to be several ids (`rocket:nose`, `rocket:servo-can`, …), one per
+ * clickable section, each opening its own floating 3D detail card. That is gone:
+ * the card mounted a light, and a light mounting mid-session forces three.js to
+ * recompile every material in the scene, which is what made clicking a part
+ * lurch. See desk/RocketModel's header for the measurements.
  */
-export const ROCKET_PREFIX = 'rocket:'
-export const rocketPartId = (part) => `${ROCKET_PREFIX}${part}`
-export const isRocketId = (id) => typeof id === 'string' && id.startsWith(ROCKET_PREFIX)
+export const ROCKET_ID = 'rocket'
 
 export const COLORS = {
   wood: '#6f4c2c',

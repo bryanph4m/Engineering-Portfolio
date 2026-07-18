@@ -2,7 +2,7 @@ import { useSceneStore } from '../store/useSceneStore'
 import { pageCountOf } from '../documents/registry'
 import { profile, gallery, research } from '../content/portfolio'
 import { IS_TOUCH } from '../lib/quality'
-import { PHOTO_FRAME_ID, ROCKET_PREFIX, isRocketId } from '../desk/constants'
+import { PHOTO_FRAME_ID, ROCKET_ID } from '../desk/constants'
 
 /** Flat UI chrome: the title block, the switch to the simple view, a
  *  context-aware nav hint, and — when the photo album is open — a small position
@@ -25,24 +25,24 @@ export default function HudHints({ onSwitchMode }) {
   const pageIndex = useSceneStore((s) => s.pageIndex)
 
   const isPhotos = focusedId === PHOTO_FRAME_ID
-  const isRocket = isRocketId(focusedId)
+  const isRocket = focusedId === ROCKET_ID
   const photoCount = Math.max(1, gallery.photos.length)
+  const partCount = Math.max(1, research.vehicle.parts.length)
   const pages = focusedId && !isPhotos && !isRocket ? pageCountOf(focusedId) : 0
 
   const setDown = IS_TOUCH
     ? 'tap away to set it back down'
     : 'click away or press Esc to set it back down'
-  const closeDetail = IS_TOUCH
-    ? 'tap away to close the detail'
-    : 'click away or press Esc to close the detail'
-
-  /** The name of whatever rocket section is open or under the cursor. */
-  const rocketPartName = (id) =>
-    research.vehicle.parts.find((p) => p.id === id.slice(ROCKET_PREFIX.length))?.name
 
   let hint
   if (isRocket) {
-    hint = closeDetail
+    // Worded like a multi-page document's hint, because that is exactly what
+    // the picked-up rocket is now: one object, stepped part by part.
+    hint = partCount > 1
+      ? IS_TOUCH
+        ? `swipe or tap a bottom corner for the next part · ${setDown}`
+        : 'tap a bottom corner or press ← → for the next part · Esc or click away to set it down'
+      : setDown
   } else if (isPhotos) {
     hint = photoCount > 1
       ? IS_TOUCH
@@ -55,12 +55,12 @@ export default function HudHints({ onSwitchMode }) {
         ? `swipe or tap a bottom corner to flip · ${setDown}`
         : 'tap a bottom corner or press ← → to flip · Esc or click away to set it down'
       : setDown
-  } else if (isRocketId(hoveredId)) {
-    // Naming the part under the cursor is what tells a visitor the rocket is
-    // made of parts at all — without it, a section lighting up reads as the
-    // whole model being hoverable.
-    const name = rocketPartName(hoveredId)
-    hint = IS_TOUCH ? `tap the ${name?.toLowerCase()}` : `click to inspect the ${name?.toLowerCase()}`
+  } else if (hoveredId === ROCKET_ID) {
+    // Named, because "pick it up" alone would not tell a visitor that the thing
+    // they are about to pick up comes apart into readable sections.
+    hint = IS_TOUCH
+      ? 'tap the rocket to read it part by part'
+      : 'click the rocket to read it part by part'
   } else if (IS_TOUCH) {
     hint = 'tap a document to pick it up'
   } else {
