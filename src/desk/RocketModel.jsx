@@ -197,8 +197,9 @@ const ogiveRho = (coneLen, baseR) => (baseR * baseR + coneLen * coneLen) / (2 * 
  * `h` from the tip instead inverts the cone, and because the airframe is
  * authored nose-up along +Y (see PLACEMENT) an inverted cone does not read as a
  * cone pointing the other way — it lathes a funnel that flares out ahead of the
- * body tube, and every feature keyed to the skin (the shoulder, the marking
- * band) is left sizing itself against a radius that is no longer there.
+ * body tube, and every feature keyed to the skin (the shoulder, and the sled
+ * clearance derived from this same function) is left sizing itself against a
+ * radius that is no longer there.
  */
 const ogiveRadius = (coneLen, baseR, h) => {
   const rho = ogiveRho(coneLen, baseR)
@@ -242,9 +243,11 @@ function surfaceGeometry({ tip, rootChord, tipChord, sweep, thick }) {
 /* Materials                                                           */
 /* ------------------------------------------------------------------ */
 
-// Colours follow the real vehicle: muted blue-gray body tubes, black printed
-// nose and fin cans, black airfoils on the fins and canards, one orange marking
-// band on the lower nose.
+// Colours follow the real vehicle: muted blue body tubes, black printed nose
+// and fin cans, black airfoils on the fins and canards.
+//
+// There is deliberately NO marking band on the nose. One used to be painted
+// there and it was removed outright — see NoseCone.
 //
 // The black parts are near-black rather than #000, and that is a lighting
 // decision rather than a hedge on the colour. The model lies along the front of
@@ -260,7 +263,16 @@ function surfaceGeometry({ tip, rootChord, tipChord, sweep, thick }) {
 // Metalness is kept low on every black part for the same reason: with no
 // environment to reflect, metalness only subtracts diffuse, so a "shinier" black
 // here is just a darker one.
-const HULL = { color: '#7e8a99', metalness: 0.26, roughness: 0.48 }
+// The body tubes. Muted, but decidedly BLUE rather than a blue-ish gray: the
+// previous value sat at about 12% saturation, which under the desk's warm lamp
+// (COLORS.lampWarm, ~3000K) neutralised the rest of the way and read as plain
+// gray aluminium. Warm key light is the reason this has to be authored cooler
+// than it looks in isolation — the scene subtracts blue from everything it
+// touches. ~21% saturation at the same lightness is the point where the tube
+// still reads as a real airframe material under that lamp instead of as
+// painted plastic. Raising it further is what starts to look toy-like, so
+// check any change against the LIT desk, not against a colour picker.
+const HULL = { color: '#6b7f9e', metalness: 0.26, roughness: 0.48 }
 const PRINT = { color: '#191c21', metalness: 0.08, roughness: 0.64 }
 // The airfoils are black too, but a harder, slightly glossier finish than the
 // printed cans — enough separation that a fin does not merge into the can it
@@ -268,7 +280,6 @@ const PRINT = { color: '#191c21', metalness: 0.08, roughness: 0.64 }
 const AIRFOIL = { color: '#1e2229', metalness: 0.2, roughness: 0.46 }
 const PANEL = { color: '#4a5058', metalness: 0.3, roughness: 0.5 }
 const MACHINED = { color: '#b4bac2', metalness: 0.5, roughness: 0.32 }
-const ORANGE = { color: '#cf5c2d', metalness: 0.15, roughness: 0.45 }
 const BOARD = { color: '#1d2836', metalness: 0.1, roughness: 0.55 }
 const GRAPHITE = { color: '#2e333c', metalness: 0.25, roughness: 0.55 }
 const BRASS = { color: '#bf9c45', metalness: 0.55, roughness: 0.35 }
@@ -518,16 +529,28 @@ function BodyTubes({ hot }) {
  * mounted or unmounted mid-session (see the root component's header). The lamp's
  * `distance` keeps it inside the cone, so a closed nose leaks nothing.
  */
-// The orange marking band, as height above the cone's base and band height.
-const BAND_AT = 0.185
-const BAND_H = 0.07
-
+/**
+ * ## No marking band — and don't add one back
+ *
+ * The nose used to carry an orange marking ring low on the cone. It is gone,
+ * geometry and material both, because on screen it never read as a painted
+ * marking: at this prop's size the cone is a black wedge a few dozen pixels
+ * tall, and a saturated ring across it reads as a red bar wrapped round the
+ * nose — a stray artifact, not a livery detail.
+ *
+ * It survived one earlier attempt to remove it, which is worth recording so the
+ * next person does not repeat it. That pass only made the band sweep the same
+ * arc as the cutaway window, which fixed a *different* complaint (the ring
+ * bridging the open cutaway with an unsupported arc of paint) and left the
+ * resting model — where the cone is swept whole, so the band was a full,
+ * unbroken 360° ring — exactly as it was. The band was never floating. It was
+ * correctly stuck to the skin, and it was the ring itself that was unwanted.
+ *
+ * So: this is a removal, not a re-tune. Do not reintroduce it as a narrower
+ * ring, a decal, or a painted band on a texture.
+ */
 function NoseCone({ hot, focused = false }) {
   const L = len(STATION.nose)
-  // …a hair proud of the skin (×1.006) so it reads as a band painted on the
-  // cone rather than z-fighting the surface it sits on.
-  const bandAftR = ogiveRadius(L, R, BAND_AT) * 1.006
-  const bandFwdR = ogiveRadius(L, R, BAND_AT + BAND_H) * 1.006
   // Split the ogive into the panelled part (where the bay is, and where the
   // window is taken out) and the whole tip above it. Two lathes off one profile,
   // so the surfaces are guaranteed to meet exactly at the split station.
@@ -538,9 +561,7 @@ function NoseCone({ hot, focused = false }) {
     return { bay: pts.slice(0, k + 1), tip: pts.slice(k) }
   }, [L])
   // The skin's sweep: a full turn while the model rests, the window's arc once
-  // it has been picked up. One pair of numbers, shared by the cone and by the
-  // marking band painted on it, so the two can never disagree about where the
-  // skin stops. `side` is NOT switched with them — DoubleSide stays on through
+  // it has been picked up. `side` is NOT switched with them — DoubleSide stays on through
   // both states, because toggling it is the kind of material change that costs a
   // shader recompile, and a closed cone renders correctly double-sided anyway.
   const sweep = focused
@@ -560,29 +581,6 @@ function NoseCone({ hot, focused = false }) {
       <mesh position={[0, -L / 2 + 0.02, 0]}>
         <cylinderGeometry args={[R * 0.97, R * 0.97, 0.05, seg(20)]} />
         <meshStandardMaterial {...mat(PANEL, hot)} />
-      </mesh>
-      {/* Orange marking band on the lower cone. Its two radii are READ OFF the
-          ogive at the band's own two stations rather than typed in as fractions
-          of R: the cone's radius varies over the band's height, so any pair of
-          constants is wrong at one edge or both, and on a taper that steep
-          "wrong" means a ring hanging in space around nothing. Derived, it
-          cannot come loose from the skin however the cone is rescaled. */}
-      {/* …and swept over the same arc the cone is (`sweep` above), so the window
-          takes the band out with the skin it is painted on. A full ring across an
-          OPEN cutaway would bridge it with an unsupported arc of paint hanging
-          in the opening — the same "floating ring" read as sizing it wrong,
-          arrived at from the other direction. CylinderGeometry's theta and
-          LatheGeometry's phi share a convention, so the cone's own two numbers
-          drop straight in, and the closed state's full turn does too. */}
-      <mesh position={[0, -L / 2 + BAND_AT + BAND_H / 2, 0]}>
-        <cylinderGeometry args={[bandFwdR, bandAftR, BAND_H, seg(20), 1, true, ...sweep]} />
-        <meshStandardMaterial
-          {...mat(ORANGE, hot)}
-          side={THREE.DoubleSide}
-          polygonOffset
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
-        />
       </mesh>
     </group>
   )
@@ -1068,6 +1066,35 @@ const SHADOW_REST = 0.26
 const SHADOW_HOVER = 0.12
 const SHADOW_FADE_END = 0.45
 
+/**
+ * Raycast overrides for the component page.
+ *
+ * ## `visible = false` does NOT make a mesh unclickable
+ *
+ * This is the whole reason these exist, and it is a genuinely surprising piece
+ * of three.js: `Raycaster` does not test `object.visible` at all (r125 removed
+ * the check; verified against the r169 this project ships). An invisible mesh
+ * is still a hit target, and a mesh whose *parent group* is invisible is too,
+ * because the raycaster recurses into invisible groups just the same.
+ *
+ * That is not a hypothetical here. The page is a 3.3-unit plane parked at the
+ * focus pose, roughly 5.2 units from the camera — nearer than every document on
+ * the desk, which sit at 9–11. It is mounted on the first pickup and then kept
+ * for the life of the session (`armed` is sticky, by design). So from the
+ * moment a visitor first picked the rocket up, an invisible plane sat across
+ * the middle of the desk swallowing every click aimed through it, for the rest
+ * of the session — the Projects stack and the About card being the two it
+ * covers. Picking either up simply stopped working, and stayed broken, with
+ * nothing on screen to suggest why.
+ *
+ * `visible` and `raycast` are therefore driven separately and mean different
+ * things: `visible` is decided per frame off the pickup spring (is there
+ * anything to draw?), `raycast` is decided by focus state (is this page a thing
+ * you can click?). Do not collapse them back into one flag.
+ */
+const NO_RAYCAST = () => null
+const MESH_RAYCAST = THREE.Mesh.prototype.raycast
+
 const _v = new THREE.Vector3()
 const _q = new THREE.Quaternion()
 const _centre = new THREE.Vector3()
@@ -1256,7 +1283,10 @@ export default function RocketModel() {
     const p = pageRef.current
     if (p) {
       // Hidden outright while the rocket is down, so a fully transparent plane
-      // is neither drawn nor raycast against on an idle desk.
+      // is not DRAWN on an idle desk. Note what this does and does not buy:
+      // `visible` is a render flag only, and does not make the plane
+      // unclickable — that is what `raycast` on the mesh below is for, and the
+      // two are deliberately driven from different places. See NO_RAYCAST.
       const shown = t > 0.001
       p.visible = shown
       if (shown) {
@@ -1318,6 +1348,8 @@ export default function RocketModel() {
       return
     }
     if (anyFocused) return
+    // Not gated on the return animation, for the reason written out in
+    // desk/Document's matching handler.
     e.stopPropagation()
     document.body.style.cursor = 'auto'
     // Claim the tap so the edge-tap panning stands down: the model lies along
@@ -1410,17 +1442,56 @@ export default function RocketModel() {
           material whose `map` goes from null to a texture changes its shader
           defines and has to recompile, which is precisely the class of hitch
           this rewrite exists to remove. Built with its map already attached, it
-          compiles once and every page turn after is a texture re-upload. */}
+          compiles once and every page turn after is a texture re-upload.
+
+          ## Why this is a LIT material
+
+          It was a `meshBasicMaterial` with `toneMapped={false}`, which is two
+          separate opt-outs from the desk's lighting stacked on one surface: an
+          unlit material ignores every light in the scene, and skipping tone
+          mapping bypasses the ACES curve and 1.05 exposure that DeskScene puts
+          every other pixel through. The result was a page that rendered at its
+          exact painted RGB no matter what — flat, cold, and at full brightness
+          — floating in front of a warm desk whose own papers are all
+          `meshStandardMaterial`. It read as a screen someone had held up in
+          front of the desk rather than as a sheet lying on it.
+
+          So it is lit like paper now, on the same terms as every document face
+          (see desk/props DocProp: standard material, roughness ~0.85). That
+          hands it the whole established key — the warm lamp, the ambient and
+          hemisphere fill, and READING_KEY, which is the same #ffe9c9 light that
+          is already lighting the rocket sitting directly above it. Both halves
+          of the composition now respond to one light rig, which is the actual
+          requirement: they have to agree, not merely each look fine.
+
+          Nothing here costs an interaction. The material type is fixed at
+          author time and compiles once with the page; only `opacity` animates,
+          and that is a uniform. This file's rule is about lights and shader
+          defines changing MID-SESSION (see the root component's header) — a
+          statically-chosen material is not that. */}
       {armed && (
         <group ref={pageRef} visible={false}>
-          <mesh name="rocket-page" onPointerMove={onPageMove} onClick={onPageClick}>
+          <mesh
+            name="rocket-page"
+            // Clickable only while the rocket is actually being read. Any other
+            // time this plane is an invisible sheet of glass lying across the
+            // desk between the camera and the documents (see NO_RAYCAST).
+            raycast={isFocused ? MESH_RAYCAST : NO_RAYCAST}
+            onPointerMove={onPageMove}
+            onClick={onPageClick}
+          >
             <planeGeometry args={[LAYOUT.pageW, LAYOUT.pageH]} />
-            <meshBasicMaterial
+            <meshStandardMaterial
               ref={pageMatRef}
               map={pageTex}
               transparent
               opacity={0}
-              toneMapped={false}
+              // Matte, like the drafting paper the rest of the desk is made of.
+              // Non-metallic: a metallic sheet with no environment map only
+              // subtracts diffuse, which would darken the page toward the same
+              // flat slab it just stopped being.
+              roughness={0.85}
+              metalness={0}
             />
           </mesh>
         </group>

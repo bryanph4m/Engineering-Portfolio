@@ -245,6 +245,16 @@ export default function Document({ doc }) {
       return
     }
     if (anyFocused) return
+    // Deliberately NOT gated on the return animation. A sheet on its way back
+    // to the desk sweeps across a wide slice of it — the blueprint passes right
+    // over the projects stack — so for a few hundred ms after clicking away, a
+    // click aimed at another document can land on the one still in flight and
+    // reopen it. That was tried and reverted: making the returning sheet
+    // click-through fixes it only by making a click on the sheet's OWN pixels do
+    // nothing at all, and a silent no-op is strictly worse than an obvious wrong
+    // pickup you can see happen and undo. Both are sub-second and both are
+    // self-explanatory on screen, which is the bar the two real bugs here
+    // (desk/FocusScrim, desk/RocketModel's page) did not clear.
     e.stopPropagation()
     document.body.style.cursor = 'auto'
     // Claim the tap so the edge-tap panning stands down: this document may be
