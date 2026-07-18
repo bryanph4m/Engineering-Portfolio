@@ -43,14 +43,21 @@ import { CAMERA, FOCUS_POSE, HOVER_LIFT, ROCKET_ID } from './constants'
  * ## Idle cost
  *
  * The airframe is flat-coloured and adds no per-frame work to the idle scene.
- * It carries exactly one texture cost at rest, and it is deliberate: the four
- * avionics boards are painted (three shared 256×160 rasters, ~490 KB desktop /
- * ~120 KB mobile — see lib/rocketTextures sledBoardTexture). The sled sits in
- * the nose's cutaway under its own light and is the one part of this prop a
+ * It carries exactly one texture cost at rest: the four avionics boards are
+ * painted (three shared 256×160 rasters, ~490 KB desktop / ~120 KB mobile — see
+ * lib/rocketTextures sledBoardTexture). The sled is the one part of this prop a
  * visitor is invited to look INTO, so it is held to the desk's circuit-board
  * standard rather than the airframe's; painting that detail is what keeps it
  * from being bought in triangles instead. For scale, the whole board set is
  * about a quarter of the single component page canvas.
+ *
+ * That cost is now paid slightly early, and knowingly. The nose is solid at rest
+ * and only sections open in the hand (see NoseCone), so nothing on the sled is
+ * on screen until the first pickup — but the boards keep their maps from the
+ * start regardless, because a material whose `map` goes from null to a texture
+ * changes its shader defines and recompiles, and trading ~490 KB of upload for a
+ * mid-session stall is the wrong way round on this file's own terms. If the
+ * board rasters ever grow enough to matter, defer the whole SLED, not the maps.
  *
  * Everything else still defers. The component page's canvas
  * (src/lib/rocketTextures) and the fine board hardware (chips, headers, the
@@ -154,12 +161,13 @@ const CRADLE_Y = CRADLE_HALF + 0.002
 // so no arm has to pass through a fin.
 const CRADLE_AT = [at(0.25), at(0.663)]
 
-// The nose's cutaway window: the arc of the cone that is missing so the avionics
-// sled inside is both visible and clickable.
+// The nose's cutaway window: the arc of the cone that is taken out so the
+// avionics sled inside can be seen. Applied ONLY while the rocket is held —
+// the resting model is a whole cone (see NoseCone).
 //
 // Three numbers, each fixing something that looked wrong:
-//  ARC    — wide enough to see and click the sled through, narrow enough that
-//           the cone still reads as a cone rather than as an open trough.
+//  ARC    — wide enough to see the sled through, narrow enough that the cone
+//           still reads as a cone rather than as an open trough.
 //  CENTRE — the lathe phi the window is centred on. Straight up: the vantage
 //           looks down on the desk at about 40°, so an upward slot is seen well
 //           into while the cone's left and right flanks stay whole, which is
@@ -175,8 +183,7 @@ const WINDOW_TIP = 0.6
 // How far the sled is lifted off the airframe's centreline toward the window.
 // The airframe is slender and the bay is deep, so a sled sitting on the axis is
 // simply not visible past the near lip of the slot from a 40° vantage, however
-// wide the slot is — the boards have to ride high in the bay to be seen, and to
-// be hit by a click, at all.
+// wide the slot is — the boards have to ride high in the bay to be seen at all.
 const SLED_LIFT = 0.022
 
 /** Ogive radius of curvature for a cone of this length on this base. */
@@ -235,19 +242,30 @@ function surfaceGeometry({ tip, rootChord, tipChord, sweep, thick }) {
 /* Materials                                                           */
 /* ------------------------------------------------------------------ */
 
-// Colours follow the real vehicle: bright aluminium tubes, dark printed nose and
-// fin cans, machined surfaces on the fins and canards, one orange marking band
-// on the lower nose.
+// Colours follow the real vehicle: muted blue-gray body tubes, black printed
+// nose and fin cans, black airfoils on the fins and canards, one orange marking
+// band on the lower nose.
 //
-// Every value here is lifted well above the real object's albedo, and that is a
-// lighting decision rather than an artistic one. The model lies along the front
-// of the desk, which is the one region the lamp's pool does not reach, and the
+// The black parts are near-black rather than #000, and that is a lighting
+// decision rather than a hedge on the colour. The model lies along the front of
+// the desk, which is the one region the lamp's pool does not reach, and the
 // scene carries no environment map — so a metallic surface has nothing to
-// reflect and a genuinely black printed part (the real nose and fin cans are
-// black ASA) renders as a flat silhouette down here, losing the form entirely.
-// Charcoal at low metalness keeps the shading that tells you it is a cone.
-const HULL = { color: '#ccd1d9', metalness: 0.42, roughness: 0.36 }
-const PRINT = { color: '#585f6a', metalness: 0.1, roughness: 0.62 }
+// reflect and a true-black part renders as a flat silhouette down here, losing
+// the form entirely. These values sit a few points off black: they read as the
+// black ASA the real parts are printed in, and still keep the shading gradient
+// that tells you the nose is a cone and not a triangle. Anything darker starts
+// dropping that gradient, so check the model against the desk before lowering
+// them — this is the floor, not a starting point.
+//
+// Metalness is kept low on every black part for the same reason: with no
+// environment to reflect, metalness only subtracts diffuse, so a "shinier" black
+// here is just a darker one.
+const HULL = { color: '#7e8a99', metalness: 0.26, roughness: 0.48 }
+const PRINT = { color: '#191c21', metalness: 0.08, roughness: 0.64 }
+// The airfoils are black too, but a harder, slightly glossier finish than the
+// printed cans — enough separation that a fin does not merge into the can it
+// grows out of when the two are seen edge-on.
+const AIRFOIL = { color: '#1e2229', metalness: 0.2, roughness: 0.46 }
 const PANEL = { color: '#4a5058', metalness: 0.3, roughness: 0.5 }
 const MACHINED = { color: '#b4bac2', metalness: 0.5, roughness: 0.32 }
 const ORANGE = { color: '#cf5c2d', metalness: 0.15, roughness: 0.45 }
@@ -280,6 +298,38 @@ const HOVER_GLOW = 0.05
 // lit — and the wrong tool for lighting the model itself; see READING_KEY.
 const ACTIVE_GLOW = 0.06
 
+// The albedo the two constants above were tuned against — the charcoal the nose
+// and fin cans used to be printed in. See `glowScale`.
+const GLOW_REF_LUMA = 0.37
+
+/**
+ * How much of the glow a given base colour should actually take.
+ *
+ * This exists because the airframe's parts no longer share a brightness. The
+ * numbers above were measured against one mid-charcoal, and they describe a
+ * RELATIONSHIP — "roughly double what the part is already getting" — not an
+ * absolute. Emissive, though, adds an absolute amount of light. So the moment
+ * the nose and fin cans went black, a constant 0.06 stopped being a doubling
+ * and became several times their albedo, which repainted the whole nose as a
+ * flat cream cut-out in the focused view: the exact failure the comment above
+ * describes, arrived at by changing the paint instead of the number.
+ *
+ * Scaling by the part's own luminance restores the relationship, so the glow
+ * means the same thing on every part and the constants stay meaningful when a
+ * colour changes again. Rec. 709 weights on the sRGB values — not linearised,
+ * deliberately: strict linear proportionality is *too* faithful here and leaves
+ * a doubled near-black still reading as near-black, losing the active-section
+ * cue on four of the five sections. This sits between the two and was picked by
+ * looking at the focused model, which is the only place it shows.
+ */
+const glowScale = (hex) => {
+  const n = parseInt(hex.slice(1), 16)
+  const r = ((n >> 16) & 255) / 255
+  const g = ((n >> 8) & 255) / 255
+  const b = (n & 255) / 255
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / GLOW_REF_LUMA
+}
+
 /**
  * Spreads a base material plus a warmth, so every part glows alike.
  *
@@ -290,11 +340,13 @@ const ACTIVE_GLOW = 0.06
  * it is free and, unlike adding a light, invisible to the shader program cache.
  * That is the entire reason the focused rocket is lit this way and not with a
  * key light (see the root component's header).
+ *
+ * The one thing it does NOT do is take `glow` at face value — see `glowScale`.
  */
 const mat = (base, glow = 0) => ({
   ...base,
   emissive: HOT_EMISSIVE,
-  emissiveIntensity: glow,
+  emissiveIntensity: glow * glowScale(base.color),
 })
 
 /* ------------------------------------------------------------------ */
@@ -332,7 +384,7 @@ function StaticFinCan({ hot }) {
       </mesh>
       {FIN_CLOCK.map((a) => (
         <mesh key={a} castShadow geometry={fin} rotation={[0, a, 0]}>
-          <meshStandardMaterial {...mat(MACHINED, hot)} side={THREE.DoubleSide} />
+          <meshStandardMaterial {...mat(AIRFOIL, hot)} side={THREE.DoubleSide} />
         </mesh>
       ))}
       {/* motor mount + nozzle, protruding aft */}
@@ -394,7 +446,7 @@ function ServoFinCan({ hot }) {
       {CANARD_CLOCK.map((a) => (
         <group key={a} rotation={[0, a, 0]} position={[0, shaftY, 0]}>
           <mesh castShadow geometry={canard}>
-            <meshStandardMaterial {...mat(MACHINED, hot)} side={THREE.DoubleSide} />
+            <meshStandardMaterial {...mat(AIRFOIL, hot)} side={THREE.DoubleSide} />
           </mesh>
           {/* shaft bearing collar where the canard passes through the skin */}
           <mesh position={[R * 0.99, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
@@ -441,16 +493,36 @@ function BodyTubes({ hot }) {
 }
 
 /**
- * Nose cone — on this vehicle the nose *is* the avionics bay, so the model is
- * cut away: the lathe sweeps everything except WINDOW_ARC, leaving a
- * longitudinal slot facing the camera that the sled inside shows through. Two
- * sided, because a cutaway's whole point is that you see the inside wall.
+ * Nose cone — on this vehicle the nose *is* the avionics bay, so the model can
+ * be cut away: the lathe sweeps everything except WINDOW_ARC, leaving a
+ * longitudinal slot the sled inside shows through. Two sided, because a
+ * cutaway's whole point is that you see the inside wall.
+ *
+ * ## The cutaway is a FOCUSED-VIEW feature, not a resting one
+ *
+ * At rest on the desk the cone is swept whole and the nose is solid — no slot,
+ * no view into the bay, nothing see-through. The slot only opens once the rocket
+ * has been picked up, which is where the avionics bay is meant to be read.
+ *
+ * That is a deliberate reversal of how this started. The slot used to be open
+ * always, and a cutaway in a prop the size of a thumbnail does not read as "a
+ * shop model sectioned to show its guts" — it reads as a nose cone that has gone
+ * transparent, or as a hole in the airframe, because at that scale the eye gets
+ * the boards showing through before it gets the cut edge that explains them. A
+ * resting model on a stand should look like a finished vehicle; the visitor
+ * reaches the bay by clicking into the component view, which is a page that can
+ * actually name what it is showing. So: do not open this at rest again.
+ *
+ * The sled itself stays mounted either way, occluded rather than removed. It
+ * carries the bay lamp, and this file's hard rule is that no light is ever
+ * mounted or unmounted mid-session (see the root component's header). The lamp's
+ * `distance` keeps it inside the cone, so a closed nose leaks nothing.
  */
 // The orange marking band, as height above the cone's base and band height.
 const BAND_AT = 0.185
 const BAND_H = 0.07
 
-function NoseCone({ hot }) {
+function NoseCone({ hot, focused = false }) {
   const L = len(STATION.nose)
   // …a hair proud of the skin (×1.006) so it reads as a band painted on the
   // cone rather than z-fighting the surface it sits on.
@@ -465,12 +537,19 @@ function NoseCone({ hot }) {
     const k = Math.max(1, Math.round(steps * WINDOW_TIP))
     return { bay: pts.slice(0, k + 1), tip: pts.slice(k) }
   }, [L])
+  // The skin's sweep: a full turn while the model rests, the window's arc once
+  // it has been picked up. One pair of numbers, shared by the cone and by the
+  // marking band painted on it, so the two can never disagree about where the
+  // skin stops. `side` is NOT switched with them — DoubleSide stays on through
+  // both states, because toggling it is the kind of material change that costs a
+  // shader recompile, and a closed cone renders correctly double-sided anyway.
+  const sweep = focused
+    ? [WINDOW_CENTRE + WINDOW_ARC / 2, Math.PI * 2 - WINDOW_ARC]
+    : [0, Math.PI * 2]
   return (
     <group>
       <mesh castShadow>
-        <latheGeometry
-          args={[bay, seg(28), WINDOW_CENTRE + WINDOW_ARC / 2, Math.PI * 2 - WINDOW_ARC]}
-        />
+        <latheGeometry args={[bay, seg(28), ...sweep]} />
         <meshStandardMaterial {...mat(PRINT, hot)} side={THREE.DoubleSide} />
       </mesh>
       <mesh castShadow>
@@ -488,25 +567,15 @@ function NoseCone({ hot }) {
           constants is wrong at one edge or both, and on a taper that steep
           "wrong" means a ring hanging in space around nothing. Derived, it
           cannot come loose from the skin however the cone is rescaled. */}
-      {/* …and swept over the same arc the cone is, so the window takes the band
-          out with the skin it is painted on. A full ring here would bridge the
-          cutaway with an unsupported arc of paint hanging across the opening —
-          the same "floating ring" read as sizing it wrong, arrived at from the
-          other direction. CylinderGeometry's theta and LatheGeometry's phi share
-          a convention, so these are the cone's own two window numbers. */}
+      {/* …and swept over the same arc the cone is (`sweep` above), so the window
+          takes the band out with the skin it is painted on. A full ring across an
+          OPEN cutaway would bridge it with an unsupported arc of paint hanging
+          in the opening — the same "floating ring" read as sizing it wrong,
+          arrived at from the other direction. CylinderGeometry's theta and
+          LatheGeometry's phi share a convention, so the cone's own two numbers
+          drop straight in, and the closed state's full turn does too. */}
       <mesh position={[0, -L / 2 + BAND_AT + BAND_H / 2, 0]}>
-        <cylinderGeometry
-          args={[
-            bandFwdR,
-            bandAftR,
-            BAND_H,
-            seg(20),
-            1,
-            true,
-            WINDOW_CENTRE + WINDOW_ARC / 2,
-            Math.PI * 2 - WINDOW_ARC,
-          ]}
-        />
+        <cylinderGeometry args={[bandFwdR, bandAftR, BAND_H, seg(20), 1, true, ...sweep]} />
         <meshStandardMaterial
           {...mat(ORANGE, hot)}
           side={THREE.DoubleSide}
@@ -633,7 +702,7 @@ function useHarness() {
  * stay deferred to `detail`, because none of them resolve to more than a pixel
  * or two until the sled is actually inspected.
  */
-function AvionicsSled({ hot, detail = false }) {
+function AvionicsSled({ hot, detail = false, focused = false }) {
   const standoffs = useStandoffs()
   const harness = useHarness()
   const railY = -SLED.deck / 2 - 0.004
@@ -712,9 +781,21 @@ function AvionicsSled({ hot, detail = false }) {
       {/* Interior fill for the bay. A cutaway model whose cutaway is a black
           hole shows nothing, and the desk lamp does not reach the front edge —
           so the bay carries its own small light, exactly the way a display
-          cutaway is lit. Tightly bounded by `distance` so it stays inside the
-          cone and never spills onto the desk. */}
-      <pointLight position={[0, 0.1, -0.05]} intensity={0.55} distance={0.62} color="#fff0d8" />
+          cutaway is lit.
+
+          Turned down to nothing while the rocket rests, because the cutaway it
+          exists to light is closed then (see NoseCone) and a point light is not
+          stopped by the cone the way sight is: it went on washing a warm pool
+          onto the desk under a nose that no longer had an opening to explain it.
+          Intensity, not mounting — the light stays in the scene at zero so the
+          count never changes, which is this file's hard rule (see the root
+          component's header). `distance` still bounds it either way. */}
+      <pointLight
+        position={[0, 0.1, -0.05]}
+        intensity={focused ? 0.55 : 0}
+        distance={0.62}
+        color="#fff0d8"
+      />
 
       {/* battery pack, aft of the boards */}
       <mesh castShadow position={[0, SLED.deck / 2 + 0.022, 0.33]}>
@@ -745,10 +826,14 @@ function AvionicsSled({ hot, detail = false }) {
 // SLED_LIFT offset stay independent of the cone's — it is seated INTO the bay,
 // not attached to it, which is also true of the real thing.
 const SECTIONS = [
-  { id: 'nose', Part: NoseCone, y: mid(STATION.nose) },
+  { id: 'nose', Part: NoseCone, y: mid(STATION.nose), roll: true },
   {
     id: 'avionics',
     Part: AvionicsSled,
+    // Rolls with the nose (see FOCUS_ROLL). It has to: the sled is aimed at the
+    // window, so anything that turns the window has to turn the sled with it or
+    // the boards end up facing the inside of the skin.
+    roll: true,
     // Seated so the board stack falls inside the cutaway rather than under the
     // solid tip above it — the sled is longer than the window, so where it sits
     // decides which boards are actually visible through it.
@@ -780,6 +865,53 @@ const SECTIONS = [
 ]
 
 /**
+ * How far the nose and its sled roll about the tube axis on the way up, so the
+ * cutaway ends up facing the reader.
+ *
+ * ## Why any roll is needed
+ *
+ * The window is cut at a FIXED angle on the cone (WINDOW_CENTRE), aimed to be
+ * seen from the desk's vantage — where it points straight up and the camera
+ * looks down on it at about 40°. The focused pose then tilts the model by
+ * FOCUS_POSE.rotation, which is a rotation about world X… and the laid-down
+ * rocket's own long axis is world X. So that tilt is not a tilt at all from the
+ * airframe's point of view: it is a 47° ROLL about its own axis, and it carries
+ * the window from "up" round to "up and away", pointing behind the model. The
+ * slot opens and shows nothing. That is worth knowing before touching either
+ * pose: the two rotations are not independent, and the focus pose silently
+ * spends its whole rotation budget rolling this window out of view.
+ *
+ * ## How the number is arrived at
+ *
+ * Derived, not dialled in. Take the direction from the focused model to the
+ * camera, carry it back through the focused orientation into the model's own
+ * frame, and read off the lathe phi that points there — that is the window angle
+ * which would face the reader dead-on, and the roll is the difference between it
+ * and where the window actually is. Nothing here needs revisiting if either pose
+ * moves; it re-derives.
+ *
+ * LEAN is then the one taste number, and it is the same judgement the window's
+ * own CENTRE records: dead-on fills the opening with the flat far wall of the
+ * bay and loses the cone's surface, so the window is left leaning back from
+ * square by this much. The reader looks INTO the bay at a slight angle, which is
+ * what reads as a sectioned model rather than a trough.
+ */
+const FOCUS_LEAN = 0.42
+const FOCUS_ROLL = (() => {
+  const lay = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -Math.PI / 2))
+  const plane = new THREE.Quaternion().setFromEuler(new THREE.Euler(...FOCUS_POSE.rotation))
+  const focusQ = plane.multiply(lay)
+  const toCam = new THREE.Vector3(...CAMERA.position)
+    .sub(new THREE.Vector3(...FOCUS_POSE.position))
+    .normalize()
+    .applyQuaternion(focusQ.invert()) // …back into the model's own frame
+  // LatheGeometry lays its profile at (r sin φ, y, r cos φ), so this is the phi
+  // of the direction the reader is sitting in.
+  const facing = Math.atan2(toCam.x, toCam.z)
+  return facing - WINDOW_CENTRE - FOCUS_LEAN
+})()
+
+/**
  * The airframe: every section at its station, authored centred on the model's
  * own length so one transform can carry the whole rocket between the desk and
  * the hand (see the root's restPos/focusPos).
@@ -789,8 +921,18 @@ const SECTIONS = [
  * same `hot` channel as the hover warmth rather than a second mechanism, so a
  * section can only ever be lit one way and `emissiveIntensity` stays a plain
  * uniform — no material variant, and so no shader recompile, on a page turn.
+ *
+ * `focused` opens the nose's cutaway (see NoseCone) and lights the bay. It is
+ * geometry and a light intensity, not a material — nothing here recompiles when
+ * it flips.
+ *
+ * `rollRefs` collects the groups that turn with the pickup — the nose and the
+ * sled inside it (see FOCUS_ROLL). They are handed up to the root rather than
+ * animated here on purpose: the roll is written straight to the object every
+ * frame from the same spring the rest of the motion reads, so this component
+ * re-renders on a hover or a page turn and never on a frame.
  */
-function Airframe({ glow, activeId, detail }) {
+function Airframe({ glow, activeId, detail, focused, rollRefs }) {
   return (
     <group position={[0, -LEN / 2, 0]}>
       {SECTIONS.map((s) => {
@@ -799,11 +941,16 @@ function Airframe({ glow, activeId, detail }) {
         // outside-in, the way the comment on `tilt` describes it.
         const inner = (s.tilt ?? []).reduceRight(
           (child, rot) => <group rotation={rot}>{child}</group>,
-          <s.Part hot={lit} detail={detail} />
+          <s.Part hot={lit} detail={detail} focused={focused} />
         )
+        // The roll sits OUTSIDE the section's offset, so a section mounted off
+        // the centreline (the sled, lifted toward the window by SLED_LIFT) swings
+        // around the tube axis with the window instead of pivoting in place.
         return (
           <group key={s.id} position={[0, s.y, 0]}>
-            <group position={s.offset ?? [0, 0, 0]}>{inner}</group>
+            <group ref={s.roll ? (el) => (rollRefs.current[s.id] = el) : undefined}>
+              <group position={s.offset ?? [0, 0, 0]}>{inner}</group>
+            </group>
           </group>
         )
       })}
@@ -979,6 +1126,9 @@ export default function RocketModel() {
   const pageMatRef = useRef()
   const shadowMeshRef = useRef()
   const shadowMatRef = useRef()
+  // The nose and its sled, which roll toward the reader with the pickup. Keyed
+  // by section id and filled by Airframe; see FOCUS_ROLL.
+  const rollRefs = useRef({})
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const hoveredId = useSceneStore((s) => s.hoveredId)
@@ -1090,6 +1240,17 @@ export default function RocketModel() {
     _v.y += HOVER_LIFT * hv * (1 - t)
     g.position.copy(_v)
     g.scale.setScalar(THREE.MathUtils.lerp(1 + 0.03 * hv, s * (LAYOUT.rocketW / LEN), t))
+
+    // The nose and its sled turn their cutaway toward the reader as the model
+    // comes up, off the very same `t` — so the bay opens into view over the
+    // pickup instead of being somewhere behind the model once it lands. Written
+    // to the objects directly: a rotation is not worth a re-render (see
+    // Airframe's rollRefs).
+    const roll = FOCUS_ROLL * t
+    for (const id in rollRefs.current) {
+      const r = rollRefs.current[id]
+      if (r) r.rotation.y = roll
+    }
 
     // The component page, in the band below it.
     const p = pageRef.current
@@ -1236,6 +1397,8 @@ export default function RocketModel() {
             glow={isHovered ? HOVER_GLOW : 0}
             activeId={isFocused ? parts[page].id : null}
             detail={armed}
+            focused={isFocused}
+            rollRefs={rollRefs}
           />
         </group>
       </group>
