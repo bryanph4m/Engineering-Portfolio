@@ -89,6 +89,144 @@ const PILE = {
 /** Rest angle (radians about the hinge) for the pile leaf at `depth`. */
 const pileAngle = (depth) => -Math.min(PILE.base + depth * PILE.step, 0.995) * Math.PI
 
+// ---------------------------------------------------------------------------
+// The turning leaf: a skinned sheet that actually bends
+// ---------------------------------------------------------------------------
+//
+// A page that rotates about its bound edge as one rigid rectangle reads as a
+// hinged board, not paper. So the leaf in flight is a real SkinnedMesh: the
+// plane is subdivided along its length and a chain of bones runs from the bound
+// edge down to the free edge, each bone taking a share of one total bend angle.
+// Curl the chain and the sheet curves; the hinge rotation is unchanged.
+//
+// Two SkinnedMeshes (painted front, plain back) share ONE geometry and ONE
+// skeleton, so the bend is evaluated once and the two faces can never disagree.
+// They sit at the same transform and differ only by `side`, which also removes
+// the z-offset pair the rigid version needed to keep its faces apart.
+//
+// The rig is built once per document and reused by every flip — nothing is
+// allocated during a turn, which is what keeps rapid repeated flips smooth.
+
+const LEAF_SEGMENTS = seg(16)
+
+// Each bone's share of the bend, as a function of p — distance from the hinge,
+// 0 at the bound edge, 1 at the free edge. The sine term puts the curvature in
+// the middle of the sheet so both edges stay tangent-smooth (a page hinged at a
+// clip cannot kink at the clip); subtracting the double-frequency term biases
+// bend toward the free half, which is what makes the far corner trail through
+// the sweep and flick as it lands.
+const bendProfile = (p) => Math.sin(p * Math.PI) - 0.45 * Math.sin(p * 2 * Math.PI)
+
+const MAX_BEND = 0.9 // total radians of curl, hinge to free edge, at fold = 1
+
+/**
+ * Build the reusable skinned leaf: geometry with skin attributes, the bone
+ * chain, the skeleton, and the two face meshes. Returns the group to drop into
+ * the hinge plus the per-bone bend shares.
+ *
+ * Binding is done while the rig is still detached and at identity, with an
+ * explicit identity bind matrix, so the bind pose is captured in the rig's own
+ * local space. The skeleton then rides the animated hinge above it without the
+ * pivot's rotation being counted twice (SkinnedMesh's default attached bind
+ * mode divides the mesh's own world matrix back out each frame).
+ */
+function buildLeafRig(w, h, segments, backColor, frontMap) {
+  const geometry = new THREE.PlaneGeometry(w, h, 1, segments)
+  geometry.translate(0, -h / 2, 0) // bound edge at y = 0, free edge at y = -h
+
+  // Skin weights straight off each vertex's height, so they stay correct no
+  // matter what order PlaneGeometry happens to emit its rows in: every vertex
+  // blends the two bones it sits between.
+  const pos = geometry.attributes.position
+  const skinIndex = new Uint16Array(pos.count * 4)
+  const skinWeight = new Float32Array(pos.count * 4)
+  for (let v = 0; v < pos.count; v++) {
+    const f = THREE.MathUtils.clamp((-pos.getY(v) / h) * segments, 0, segments)
+    const i0 = Math.min(Math.floor(f), segments - 1)
+    const frac = f - i0
+    skinIndex[v * 4] = i0
+    skinIndex[v * 4 + 1] = i0 + 1
+    skinWeight[v * 4] = 1 - frac
+    skinWeight[v * 4 + 1] = frac
+  }
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndex, 4))
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeight, 4))
+
+  // One bone per segment boundary, chained down the sheet from the hinge.
+  const bones = []
+  for (let i = 0; i <= segments; i++) {
+    const bone = new THREE.Bone()
+    if (i > 0) {
+      bone.position.y = -h / segments
+      bones[i - 1].add(bone)
+    }
+    bones.push(bone)
+  }
+
+  const front = new THREE.SkinnedMesh(
+    geometry,
+    new THREE.MeshStandardMaterial({ map: frontMap, roughness: 0.9, side: THREE.FrontSide })
+  )
+  const back = new THREE.SkinnedMesh(
+    geometry,
+    new THREE.MeshStandardMaterial({ color: backColor, roughness: 0.9, side: THREE.BackSide })
+  )
+  // A skinned bounding volume is the flat bind pose, which a curled sheet can
+  // leave; the leaf is a few dozen triangles, so never culling it is cheaper
+  // than keeping the bounds honest.
+  front.frustumCulled = false
+  back.frustumCulled = false
+
+  const group = new THREE.Group()
+  group.add(bones[0], front, back)
+  group.updateMatrixWorld(true)
+
+  const skeleton = new THREE.Skeleton(bones)
+  const bindMatrix = new THREE.Matrix4()
+  front.bind(skeleton, bindMatrix)
+  back.bind(skeleton, bindMatrix)
+
+  // Normalised so the shares always sum to MAX_BEND: the profile's shape sets
+  // where the sheet curves, MAX_BEND alone sets how much.
+  const share = [0]
+  let sum = 0
+  for (let i = 1; i <= segments; i++) sum += bendProfile(i / segments)
+  for (let i = 1; i <= segments; i++) share[i] = (bendProfile(i / segments) / sum) * MAX_BEND
+
+  const dispose = () => {
+    geometry.dispose()
+    front.material.dispose()
+    back.material.dispose()
+    skeleton.dispose()
+  }
+
+  return { group, bones, share, front, dispose }
+}
+
+// Easing of the bend, deliberately separate from the turn's own spring: the
+// hinge angle and the curl are two different physical things and must not share
+// a curve. The fold is damped per-frame toward its target rather than tweened,
+// so it survives a flip being interrupted mid-flight by the next one.
+//
+//  - FOLD_LAMBDA — how fast the curl chases its target, per second. This has to
+//    be read against how long a turn actually lasts: the hinge spring sweeps a
+//    sheet through its full half-turn in roughly 170ms, so anything gentle here
+//    means the curl is still winding up as the page lands and the sheet reads
+//    flat through the part of the arc the eye is actually on. At 26 the curl is
+//    ~60% of target one frame in, which still lags the hinge enough to read as
+//    paper with mass, but lands that lag inside the flip instead of after it.
+//  - FOLD_BASE   — curl of an unhurried single flip.
+//  - FOLD_VEL    — extra curl bought by hinge speed, so hammering the corner
+//    through several pages visibly whips them harder than one deliberate turn.
+//  - VEL_REF     — the hinge speed (turn units/sec) that counts as full tilt.
+//    Set above the spring's own peak so a normal flip sits partway up the
+//    range; clamping it lower would saturate every turn and flatten the
+//    distinction this term exists to draw.
+const FOLD_LAMBDA = 26
+const FOLD_BASE = 0.55
+const FOLD_VEL = 0.5
+const VEL_REF = 6
+
 /** One already-read leaf at rest on the flipped-over pile. */
 function PileLeaf({ doc, idx, depth, back }) {
   const { w, h } = doc.paper
@@ -156,6 +294,23 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   const pivotRef = useRef()
   const slideRef = useRef()
 
+  // The bending leaf, built once and reused by every flip this document ever
+  // does. Mounting/unmounting the <primitive> below only attaches and detaches
+  // it; the geometry, skeleton and materials outlive the turn.
+  const rig = useMemo(
+    () => buildLeafRig(w, h, LEAF_SEGMENTS, back, docTexture(doc, 0)),
+    [w, h, back, doc]
+  )
+  useEffect(() => rig.dispose, [rig])
+
+  const fold = useRef(0) // live curl amount, eased per frame (never a tween)
+  const prevTurn = useRef(0)
+
+  /** Curl the bone chain to `f`, signed by flip direction. */
+  const applyBend = (f) => {
+    for (let i = 1; i < rig.bones.length; i++) rig.bones[i].rotation.x = rig.share[i] * f
+  }
+
   // Drive the turning sheet from the spring value: rotation about the hinge
   // (clamped so it can't pass through the pile or the front stack), plus the
   // slide past the hinge and the lift up to the pile's top slot, both
@@ -175,6 +330,10 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     if (!anim) return
     const from = anim.dir > 0 ? 0 : PILE.base
     applyTurn(from)
+    // Seed the velocity estimate at the start angle so an opening frame can't
+    // read as an enormous jump and slam the sheet to full curl.
+    prevTurn.current = from
+    rig.front.material.map = docTexture(doc, anim.idx)
     turnApi.start({
       from: { turn: from },
       turn: anim.dir > 0 ? PILE.base : 0,
@@ -182,10 +341,36 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     })
     // applyTurn is re-created per render but only reads refs + constants
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anim, turnApi])
+  }, [anim, turnApi, rig, doc])
 
-  useFrame(() => {
-    if (anim) applyTurn(turn.get())
+  useFrame((_, delta) => {
+    // Clamped so a backgrounded tab or a dropped frame resumes with a sane step
+    // instead of snapping the curl to its target in one jump.
+    const dt = Math.min(delta, 1 / 30)
+
+    if (anim) {
+      const t = turn.get()
+      applyTurn(t)
+
+      // Progress along the actual travel, so the curl is zero at BOTH ends of a
+      // flip in either direction: a page at rest — front stack or pile — is
+      // flat, and the sheet hands off to a flat PileLeaf without a step.
+      const tc = THREE.MathUtils.clamp(t, 0, 1)
+      const u = THREE.MathUtils.clamp(tc / PILE.base, 0, 1)
+      const vel = Math.abs(tc - prevTurn.current) / dt
+      prevTurn.current = tc
+
+      const speed = Math.min(vel / VEL_REF, 1)
+      const target =
+        Math.sin(u * Math.PI) * (FOLD_BASE + FOLD_VEL * speed) * anim.dir
+      fold.current += (target - fold.current) * (1 - Math.exp(-FOLD_LAMBDA * dt))
+      applyBend(fold.current)
+    } else if (Math.abs(fold.current) > 1e-4) {
+      // Nothing in flight: relax whatever curl was left when the leaf handed
+      // off, so the next flip starts from a flat sheet even if it starts now.
+      fold.current *= Math.exp(-FOLD_LAMBDA * dt)
+      applyBend(fold.current)
+    }
   })
 
   // The static top sheet: while flipping forward it already shows the next
@@ -254,19 +439,13 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
         />
       </mesh>
 
-      {/* the sheet mid-turn, hinged at the top edge; the inner group slides
-          it past the hinge as it turns so it settles onto the pile */}
+      {/* the sheet mid-turn, hinged at the top edge; the inner group slides it
+          past the hinge as it turns so it settles onto the pile, and the leaf
+          itself bends about that hinge via its bone chain (buildLeafRig) */}
       {flipping && (
         <group ref={pivotRef} position={[0, h / 2, topZ + SHEET_T]}>
           <group ref={slideRef}>
-            <mesh position={[0, -h / 2, 0.001]}>
-              <planeGeometry args={[w, h]} />
-              <meshStandardMaterial map={docTexture(doc, anim.idx)} roughness={0.9} />
-            </mesh>
-            <mesh position={[0, -h / 2, -0.001]} rotation={[0, Math.PI, 0]}>
-              <planeGeometry args={[w, h]} />
-              <meshStandardMaterial color={back} roughness={0.9} />
-            </mesh>
+            <primitive object={rig.group} />
           </group>
         </group>
       )}
