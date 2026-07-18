@@ -388,106 +388,10 @@ function Pennant({ position, yaw = 0 }) {
   )
 }
 
-const ROCKET_WHITE = { color: '#ece4d2', roughness: 0.32, metalness: 0.14 }
-const ROCKET_RED = { color: '#b0271d', roughness: 0.38, metalness: 0.1 }
-const ROCKET_NOZZLE = { color: '#2b2b30', metalness: 0.35, roughness: 0.5 }
-
-/** One swept trapezoidal fin, authored in the body's X–Y plane (X along the
- *  tube, +Y radial out from the surface) and rotated about the tube axis to
- *  its clock angle. Thin in the tangential (Z) direction. */
-function RocketFin({ alpha }) {
-  const geo = useMemo(() => {
-    const s = new THREE.Shape()
-    s.moveTo(0.18, 0.125) // leading root, at the body surface
-    s.lineTo(0.33, 0.3) // leading tip (swept back)
-    s.lineTo(0.47, 0.3) // trailing tip
-    s.lineTo(0.52, 0.125) // trailing root
-    s.closePath()
-    const g = new THREE.ExtrudeGeometry(s, { depth: 0.014, bevelEnabled: false })
-    g.translate(0, 0, -0.007) // centre the thickness on the plane
-    return g
-  }, [])
-  return (
-    <mesh castShadow geometry={geo} rotation={[alpha, 0, 0]}>
-      <meshStandardMaterial {...ROCKET_RED} side={THREE.DoubleSide} />
-    </mesh>
-  )
-}
-
-/**
- * A physical scale-model high-powered rocket lying on its side on a small
- * cradle: red ogive nose cone, cream body tube, three 120°-clocked fins (one
- * pointing up, two splayed down as the visual "feet"), a recessed motor mount
- * with a flared nozzle at the aft, and a launch lug along the flank. Authored
- * with the tube axis on local X (nose at −X) and the axis lifted to local
- * y = 0.17 so the two lower fins clear the desk; two dark cradle saddles carry
- * the tube so nothing floats. Static set dressing — no handlers, no per-frame
- * cost — sitting in the open front-right pocket of the desk.
- */
-function ModelRocket({ position, yaw = 0 }) {
-  const AXIS_Y = 0.17
-  return (
-    <group position={position} rotation={[0, yaw, 0]}>
-      {/* everything on the tube axis */}
-      <group position={[0, AXIS_Y, 0]}>
-        {/* body tube */}
-        <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.13, 0.13, 1.0, seg(24)]} />
-          <meshStandardMaterial {...ROCKET_WHITE} />
-        </mesh>
-        {/* a red trim band around the forward body */}
-        <mesh castShadow position={[-0.34, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.132, 0.132, 0.09, seg(24)]} />
-          <meshStandardMaterial {...ROCKET_RED} />
-        </mesh>
-        {/* ogive-ish nose cone at −X (apex points −X after the Z spin) */}
-        <mesh castShadow position={[-0.66, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <coneGeometry args={[0.13, 0.32, seg(24)]} />
-          <meshStandardMaterial {...ROCKET_RED} />
-        </mesh>
-        {/* shoulder ring where the nose meets the tube */}
-        <mesh position={[-0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.128, 0.128, 0.02, seg(24)]} />
-          <meshStandardMaterial color="#d8cfba" roughness={0.4} />
-        </mesh>
-
-        {/* three fins, one up + two down as feet */}
-        {[0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].map((a) => (
-          <RocketFin key={a} alpha={a} />
-        ))}
-
-        {/* aft motor mount: a recessed dark tube + a flared nozzle exit */}
-        <mesh castShadow position={[0.53, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.11, 0.11, 0.12, seg(20)]} />
-          <meshStandardMaterial {...ROCKET_NOZZLE} />
-        </mesh>
-        <mesh position={[0.6, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.055, 0.095, 0.1, seg(20), 1, true]} />
-          <meshStandardMaterial {...ROCKET_NOZZLE} side={THREE.DoubleSide} />
-        </mesh>
-
-        {/* launch lug: a short straw parallel to the tube, on the upper flank
-            between the up fin and one lower fin */}
-        <mesh castShadow position={[-0.02, 0.075, 0.13]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.26, seg(12)]} />
-          <meshStandardMaterial color="#cfc7b2" roughness={0.5} />
-        </mesh>
-      </group>
-
-      {/* two cradle saddles carrying the tube (dark stained wood) */}
-      {[-0.12, 0.12].map((x) => (
-        <group key={x} position={[x, 0, 0]}>
-          {[-1, 1].map((s) => (
-            <mesh key={s} castShadow position={[0, 0.05, s * 0.045]} rotation={[s * 0.5, 0, 0]}>
-              <boxGeometry args={[0.05, 0.11, 0.02]} />
-              <meshStandardMaterial color="#3a2c1c" roughness={0.7} metalness={0.05} />
-            </mesh>
-          ))}
-        </group>
-      ))}
-    </group>
-  )
-}
+/* The generic model rocket that used to be set dressing here is gone. It is now
+   a replica of the real research vehicle — and, being clickable, no longer
+   clutter at all: see src/desk/RocketModel.jsx, which mounts itself beside the
+   documents in DeskScene and is measured by the same layout audit. */
 
 export default function Clutter() {
   const paper = paperTexture(true)
@@ -506,13 +410,15 @@ export default function Clutter() {
         </mesh>
       </group>
 
-      {/* ---- The drafting compass, set down by the pencils mid-layout ---- */}
-      <DraftingCompass position={[0.15, 0, 2.95]} yaw={1.25} />
+      {/* ---- The drafting compass, set down by the pencils mid-layout. Pulled
+           left off its old (0.15, 2.95) spot: the rocket model now runs along
+           this front line and the compass legs reached into its fin can. ---- */}
+      <DraftingCompass position={[-1.35, 0, 2.25]} yaw={1.25} />
 
-      {/* ---- Model rocket resting on its cradle in the open front-right
-           pocket, in front of the projects stack. Emptiest region on the desk;
-           re-run window.__deskLayoutAudit() if you nudge it. ---- */}
-      <ModelRocket position={[2.15, 0, 3.08]} yaw={0} />
+      {/* ---- The open front-right pocket this file used to fill with a small
+           generic model rocket now carries the research vehicle's replica, which
+           is interactive and so lives outside the clutter group entirely
+           (src/desk/RocketModel.jsx). ---- */}
 
       {/* ---- UCLA felt pennant, laid flat with the hoist corner tucked under
            the coffee mug so it reads as layered into the clutter (polygonOffset
@@ -537,10 +443,13 @@ export default function Clutter() {
         bore={0.035}
       />
 
-      {/* ---- Mechanical pencils + kneaded eraser, front-centre-left ---- */}
-      <Pencil position={[-1.8, 0.048, 2.98]} rotation={[Math.PI / 2, 0, 0.9]} color="#7a1f24" />
-      <Pencil position={[-1.45, 0.048, 3.2]} rotation={[Math.PI / 2, 0, 1.0]} color="#1f3a5a" />
-      <mesh castShadow position={[-0.85, 0.062, 3.25]} rotation={[0, 0.4, 0]}>
+      {/* ---- Mechanical pencils + kneaded eraser, front-left. All three slid
+           left off their old spots so the rocket model's aft end and motor have
+           the front strip from x ≈ -0.8 rightward to themselves — they used to
+           sit under the nozzle. ---- */}
+      <Pencil position={[-2.2, 0.048, 2.98]} rotation={[Math.PI / 2, 0, 0.9]} color="#7a1f24" />
+      <Pencil position={[-1.85, 0.048, 3.2]} rotation={[Math.PI / 2, 0, 1.0]} color="#1f3a5a" />
+      <mesh castShadow position={[-1.25, 0.062, 3.15]} rotation={[0, 0.4, 0]}>
         <boxGeometry args={[0.28, 0.12, 0.2]} />
         <meshStandardMaterial color="#4a4a48" roughness={0.95} />
       </mesh>

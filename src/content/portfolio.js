@@ -419,6 +419,98 @@ export const research = {
   // lead, like `extended`). Per-page desk polaroids live on `sheets[].photos`
   // below, not here. Same entry shape documented at the top of this file.
   photos: [],
+  /**
+   * The airframe broken into its named sections — the content behind the desk's
+   * interactive rocket model (src/desk/RocketModel.jsx), which replicates the
+   * vehicle as a cutaway shop model you can click part by part.
+   *
+   * Provenance: every part below is a named section of the team's real CAD
+   * assembly, transcribed from the project's own public site and source —
+   * abgsccc-website.vercel.app and github.com/Thrust-Stack/ABGSWebsite (see
+   * `src/data/project.js` there, `airframe` + `components`). Nothing is invented
+   * and nothing here is auto-managed; it is manual editorial copy like the rest
+   * of this file.
+   *
+   * Shape, per part:
+   *   id     — the desk's click-target id; must match a section in RocketModel
+   *   name   — the part's name as the project calls it
+   *   role   — its one-line job on the vehicle
+   *   desc   — a sentence or two of detail (painted on the desk's detail card)
+   *   specs  — [{ label, value }] at-a-glance rows, same spirit as projects[].specs
+   *
+   * Desk mode paints all five fields onto the focused part's detail card. The
+   * simple mode does not render this list at all — the Research article already
+   * covers the vehicle in `extended` prose, and repeating it as a spec table
+   * there would duplicate rather than complement.
+   */
+  vehicle: {
+    parts: [
+      {
+        id: 'nose',
+        name: 'Nose Cone',
+        role: 'Forward Section · Avionics Bay',
+        desc: '3D-printed forward section that doubles as the avionics bay. The whole sled — flight computer, sensors, radio and power — rides inside it, which is why the desk model is cut away here.',
+        specs: [
+          { label: 'Build', value: '3D-printed ASA' },
+          { label: 'Bay', value: 'Ø71.6 mm × 348.7 mm, full length of the cone' },
+          { label: 'Carries', value: 'The complete avionics sled' },
+        ],
+      },
+      {
+        id: 'avionics',
+        name: 'Avionics Sled',
+        role: 'Flight Computer · Sensors · Power',
+        desc: 'The board stack that flies inside the nose. An ESP32 reads the sensors and drives the servos while a Raspberry Pi 5 handles onboard camera capture; the control loop itself runs hardware-in-the-loop on a laptop over the telemetry link.',
+        specs: [
+          { label: 'Compute', value: 'Raspberry Pi 5 · ESP32' },
+          { label: 'Sensing', value: 'MPU6050 IMU · BMP585 altimeter · GPS' },
+          { label: 'Actuation', value: 'PCA9685 servo driver' },
+          { label: 'Link', value: 'RFM95W LoRa downlink' },
+          { label: 'Power', value: '7.4 V pack via 5 V 5 A UBEC' },
+        ],
+      },
+      {
+        id: 'servo-can',
+        name: 'Servo Fin Can',
+        role: 'Canard Control Section',
+        desc: 'Structural section carrying the servo mounts, shaft bearings and the airfoil canards. The canards are the only surfaces the control system actually drives — deflecting them generates the corrective roll moment.',
+        specs: [
+          // REVIEW: two sources disagree on canard count and this model shows four.
+          // The project's CAD assembly (github.com/Thrust-Stack/ABGSWebsite) names
+          // four "Airfoil Canard" parts, while this file's own control-system prose
+          // (from the Avionics-Bay README) describes the firmware driving a mirrored
+          // PAIR. Both can be true — four in structure, two currently driven — but
+          // confirm against the build before treating either as settled.
+          { label: 'Surfaces', value: 'Four airfoil canards (CFD-analyzed profile)' },
+          { label: 'Servos', value: 'BlueBird BMS-127WV+ digital, high-voltage' },
+          { label: 'Mounts', value: 'In-house SolidWorks design, bearing-supported' },
+          { label: 'Travel', value: 'Clamped to ±15° about a 90° neutral' },
+        ],
+      },
+      {
+        id: 'airframe',
+        name: 'Body Tubes',
+        role: 'Upper & Lower Airframe',
+        desc: 'The two body tubes: a forward coupler between the nose and the canard section, and the main lower airframe running back to the aft end. Passive structure — they carry load and nothing else.',
+        specs: [
+          { label: 'Upper', value: 'Coupler, nose → servo fin can' },
+          { label: 'Lower', value: 'Main section, servo fin can → aft end' },
+          { label: 'Airframe', value: '≈1052 mm long, Ø79 mm' },
+        ],
+      },
+      {
+        id: 'static-can',
+        name: 'Static Fin Can',
+        role: 'Passive Stability · Motor Mount',
+        desc: 'Fixed airfoil fins, the lower bearing mount and the motor mount. This is the passive stability at the aft end — it sets where the vehicle wants to point before the canards ever move.',
+        specs: [
+          { label: 'Fins', value: 'Fixed airfoil section' },
+          { label: 'Motor', value: 'Built around an AeroTech H219' },
+          { label: 'Also carries', value: 'Lower bearing mount for the canard shafts' },
+        ],
+      },
+    ],
+  },
   // Per-sheet `sub`/`lead`/`notes` are the desk blueprint's copy (desk mode reads
   // only those; see src/documents/content/research.js). Each sheet's `extended`
   // is longer-form prose for the simple/recruiter mode ONLY — the simple mode

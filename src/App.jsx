@@ -20,7 +20,10 @@ export default function App() {
 
       {mode === 'desk' && (
         <Suspense fallback={null}>
-          <DeskMode />
+          {/* The desk's own switch to the simple view is this same fork, taken
+              from inside the scene instead of from the start screen — so both
+              routes are one line of state and cannot drift apart. */}
+          <DeskMode onSwitchMode={() => setMode('simple')} />
         </Suspense>
       )}
 

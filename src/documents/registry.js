@@ -66,12 +66,17 @@ export const DOCUMENTS = [
     rest: rest('fold', -2.2, -0.95, -0.12),
   },
   {
+    // Moved right and back off its old (3.85, 2.5) spot to clear the rocket
+    // model's fin span along the desk's front strip (desk/RocketModel). The
+    // margins here are genuinely tight in BOTH directions — much further back
+    // and the envelope fouls the projects stack instead — so re-run
+    // window.__deskLayoutAudit() after any nudge rather than eyeballing it.
     id: 'contact',
     title: 'Contact',
     kind: 'envelope',
     pages: contactPages,
     paper: { w: 1.7, h: 1.05 },
-    rest: rest('envelope', 3.85, 2.5, -0.28),
+    rest: rest('envelope', 4.3, 2.15, -0.28),
   },
 ]
 

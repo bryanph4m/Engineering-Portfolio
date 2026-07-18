@@ -13,7 +13,7 @@ import { useSceneStore } from '../store/useSceneStore'
  * visitor actually picks the desk. Choosing the simple mode never pulls any
  * of it in, so that path stays genuinely lightweight.
  */
-export default function DeskMode() {
+export default function DeskMode({ onSwitchMode }) {
   const setReady = useSceneStore((s) => s.setReady)
   const sceneDrawn = useSceneStore((s) => s.sceneDrawn)
 
@@ -46,7 +46,7 @@ export default function DeskMode() {
   return (
     <>
       <DeskScene />
-      <HudHints />
+      <HudHints onSwitchMode={onSwitchMode} />
       {/* first-visit-only nudge toward the invisible edge-tap panning; renders
           nothing on a mouse, or once it has been seen */}
       <EdgeHint />

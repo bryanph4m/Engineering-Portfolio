@@ -8,10 +8,19 @@ import { DOCUMENTS } from '../documents/registry'
  *  - two interactive documents' footprints overlap (that's how the papers
  *    z-fought in the first place), or
  *  - desk clutter shares footprint with a document, or
+ *  - the rocket model shares footprint with a document or with the clutter, or
  *  - a document hangs off the desk.
- * Footprints are yaw-aligned rectangles tested with 2D SAT; clutter meshes
- * are measured from the live scene so new props are covered automatically.
+ * Footprints are yaw-aligned rectangles tested with 2D SAT; prop meshes are
+ * measured from the live scene so new props are covered automatically.
  * Re-run any time from the console: window.__deskLayoutAudit()
+ *
+ * The rocket (group "rocket") is measured exactly like the clutter, and then
+ * additionally tested against it. That extra pass exists because the rocket is
+ * the one prop big enough to reach across other props' footprints rather than
+ * merely sit near them — for everything else, prop-vs-prop crowding is a look
+ * you can see, but a four-and-a-half-unit airframe laid across the desk can
+ * quietly intersect a cradle, a compass leg or a coffee mug from the one camera
+ * angle nobody checks.
  */
 
 const DOC_INFLATE = 0.05 // covers the stack fan + a safety margin
@@ -103,13 +112,17 @@ function auditLayout(scene) {
     }
   }
 
-  // documents vs measured clutter meshes
-  const clutter = scene.getObjectByName('clutter')
-  if (!clutter) {
-    warnings.push('no "clutter" group found in the scene — audit incomplete')
-  } else {
-    clutter.updateWorldMatrix(true, true)
-    clutter.traverse((obj) => {
+  // Measured prop meshes, per group. Collected rather than only tested in
+  // place, because the rocket then has to be tested against the clutter too.
+  const measure = (groupName) => {
+    const group = scene.getObjectByName(groupName)
+    if (!group) {
+      warnings.push(`no "${groupName}" group found in the scene — audit incomplete`)
+      return []
+    }
+    const out = []
+    group.updateWorldMatrix(true, true)
+    group.traverse((obj) => {
       if (!obj.isMesh) return
       // exact vertex-space bounds — Box3.setFromObject transforms the local
       // AABB's corners, which badly over-covers rotated shapes like the
@@ -125,11 +138,27 @@ function auditLayout(scene) {
         hw: (box.max.x - box.min.x) / 2 + CLUTTER_INFLATE,
         hh: (box.max.z - box.min.z) / 2 + CLUTTER_INFLATE,
       }
-      if (box.min.y < -0.005) warnings.push(`clutter ${b.label} is sunk into the desk (minY ${box.min.y.toFixed(3)})`)
-      for (const d of docs) {
-        if (overlaps(d, b)) warnings.push(`${d.label} shares footprint with clutter ${b.label}`)
+      if (box.min.y < -0.005) {
+        warnings.push(`${groupName} ${b.label} is sunk into the desk (minY ${box.min.y.toFixed(3)})`)
       }
+      for (const d of docs) {
+        if (overlaps(d, b)) warnings.push(`${d.label} shares footprint with ${groupName} ${b.label}`)
+      }
+      out.push(b)
     })
+    return out
+  }
+
+  const clutter = measure('clutter')
+  const rocket = measure('rocket')
+
+  // The rocket against the clutter. Only these two groups are cross-tested —
+  // within a group, props are allowed to touch (the mug pins the pennant, the
+  // gears mesh), and that is deliberate composition rather than a mistake.
+  for (const r of rocket) {
+    for (const c of clutter) {
+      if (overlaps(r, c)) warnings.push(`rocket ${r.label} intersects clutter ${c.label}`)
+    }
   }
 
   if (warnings.length) {

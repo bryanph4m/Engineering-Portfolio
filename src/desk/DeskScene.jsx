@@ -10,6 +10,7 @@ import DeskLamp from './DeskLamp'
 import Clutter from './Clutter'
 import Documents from './Documents'
 import PhotoFrame from './PhotoFrame'
+import RocketModel from './RocketModel'
 import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
 import TouchControls from './TouchControls'
@@ -104,6 +105,7 @@ export default function DeskScene() {
         <Clutter />
         <Documents />
         <PhotoFrame />
+        <RocketModel />
         <FocusScrim />
         <Preload all />
       </Suspense>

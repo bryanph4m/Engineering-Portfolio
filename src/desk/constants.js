@@ -122,6 +122,22 @@ export const HOVER_LIFT = 0.14 // metres a document rises on hover
 // shared by PhotoFrame, KeyControls and HudHints so they never drift.
 export const PHOTO_FRAME_ID = 'photos'
 
+/**
+ * The rocket model's sections ride the same focus machinery too, but unlike the
+ * photo frame there are several of them, so they take a namespaced id rather
+ * than a single constant: `rocket:nose`, `rocket:servo-can`, and so on, where
+ * the suffix is a part id in `research.vehicle.parts` (src/content/portfolio.js).
+ *
+ * The prefix is what everything downstream tests against — desk/RocketModel to
+ * know which part is open, ui/HudHints to word the hint — so a part can be added
+ * to the content file and the model without a third place needing to hear about
+ * it. Everything else about focus (the scrim, click-away, Esc, pinch-to-zoom)
+ * only cares that `focusedId` is non-null and works unchanged.
+ */
+export const ROCKET_PREFIX = 'rocket:'
+export const rocketPartId = (part) => `${ROCKET_PREFIX}${part}`
+export const isRocketId = (id) => typeof id === 'string' && id.startsWith(ROCKET_PREFIX)
+
 export const COLORS = {
   wood: '#6f4c2c',
   woodDark: '#49301a',

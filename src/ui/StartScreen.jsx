@@ -28,6 +28,53 @@ const draftedBy = (name) => {
   return `${parts[0][0]}. ${parts.slice(1).join(' ')}`.toUpperCase()
 }
 
+/**
+ * A rocket sketched in the sheet's bottom margin, climbing away up the page on a
+ * dashed ascent arc — the site's own subject, drawn the way the rest of the
+ * drawing set is drawn.
+ *
+ * It is inline SVG strokes and nothing else: no image, no font, no request. The
+ * start screen is the very first thing a visitor sees and the only thing between
+ * them and the mode fork, so its whole visual budget has to come out of markup
+ * that is already in the HTML payload. Same reason the arc reuses the loading
+ * doodle's idiom — a faint dashed guide with a solid stroke drawing itself along
+ * it — rather than introducing a second kind of motion.
+ *
+ * The vehicle is drawn with canards up near the nose as well as fins at the
+ * tail, which is the one detail that makes it this rocket rather than a generic
+ * one (see the Rocketry document, and the desk's model in desk/RocketModel).
+ */
+function DraftedRocket() {
+  return (
+    <svg className="start__rocket" viewBox="0 0 190 150" fill="none" aria-hidden="true">
+      {/* the ascent arc: a dashed drafting guide, then the drawn flight path */}
+      <path
+        className="start__arc-rule"
+        d="M6 144 C 34 126, 62 104, 88 80 C 110 60, 128 42, 142 26"
+        pathLength="1"
+      />
+      <path
+        className="start__arc"
+        d="M6 144 C 34 126, 62 104, 88 80 C 110 60, 128 42, 142 26"
+        pathLength="1"
+      />
+      {/* the vehicle, climbing along the arc's tangent */}
+      <g className="start__rocket-body" transform="translate(150 30) rotate(38)">
+        <path d="M0 -34 C 7 -20, 10 -9, 10 2 L 10 34 L -10 34 L -10 2 C -10 -9, -7 -20, 0 -34 Z" />
+        {/* canards, forward */}
+        <path d="M10 -4 L 22 -11 L 10 6 Z" />
+        <path d="M-10 -4 L -22 -11 L -10 6 Z" />
+        {/* fins, aft */}
+        <path d="M10 18 L 26 40 L 10 34 Z" />
+        <path d="M-10 18 L -26 40 L -10 34 Z" />
+        {/* marking band + nozzle */}
+        <path d="M-10 10 L 10 10" />
+        <path d="M-6 34 L -8 43 L 8 43 L 6 34" />
+      </g>
+    </svg>
+  )
+}
+
 /** Hand-wobbled ellipse, like a pencil circling a word a couple of times. */
 function ScribbleRing() {
   return (
@@ -98,6 +145,8 @@ export default function StartScreen({ onEnter }) {
             </button>
           ))}
         </div>
+
+        <DraftedRocket />
 
         <dl className="start__titleblock" aria-label="drawing title block">
           <div>

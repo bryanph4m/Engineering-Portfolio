@@ -134,6 +134,26 @@ html, body, #root {
   place-items: center;
   background: radial-gradient(circle at 50% 38%, #2a2013, #140d06 78%);
   font-family: 'Architects Daughter', cursive;
+  overflow: hidden;
+}
+/* A warm pool of lamplight drifting slowly across the backdrop, as though the
+   desk lamp beyond the sheet were being nudged. Absolutely positioned so it
+   stays out of the grid that centres the sheet, and animated on `transform`
+   only, so it is a compositor job and never touches layout or paint. */
+.start::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: -20%;
+  width: 90%;
+  height: 120%;
+  background: radial-gradient(closest-side, rgba(255, 209, 143, 0.17), rgba(255, 209, 143, 0) 72%);
+  animation: start-lamp 32s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes start-lamp {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(58%, 12%, 0) scale(1.16); }
 }
 .start__sheet {
   position: relative;
@@ -164,6 +184,44 @@ html, body, #root {
 @keyframes start-settle {
   from { opacity: 0; transform: translateY(26px) rotate(0.8deg); }
   to { opacity: 1; transform: translateY(0) rotate(-0.6deg); }
+}
+/* Paper grain. One inline SVG turbulence tile — a few hundred bytes in the
+   stylesheet, no request, rasterised once by the browser and then reused as a
+   repeating background. It sits over the ruled lines so the rules look printed
+   ON the fibre rather than under it, and is `pointer-events: none` so it can
+   never intercept a click meant for a mode button beneath it. */
+.start__sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+}
+/* Drafting registration ticks in the sheet's four corners — the crop marks a
+   real drawing sheet carries. Eight one-pixel gradient layers, so there is no
+   extra element and no image. */
+.start__sheet::after {
+  content: '';
+  position: absolute;
+  inset: 11px;
+  pointer-events: none;
+  --tick: rgba(74, 63, 44, 0.55);
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--tick) 0 0), linear-gradient(var(--tick) 0 0),
+    linear-gradient(var(--tick) 0 0), linear-gradient(var(--tick) 0 0),
+    linear-gradient(var(--tick) 0 0), linear-gradient(var(--tick) 0 0),
+    linear-gradient(var(--tick) 0 0), linear-gradient(var(--tick) 0 0);
+  background-size: 15px 1.5px, 1.5px 15px, 15px 1.5px, 1.5px 15px,
+    15px 1.5px, 1.5px 15px, 15px 1.5px, 1.5px 15px;
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
 }
 /* leaving = the sheet is "picked up" toward the viewer, then the mode mounts */
 .start.is-leaving { pointer-events: none; }
@@ -260,6 +318,52 @@ html, body, #root {
 }
 .start__begin:focus-visible { outline: none; }
 .start__begin:disabled { cursor: default; }
+/* The rocket sketched into the sheet's bottom margin, opposite the title block.
+   Drawn faint on purpose: it is the sheet's marginalia, not a second headline,
+   and it must never compete with the two mode buttons above it. */
+.start__rocket {
+  position: absolute;
+  left: 26px;
+  bottom: 16px;
+  width: clamp(96px, 21vw, 142px);
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+  color: #4a3f2c;
+  opacity: 0.5;
+}
+.start__rocket-body {
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  animation: rocket-in 0.9s ease-out 0.5s both;
+}
+@keyframes rocket-in {
+  from { opacity: 0; transform: translate(150px, 30px) rotate(38deg) translate(0, 16px); }
+  to { opacity: 1; transform: translate(150px, 30px) rotate(38deg) translate(0, 0); }
+}
+/* the dashed drafting guide the flight path is drawn along… */
+.start__arc-rule {
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-dasharray: 0.014 0.02; /* pathLength is 1, so this is in path fractions */
+  opacity: 0.5;
+}
+/* …and the path itself, drawing in once behind the rocket */
+.start__arc {
+  stroke: #7a4a3a;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: arc-draw 1.9s cubic-bezier(0.3, 0.7, 0.3, 1) 0.35s forwards;
+}
+@keyframes arc-draw {
+  to { stroke-dashoffset: 0; }
+}
+
 /* drafting title block, ruled off in the bottom-right corner */
 .start__titleblock {
   display: flex;
@@ -292,6 +396,16 @@ html, body, #root {
   .start__titleblock > div { padding: 5px 8px 4px; }
   .start__sub { font-size: 14px; }
 }
+/* The sketch shares the bottom margin with the title block, and that margin gets
+   narrow before it disappears. So it shrinks and tucks into the corner first,
+   and only stands down entirely once there is genuinely no room beside the block.
+   The mode selector never moves for it at any width. */
+@media (max-width: 520px) {
+  .start__rocket { left: 14px; bottom: 8px; width: 86px; }
+}
+@media (max-width: 380px) {
+  .start__rocket { display: none; }
+}
 
 /* ------------------------------------------------------------------ */
 /* HUD chrome — nav hint + title                                       */
@@ -304,6 +418,37 @@ html, body, #root {
 }
 .hud__title h1 { margin: 0; font-size: 19px; letter-spacing: 1px; }
 .hud__title p { margin: 2px 0 0; font-size: 12px; opacity: 0.7; }
+/* Mode switch, under the name. The .hud layer is pointer-events: none so the
+   chrome can never eat a click meant for the desk; this is the one control in
+   it, so it takes pointer events back for itself alone. Styled as a pencilled
+   note with a dashed underline rather than a button chrome — the desk has no
+   boxed buttons anywhere, and adding one here would be the only hard-edged UI
+   in the scene. */
+.hud__switch {
+  pointer-events: auto;
+  display: inline-block;
+  margin: 9px 0 0;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px dashed rgba(241, 230, 205, 0.45);
+  background: none;
+  cursor: pointer;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #f1e6cd;
+  opacity: 0.62;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+  transition: opacity 0.25s ease, border-color 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.hud__switch:hover,
+.hud__switch:focus-visible {
+  opacity: 1;
+  border-bottom-color: rgba(241, 230, 205, 0.9);
+}
+.hud__switch:focus-visible { outline: none; }
 /* Album position indicator ("2 / 5"), shown while the photo frame is picked
    up. Sits just above the hint band in the same reserved bottom strip, in the
    desk's typewriter face. */
@@ -361,6 +506,9 @@ html, body, #root {
      phone. Give the block a real width budget and let it wrap inside it. */
   .hud__title { right: 26px; max-width: calc(100vw - 52px); }
   .hud__title p { font-size: 11px; line-height: 1.35; }
+  /* the block above it wraps to two lines on a phone, so keep the switch's own
+     tap target honest rather than letting it crowd the disciplines line */
+  .hud__switch { margin-top: 7px; font-size: 11px; padding: 4px 0; }
   /* keep the (wrapping) hint inside the reserved bottom band on phones */
   .hud__hint { font-size: 13px; }
   .edge-hint { font-size: 12px; }
@@ -371,4 +519,10 @@ html, body, #root {
   .start__sheet { animation: none; transition: opacity 0.3s ease; }
   .start.is-leaving .start__sheet { transform: rotate(-0.6deg); }
   .edge-hint { animation: none; }
+  /* The start screen's added richness is all still there — the grain, the ticks,
+     the sketch, the lamplight — it simply arrives already finished instead of
+     drifting and drawing itself in. */
+  .start::before { animation: none; }
+  .start__rocket-body { animation: none; }
+  .start__arc { animation: none; stroke-dashoffset: 0; }
 }
