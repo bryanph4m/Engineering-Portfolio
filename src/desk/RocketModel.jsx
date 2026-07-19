@@ -272,14 +272,37 @@ function surfaceGeometry({ tip, rootChord, tipChord, sweep, thick }) {
 // still reads as a real airframe material under that lamp instead of as
 // painted plastic. Raising it further is what starts to look toy-like, so
 // check any change against the LIT desk, not against a colour picker.
-const HULL = { color: '#6b7f9e', metalness: 0.26, roughness: 0.48 }
+// Finish level, and why these are matte-leaning:
+//
+// The airframe is the largest smooth surface on the desk, so it is the one part
+// that turns a specular lobe into a metres-long sweep of highlight. At
+// metalness 0.26 / roughness 0.48 it carried a broad gloss down the tube and
+// read as polished plastic — noticeably shinier than everything it sits among
+// (papers at ~0.85-0.9, the desk at 0.82, the calculator body at 0.5), which is
+// the whole hand-drafted register this scene is in.
+//
+// Both moves here also fix that WITHOUT costing form. The scene has no
+// environment map, so metalness cannot buy a reflection: all it does is
+// subtract diffuse and tighten the highlight — the same argument the note above
+// makes for the black parts applies just as well to the hull. Dropping it and
+// raising roughness therefore hands back the broad diffuse gradient that tells
+// you the tube is round, and only takes away the hotspot. Judge any change to
+// these against the LIT desk beside the drafting compass and the gears, not in
+// isolation: the target is the same reflectivity range as those, not flatness.
+const HULL = { color: '#6b7f9e', metalness: 0.12, roughness: 0.62 }
 const PRINT = { color: '#191c21', metalness: 0.08, roughness: 0.64 }
-// The airfoils are black too, but a harder, slightly glossier finish than the
+// The airfoils are black too, but a harder, slightly tighter finish than the
 // printed cans — enough separation that a fin does not merge into the can it
-// grows out of when the two are seen edge-on.
-const AIRFOIL = { color: '#1e2229', metalness: 0.2, roughness: 0.46 }
-const PANEL = { color: '#4a5058', metalness: 0.3, roughness: 0.5 }
-const MACHINED = { color: '#b4bac2', metalness: 0.5, roughness: 0.32 }
+// grows out of when the two are seen edge-on. That separation is relative, so
+// it survives the whole family being taken down a stop: it stays below PRINT's
+// 0.64, which is all the cue needs.
+const AIRFOIL = { color: '#1e2229', metalness: 0.1, roughness: 0.58 }
+const PANEL = { color: '#4a5058', metalness: 0.15, roughness: 0.6 }
+// Bare machined aluminium — the one part of the airframe that is genuinely
+// shiny stock, so it keeps a real highlight. Held just inside the range the
+// desk's other metal props already occupy (Clutter: brass 0.7/0.35, steel
+// 0.85/0.3) rather than above it.
+const MACHINED = { color: '#b4bac2', metalness: 0.42, roughness: 0.42 }
 const BOARD = { color: '#1d2836', metalness: 0.1, roughness: 0.55 }
 const GRAPHITE = { color: '#2e333c', metalness: 0.25, roughness: 0.55 }
 const BRASS = { color: '#bf9c45', metalness: 0.55, roughness: 0.35 }

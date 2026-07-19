@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { docTexture } from '../lib/docTextures'
 import { seg } from '../lib/quality'
+import { flipFor, presentedPage } from './pageFlip'
 import { PAPER_T, SHEET_T } from './layout'
 
 // The physical "prop" for each document, drawn in its own local XY plane
@@ -267,23 +268,17 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const pageIndex = useSceneStore((s) => s.pageIndex)
-  const flipDir = useSceneStore((s) => s.flipDir)
-  const flipNonce = useSceneStore((s) => s.flipNonce)
   const isFocused = focusedId === doc.id
-  const page = isFocused ? pageIndex : 0
 
-  // one flip in flight at a time: which sheet is turning, and which way
-  const [anim, setAnim] = useState(null)
-  const lastNonce = useRef(flipNonce)
-  useEffect(() => {
-    if (flipNonce !== lastNonce.current) {
-      lastNonce.current = flipNonce
-      if (isFocused && flipDir !== 0) {
-        setAnim({ dir: flipDir, idx: flipDir > 0 ? pageIndex - 1 : pageIndex })
-      }
-    }
-    if (!isFocused && anim) setAnim(null)
-  }, [flipNonce, flipDir, pageIndex, isFocused, anim])
+  // One turn in flight at a time: which sheet is turning, and which way. The
+  // store raises it with the page index itself and this component retires it,
+  // because the spring below is the only thing that knows when the leaf has
+  // actually landed. The polaroids pinned to these sheets read the same record,
+  // which is what keeps a photo on the page the paper is painting in BOTH
+  // directions (desk/pageFlip).
+  const flip = useSceneStore((s) => s.flip)
+  const endFlip = useSceneStore((s) => s.endFlip)
+  const anim = flipFor(flip, doc.id)
 
   const [{ turn }, turnApi] = useSpring(() => ({
     turn: 0,
@@ -337,7 +332,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     turnApi.start({
       from: { turn: from },
       turn: anim.dir > 0 ? PILE.base : 0,
-      onRest: () => setAnim(null),
+      onRest: () => endFlip(doc.id),
     })
     // applyTurn is re-created per render but only reads refs + constants
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,12 +370,9 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
 
   // The static top sheet: while flipping forward it already shows the next
   // page (the turning sheet covers it); while flipping back it keeps the old
-  // page until the returning sheet lands.
-  const topIndex = anim
-    ? anim.dir > 0
-      ? pageIndex
-      : Math.min(pageIndex + 1, count - 1)
-    : page
+  // page until the returning sheet lands. That rule lives in desk/pageFlip so
+  // the polaroids riding these sheets resolve the page the same way.
+  const topIndex = isFocused ? presentedPage(pageIndex, anim, count) : 0
   // Only the sheet actually on top is ever worth a hi-res raster — the pile and
   // the turning leaf are mid-animation or edge-on, and a zoom resets on every
   // page turn anyway, so `topIndex` is the only page a pinch can be reading.
@@ -392,7 +384,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   // never in this list — it hands off to a PileLeaf (or the front stack) the
   // frame its spring rests. While a page is inbound the resident leaves sit
   // one slot deeper so the newcomer's slot is free.
-  const pileCount = anim ? anim.idx : page
+  const pileCount = anim ? anim.idx : topIndex
   const pileDepthShift = anim && anim.dir > 0 ? 1 : 0
 
   return (

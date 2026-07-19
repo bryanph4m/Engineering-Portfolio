@@ -13,8 +13,37 @@ export const useSceneStore = create((set) => ({
   focusedId: null, // id of the picked-up document, or null for the idle desk
   hoveredId: null, // id of the document under the cursor (idle state only)
   pageIndex: 0, // current sheet within a multi-page document
-  flipDir: 0, // -1 / +1 — direction of the last page turn, drives the 3D flip
-  flipNonce: 0, // bumps on every turn so the flip animation re-fires
+  // The page turn currently in flight, or null. `{ docId, dir, idx }`, where
+  // `dir` is -1/+1 and `idx` is the leaf that is actually turning.
+  //
+  // Set in the SAME update as `pageIndex` — this is load-bearing, not tidiness.
+  // It replaces an earlier `flipDir` + `flipNonce` pair that the sheet stack
+  // turned into a flip in an effect, one render LATER. That gap was a render in
+  // which the index had already moved but the turn did not exist yet, so a
+  // backward turn briefly resolved to the page it was heading for instead of
+  // the one still on screen, and anything keying an animation off "am I the
+  // page on top" got spuriously re-triggered. Keeping them in one update is
+  // what makes that unrepresentable.
+  //
+  // A bare nonce is also the reason polaroids used to re-fade across the whole
+  // desk on any turn: it carried no document, so every subscriber matched.
+  // Anything reading this must scope it with desk/pageFlip's `flipFor`.
+  //
+  // This has to be shared state rather than the flipping component's own,
+  // because a turn is not instantaneous and TWO separate subtrees have to agree
+  // about what is on top for its whole duration: the sheet stack
+  // (desk/props MultiPageSheets) and the polaroids pinned to those sheets
+  // (desk/Polaroids). `pageIndex` moves the instant a turn is REQUESTED, but a
+  // BACKWARD turn deliberately keeps the outgoing page painted on the static
+  // top sheet until the returning leaf lands — so for the length of that turn
+  // `pageIndex` is not the page being presented. Anything that reads
+  // `pageIndex` directly disagrees with the paper in one direction only, which
+  // is exactly the asymmetry this exists to remove. Read it through
+  // desk/pageFlip's `presentedPage`, never raw.
+  //
+  // Owned by MultiPageSheets, which is the only thing that knows when a leaf
+  // has actually come to rest (its spring's onRest clears it).
+  flip: null,
 
   // How far the view has been panned from centre, in whole edge-taps
   // (-steps…+steps). Stored as a step rather than a distance because the world
@@ -40,9 +69,15 @@ export const useSceneStore = create((set) => ({
   // opens at its readable resting size rather than inheriting the last one's
   // magnification. desk/TouchControls resets the matching docZoom offsets off
   // the same transitions.
-  focus: (id) => set({ focusedId: id, pageIndex: 0, flipDir: 0, zoomDetail: false }),
+  focus: (id) => set({ focusedId: id, pageIndex: 0, flip: null, zoomDetail: false }),
   close: () =>
-    set({ focusedId: null, hoveredId: null, pageIndex: 0, flipDir: 0, zoomDetail: false }),
+    set({ focusedId: null, hoveredId: null, pageIndex: 0, flip: null, zoomDetail: false }),
+
+  /** A turning leaf has come to rest. Scoped to the document that owns the
+   *  turn so a late onRest from a document that has since been set down cannot
+   *  clear a flip belonging to the one picked up after it. */
+  endFlip: (docId) =>
+    set((s) => (s.flip && s.flip.docId === docId ? { flip: null } : s)),
 
   setHovered: (id) =>
     set((s) => (s.hoveredId === id ? s : { hoveredId: id })),
@@ -62,13 +97,27 @@ export const useSceneStore = create((set) => ({
   nextPage: (pageCount) =>
     set((s) => {
       if (s.focusedId == null || s.pageIndex >= pageCount - 1) return s
-      return { pageIndex: s.pageIndex + 1, flipDir: 1, flipNonce: s.flipNonce + 1, zoomDetail: false }
+      return {
+        pageIndex: s.pageIndex + 1,
+        // Going forward, the leaf that turns is the page being LEFT: it lifts
+        // off and carries itself over to the pile, uncovering the new one.
+        flip: { docId: s.focusedId, dir: 1, idx: s.pageIndex },
+        zoomDetail: false,
+      }
     }),
 
   prevPage: () =>
     set((s) => {
       if (s.focusedId == null || s.pageIndex <= 0) return s
-      return { pageIndex: s.pageIndex - 1, flipDir: -1, flipNonce: s.flipNonce + 1, zoomDetail: false }
+      const back = s.pageIndex - 1
+      return {
+        pageIndex: back,
+        // Coming back, it is the page being RETURNED TO that turns — it comes
+        // off the pile and lands face-up, which is why the sheet underneath has
+        // to keep painting the outgoing page until it does (desk/pageFlip).
+        flip: { docId: s.focusedId, dir: -1, idx: back },
+        zoomDetail: false,
+      }
     }),
 }))
 

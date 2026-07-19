@@ -6,6 +6,7 @@ import { texDims } from '../lib/docTextures'
 import { photoPlaceholderTexture, softShadowTexture } from '../lib/textures'
 import { loadPhotoTexture } from '../lib/photoTexture'
 import { POLAROID, polaroidFrame } from '../lib/photos'
+import { flipFor, presentedPage } from './pageFlip'
 import { PAPER_T, SHEET_T } from './layout'
 
 /**
@@ -23,9 +24,10 @@ import { PAPER_T, SHEET_T } from './layout'
  * stay sharp at every zoom. They are raycast-transparent, so a click or drag
  * over one still reaches the sheet behind it — page flips and painted links
  * keep working even where a polaroid sits near an edge or a corner. A polaroid
- * is visible only while the page it belongs to is the one on top, and fades in
- * as an incoming page settles from a flip so it never shows through the turning
- * leaf.
+ * is visible only while the page it belongs to is the one the paper is actually
+ * painting (desk/pageFlip — NOT the raw page index, which runs ahead of the
+ * paper through a backward turn), and fades in on its own arrival so it never
+ * shows through the turning leaf.
  */
 
 const FRAME = polaroidFrame()
@@ -130,11 +132,18 @@ function Polaroid({ doc, placed, tex, index }) {
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const pageIndex = useSceneStore((s) => s.pageIndex)
-  const flipNonce = useSceneStore((s) => s.flipNonce)
+  const flip = useSceneStore((s) => s.flip)
 
   const isFocused = focusedId === doc.id
-  // Which sheet is on top: the flip index while focused, page 0 on the desk.
-  const topPage = isFocused ? pageIndex : 0
+  // Which sheet is on top: page 0 on the desk, and while focused whatever the
+  // paper is actually PAINTING — which is not `pageIndex` for the length of a
+  // backward turn (see desk/pageFlip). Resolving it the same way the sheets do
+  // is what keeps a polaroid on the page it belongs to in both directions;
+  // reading `pageIndex` raw put the incoming page's photo on a sheet still
+  // showing the outgoing page for the whole reverse flip.
+  const topPage = isFocused
+    ? presentedPage(pageIndex, flipFor(flip, doc.id), doc.pages.length)
+    : 0
   const showing = placed.page === topPage
 
   const pos = useMemo(() => rectCentreLocal(placed.rect, doc.paper), [placed, doc.paper])
@@ -148,12 +157,25 @@ function Polaroid({ doc, placed, tex, index }) {
     vis: 1,
     config: { tension: 90, friction: 22 },
   }))
-  // Re-fire the fade-in on every page turn, so the incoming page's polaroid
-  // eases in as the leaf lands instead of popping over a mid-flip sheet.
+  // Fade in when THIS polaroid comes onto the top sheet, so it eases in as the
+  // leaf lands instead of popping.
+  //
+  // Scoped to its own appearance, deliberately. This used to fire off the
+  // store's `flipNonce`, which bumps on every page turn anywhere on the desk —
+  // and since every document is mounted at once, turning a page in one
+  // document re-ran the fade on every polaroid in ALL of them. The visible bug
+  // was the About card's photo dipping out and back whenever an unrelated
+  // document's page turned. A polaroid's animation is per instance and nothing
+  // outside it may re-trigger it.
+  //
+  // The ref seeds from the first render so a polaroid that is simply already
+  // on top at load (page 0, on the desk) does not fade in on arrival — only a
+  // genuine hidden -> showing transition animates.
+  const wasShowing = useRef(showing)
   useEffect(() => {
-    if (flipNonce === 0) return
-    visApi.start({ from: { vis: 0 }, vis: 1 })
-  }, [flipNonce, visApi])
+    if (showing && !wasShowing.current) visApi.start({ from: { vis: 0 }, vis: 1 })
+    wasShowing.current = showing
+  }, [showing, visApi])
 
   useFrame(() => {
     const g = groupRef.current
@@ -200,7 +222,17 @@ export default function Polaroids({ doc }) {
   return (
     <group>
       {photos.map((placed, i) => (
-        <Polaroid key={i} doc={doc} placed={placed} tex={textures[i]} index={i} />
+        // Keyed by the photo it shows and the sheet it landed on, not by
+        // position in the list: the key is the identity of a polaroid's
+        // animation state, and it must not be reassigned to a different photo
+        // if a document's placements are ever re-flowed.
+        <Polaroid
+          key={`${placed.photo?.id ?? placed.photo?.src ?? i}@${placed.page}`}
+          doc={doc}
+          placed={placed}
+          tex={textures[i]}
+          index={i}
+        />
       ))}
     </group>
   )
