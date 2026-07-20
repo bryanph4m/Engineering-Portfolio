@@ -84,10 +84,9 @@ export const profile = {
   // `section` cross-links the org in the simple mode's About article.
   roles: [
     { lead: 'Mechanical Engineering Student @ ', emphasis: 'UCLA', circled: true },
-    // REVIEW: "Aria AI" (Founding Engineer) is not on Bryan-Pham-Resume.pdf and
-    // has no backing repo under github.com/bryanph4m. Resume Experience lists only
-    // the Mission College intern + senator roles. Confirm this role and add it to
-    // the résumé, or remove it from the site. (flagged by /sync-content)
+    // REVIEW: RESOLVED — the "Aria AI" role a previous /sync-content flagged here
+    // is no longer in this array, and every role below is résumé-backed. This
+    // comment can be deleted. (re-checked by /sync-content)
     { lead: 'Design & Manufacturing Engineering Intern, ', emphasis: 'Mission College' },
     { lead: 'Founder & President, ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
   ],
@@ -95,7 +94,9 @@ export const profile = {
   // current focus; `section` is where the simple mode's About article links each one
   now: [
     { label: 'tilt/roll-control rocketry', section: 'research' },
-    // REVIEW: "Aria AI" unsupported by résumé/repos — see note on profile.roles above.
+    // REVIEW: RESOLVED — the "Aria AI" entry this flagged is gone; both labels
+    // below are résumé-backed. This comment can be deleted. (re-checked by
+    // /sync-content)
     { label: 'embedded systems', section: 'resume' },
   ],
   // Extended About prose for the simple/recruiter mode ONLY. The simple mode
@@ -198,6 +199,11 @@ export const projects = [
       { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery (drogue + main)' },
       { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
       { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
+      // REVIEW: the refreshed résumé (2026-07-19) adds a Mission Launch Rocketry
+      // bullet with no home on the site — a minimum-diameter airframe for a
+      // maximum-velocity rocket on an L2-class motor, simulated to Mach 2.6.
+      // That is the most quantified claim in the entry; consider a spec row for
+      // it. Note the PDF misspells it "aiframe". (flagged by /sync-content)
     ],
     photos: [
       {
@@ -336,7 +342,7 @@ export const projects = [
       stars: 0,
       description: null,
       createdAt: '2026-07-02T03:25:29Z',
-      pushedAt: '2026-07-13T22:00:02Z',
+      pushedAt: '2026-07-20T04:25:00Z',
     },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
@@ -599,6 +605,11 @@ export const resume = {
           sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
 
+        // REVIEW: the refreshed résumé (2026-07-19) quantifies this role and the
+        // site's one-liner no longer carries any of it — "6,000+ students"
+        // represented, SSCCC resolution S26.10.01, and recommendations presented
+        // directly to district executives. Consider working the scale figure or
+        // the resolution into `sub`. (flagged by /sync-content)
         {
           title: 'Mission College, Associated Student Government Senator',
           sub: 'Aug 2025 – May 2026 · student advocacy with campus leadership',
@@ -621,6 +632,9 @@ export const resume = {
           title: 'Languages',
           sub: 'C, C++, Python, TypeScript, JavaScript, MATLAB, Swift, HTML/CSS',
         },
+        // REVIEW: résumé CAD line also lists MecAgent and Zoo.dev, which are
+        // missing here. The résumé is authoritative (CLAUDE.md rule 3), so
+        // either add them or drop them from the PDF. (flagged by /sync-content)
         {
           title: 'CAD',
           sub: 'SolidWorks, Onshape, AutoCAD, Fusion360',
@@ -629,6 +643,10 @@ export const resume = {
           title: 'Manufacturing & lab tools',
           sub: '3D printing, soldering, microcontrollers, SimScale, microcomputers, computer vision, PSpice, LTSpice, oscilloscope, function generator',
         },
+        // REVIEW: the résumé carries a fourth skills category the site drops
+        // entirely — "Tools & Platforms: Claude Code, Codex, Cursor, Git/Github,
+        // Github Actions, Redis, Mapbox". Add it as an entry here if it should
+        // show, or confirm the omission is deliberate. (flagged by /sync-content)
       ],
     },
   ],
