@@ -26,15 +26,42 @@ import { PAPER_T, SHEET_T } from './layout'
  * keep working even where a polaroid sits near an edge or a corner. A polaroid
  * is visible only while the page it belongs to is the one the paper is actually
  * painting (desk/pageFlip — NOT the raw page index, which runs ahead of the
- * paper through a backward turn), and fades in on its own arrival so it never
- * shows through the turning leaf.
+ * paper through a backward turn), and fades in on its own arrival so it eases
+ * onto the sheet instead of popping.
+ *
+ * That fade is a nicety, NOT what keeps a photo from showing through a turning
+ * page. Occlusion is geometric and is the job of the height budget below
+ * (STACK_H): a polaroid has to fit under a landing leaf, or it draws in front
+ * of one no matter what its opacity is doing.
  */
 
 const FRAME = polaroidFrame()
 // The photo keeps equal top/side borders with a thicker "chin" at the bottom,
 // so its centre sits a little above the frame's centre.
 const PHOTO_OFFSET_Y = (POLAROID.chin - POLAROID.border) / 2
-const Z_LIFT = 0.02 // metres the polaroid floats proud of the top sheet
+
+// How tall a polaroid is allowed to stand off the sheet it sits on — and the
+// reason it is derived from SHEET_T rather than picked to look right.
+//
+// A page mid-turn hinges SHEET_T above the top sheet (desk/props.jsx), and its
+// spring is deliberately underdamped, so a landing leaf does not arrive and
+// stop: it reaches flat roughly a third of the way through the turn and then
+// spends the remaining ~0.7s lying at exactly SHEET_T while the overshoot
+// settles. Anything sitting on the top sheet taller than that gap physically
+// intersects the leaf lying on it. Depth testing then does the correct thing
+// with the wrong geometry and draws the taller object in front — which is the
+// outgoing page's photo appearing THROUGH the page that just flipped into
+// view, right up until the flip retires and the polaroid hides.
+//
+// So the whole stack — shadow, frame, photo — is budgeted to fit inside one
+// leaf gap, and a landing page occludes a polaroid the way real paper would.
+// The float never read as height anyway: documents don't cast shadow-map
+// shadows, so the painted drop shadow below is what sells the lift, not the
+// millimetres. Keep PHOTO_Z under SHEET_T or the bleed-through comes back.
+const STACK_H = SHEET_T * 0.4 // ≈2.4mm — top of the photo, above the sheet
+const SHADOW_Z = STACK_H / 3 // soft drop shadow, nearest the sheet
+const FRAME_Z = (STACK_H * 2) / 3 // the white frame
+const PHOTO_Z = STACK_H // the image itself
 
 // Deterministic per-photo tilt so a page of polaroids reads hand-placed, not
 // gridded. Indexed by the photo's slot, wrapping.
@@ -147,7 +174,9 @@ function Polaroid({ doc, placed, tex, index }) {
   const showing = placed.page === topPage
 
   const pos = useMemo(() => rectCentreLocal(placed.rect, doc.paper), [placed, doc.paper])
-  const z = useMemo(() => topSheetZ(doc) + Z_LIFT, [doc])
+  // The group sits ON the sheet; the three planes below carry their own height
+  // inside the one-leaf budget, so the whole polaroid clears a landing page.
+  const z = useMemo(() => topSheetZ(doc), [doc])
   const tilt = TILTS[index % TILTS.length]
   // Uniform scale, so the frame, the photo opening and the chin offset all keep
   // their proportions at any reserved size.
@@ -191,7 +220,7 @@ function Polaroid({ doc, placed, tex, index }) {
   return (
     <group ref={groupRef} position={[pos.x, pos.y, z]} rotation={[0, 0, tilt]} visible={showing}>
       {/* soft drop shadow, nudged down-right and set just under the frame */}
-      <mesh position={[0.03 * s, -0.035 * s, -0.006]} raycast={() => null}>
+      <mesh position={[0.03 * s, -0.035 * s, SHADOW_Z]} raycast={() => null}>
         <planeGeometry args={[FRAME.w * 1.06 * s, FRAME.h * 1.06 * s]} />
         <meshBasicMaterial
           ref={shadowMat}
@@ -202,12 +231,12 @@ function Polaroid({ doc, placed, tex, index }) {
         />
       </mesh>
       {/* white polaroid frame */}
-      <mesh raycast={() => null}>
+      <mesh position={[0, 0, FRAME_Z]} raycast={() => null}>
         <planeGeometry args={[FRAME.w * s, FRAME.h * s]} />
         <meshStandardMaterial ref={frameMat} color="#f7f5ee" roughness={0.85} transparent />
       </mesh>
       {/* the photo — desk mode uses the image only, never the caption/title */}
-      <mesh position={[0, PHOTO_OFFSET_Y * s, 0.002]} raycast={() => null}>
+      <mesh position={[0, PHOTO_OFFSET_Y * s, PHOTO_Z]} raycast={() => null}>
         <planeGeometry args={[POLAROID.photoW * s, POLAROID.photoH * s]} />
         <meshStandardMaterial ref={photoMat} map={tex} roughness={0.55} transparent />
       </mesh>
