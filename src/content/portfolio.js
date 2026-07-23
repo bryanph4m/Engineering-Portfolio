@@ -342,7 +342,7 @@ export const projects = [
       stars: 0,
       description: null,
       createdAt: '2026-07-02T03:25:29Z',
-      pushedAt: '2026-07-20T04:25:00Z',
+      pushedAt: '2026-07-20T05:19:06Z',
     },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
@@ -382,6 +382,14 @@ export const projects = [
       },
     ],
   },
+  // REVIEW: the résumé (read 2026-07-22) carries a fifth project with no entry
+  // on the site — "Camera Tracking Drone": a sub-250g autonomous tracking drone
+  // that follows only registered users, with a validated desktop prototype (a
+  // CUDA-accelerated YOLO11n + ByteTrack real-time pipeline in Python, typed
+  // YAML config, pytest-covered). No matching repo exists under
+  // github.com/bryanph4m (only `bryanph4m` and `Engineering-Portfolio` are
+  // public), so it is résumé-backed only. This is a candidate for /draft-project;
+  // do not hand-author the entry here. (flagged by /sync-content)
 ]
 
 /**
@@ -605,11 +613,13 @@ export const resume = {
           sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
 
-        // REVIEW: the refreshed résumé (2026-07-19) quantifies this role and the
-        // site's one-liner no longer carries any of it — "6,000+ students"
-        // represented, SSCCC resolution S26.10.01, and recommendations presented
-        // directly to district executives. Consider working the scale figure or
-        // the resolution into `sub`. (flagged by /sync-content)
+        // REVIEW: the résumé (read 2026-07-22) quantifies this role and the
+        // site's one-liner still carries none of it — "6,000+ students"
+        // represented, and academic/operational recommendations presented
+        // directly to district executives at an institutional leadership retreat.
+        // Consider working the scale figure into `sub`. (Note: the earlier
+        // "SSCCC resolution S26.10.01" this flagged is no longer on the résumé —
+        // that line has since been dropped.) (flagged by /sync-content)
         {
           title: 'Mission College, Associated Student Government Senator',
           sub: 'Aug 2025 – May 2026 · student advocacy with campus leadership',
