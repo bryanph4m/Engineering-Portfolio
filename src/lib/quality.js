@@ -27,8 +27,27 @@ const shortSide =
     ? 1200
     : Math.min(window.innerWidth, window.innerHeight)
 
+/**
+ * Force a tier, for measuring the budget in CLAUDE.md § "Performance budget"
+ * from a desktop browser: `?tier=mobile` / `?tier=desktop`.
+ *
+ * The mobile tier decides texture rasters, DPR cap, MSAA and segment counts —
+ * i.e. most of what the budget is written in terms of — and every one of those
+ * is baked once at module load and cannot be re-tiered mid-session. Without an
+ * override there is no way to check a new feature's mobile cost except on a
+ * phone, which in practice means it does not get checked. Only the tier moves;
+ * nothing else in the site reads this.
+ */
+const forcedTier =
+  typeof window === 'undefined'
+    ? null
+    : new URLSearchParams(window.location.search).get('tier')
+
 /** A phone-class device: touch-only AND a small viewport. */
-export const IS_MOBILE = IS_TOUCH && shortSide < 900
+export const IS_MOBILE =
+  forcedTier === 'mobile' ? true
+  : forcedTier === 'desktop' ? false
+  : IS_TOUCH && shortSide < 900
 
 /**
  * What the desk is allowed to spend, per tier. Every number here is a lever the

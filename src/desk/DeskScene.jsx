@@ -4,6 +4,7 @@ import { PerspectiveCamera, AdaptiveDpr, Preload } from '@react-three/drei'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { QUALITY } from '../lib/quality'
+import { PERF_HOOK } from '../lib/perfHook'
 import { CAMERA } from './constants'
 import Desk from './Desk'
 import DeskLamp from './DeskLamp'
@@ -78,7 +79,10 @@ export default function DeskScene() {
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping
         gl.toneMappingExposure = 1.05
-        if (import.meta.env.DEV && typeof window !== 'undefined') {
+        // Renderer + scene handles for the performance budget check in
+        // CLAUDE.md § "Performance budget" — see lib/perfHook for why they are
+        // reachable from a production build at all.
+        if (PERF_HOOK && typeof window !== 'undefined') {
           window.__gl = gl
           window.__scene = scene
         }

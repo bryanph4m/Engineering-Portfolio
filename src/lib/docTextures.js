@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { QUALITY } from './quality'
+import { perfPaint } from './perfHook'
 // desk/constants is a leaf module (it imports nothing), so reading the zoom
 // ceiling here cannot cycle. It is imported rather than duplicated because the
 // two numbers are one decision: how far a pinch may magnify a sheet is exactly
@@ -23,7 +24,7 @@ import { DOC_ZOOM } from '../desk/constants'
  *
  * Fitting rules, applied automatically (never hand-tuned per page):
  *  - every `text()` call measures itself against the content box first and
- *    steps its font size down (0.5px at a time, to a minimum scale) so a
+ *    drops its font size (onto a 0.5px grid, down to a minimum scale) so a
  *    single line never runs off the right edge;
  *  - if a single-page document's painted content still exceeds the box, the
  *    whole content layer is rescaled in small steps down to MIN_PAGE_SCALE.
@@ -151,7 +152,7 @@ export function docTexture(doc, page = 0, detail = false) {
   // arrive so the drafting look survives a cold cache. On a warm cache the
   // faces are already in, and the first paint is the real one — repainting
   // every sheet a second time for an identical result is pure cost, so skip it.
-  paint(c, doc, page, links, W, H)
+  perfPaint(texKey, c, () => paint(c, doc, page, links, W, H))
   tex.needsUpdate = true
   const faces = [`16px ${HAND}`, `16px ${TYPE}`, `16px ${MONO}`]
   if (faces.every((f) => document.fonts.check(f))) {
@@ -205,7 +206,49 @@ function scratchCanvas(name, w, h) {
   return c
 }
 
-/** Axis-aligned bounds of everything painted on `layer`, or null if blank. */
+/**
+ * Axis-aligned bounds of everything painted on `layer`, or null if blank.
+ *
+ * Four directional sweeps that stop at the first inked line, rather than one
+ * pass over every texel. The answer is identical — same threshold, same buffer
+ * — but the work is proportional to the MARGIN around the ink instead of to the
+ * page. Hence the awkward ordering: the row sweeps find the vertical extent
+ * first, and the column sweeps are then bounded by it, so the blank bands above
+ * and below the ink are never read a second time.
+ *
+ * ## What this does and does not fix
+ *
+ * Measured on a 473×640 buffer: the full scan was 6.8 ms, these sweeps 2.0 ms.
+ * Worth having — it runs on every single-page document at mount, three of them
+ * back to back — but it is NOT most of what this function costs.
+ *
+ * The rest is the readback above, and it is stubborn. Reading pixels out of a
+ * canvas that was just drawn to forces a GPU→CPU sync: measured, a 1×1
+ * `getImageData` straight after painting the layer costs ~14 ms all by itself,
+ * and the full 473×640 read costs ~5 ms more once that flush is paid. Shrinking
+ * the measurement raster does not help (the flush dominates, and the precision
+ * is spent — see below), and making the layer software-backed with
+ * `willReadFrequently` measured WORSE, ~23 ms, because the downscale then
+ * rasterises on the CPU. Both were tried and rejected on numbers.
+ *
+ * So this stays a real ~20 ms per single-page document, three times, at load.
+ * It is load-time only — a single-page sheet is painted once and never
+ * repainted — so it lengthens the loading screen rather than dropping a frame
+ * during an interaction. If it ever needs to go, the fix is structural: paint
+ * unfitted first, measure off the critical path, and repaint only in the
+ * (currently non-existent) overflow case.
+ *
+ * ## Do not reduce the measurement resolution
+ *
+ * It measures at half resolution and pads outward, and the pad is why the
+ * halving is safe: over-reporting the ink can only make the fit pass more
+ * cautious, where under-reporting it would let content escape the box. There is
+ * no room for a coarser raster. Measured clearance between the ink and the
+ * content box on the three single-page sheets is 20 px (About), −2 px (Resume)
+ * and −4 px (Contact) — the latter two already sit ON the FIT_TOL threshold, so
+ * a quarter-scale measurement's ±4 px error would tip them into a whole-page
+ * shrink and visibly re-lay-out two documents.
+ */
 function inkBounds(layer, W, H) {
   const mw = Math.ceil(W / 2)
   const mh = Math.ceil(H / 2)
@@ -214,21 +257,36 @@ function inkBounds(layer, W, H) {
   mctx.clearRect(0, 0, mw, mh)
   mctx.drawImage(layer, 0, 0, mw, mh)
   const px = mctx.getImageData(0, 0, mw, mh).data
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (let y = 0; y < mh; y++) {
-    for (let x = 0; x < mw; x++) {
-      if (px[(y * mw + x) * 4 + 3] > 16) {
-        if (x < minX) minX = x
-        if (x > maxX) maxX = x
-        if (y < minY) minY = y
-        if (y > maxY) maxY = y
-      }
-    }
+  const INK = 16 // alpha above this counts as painted
+
+  /** Is any texel in row `y`, between columns x0..x1, inked? */
+  const rowInked = (y, x0, x1) => {
+    const base = y * mw * 4 + 3
+    for (let x = x0; x <= x1; x++) if (px[base + x * 4] > INK) return true
+    return false
   }
-  if (maxX < minX) return null
+  /** …and the same question down a column, between rows y0..y1. */
+  const colInked = (x, y0, y1) => {
+    const step = mw * 4
+    for (let y = y0, i = y0 * step + x * 4 + 3; y <= y1; y++, i += step) {
+      if (px[i] > INK) return true
+    }
+    return false
+  }
+
+  let minY = -1
+  for (let y = 0; y < mh; y++) if (rowInked(y, 0, mw - 1)) { minY = y; break }
+  if (minY < 0) return null // nothing painted at all
+  let maxY = minY
+  for (let y = mh - 1; y > minY; y--) if (rowInked(y, 0, mw - 1)) { maxY = y; break }
+
+  // Only the inked rows can hold the horizontal extremes, so the column sweeps
+  // never touch the blank bands above and below.
+  let minX = 0
+  for (let x = 0; x < mw; x++) if (colInked(x, minY, maxY)) { minX = x; break }
+  let maxX = minX
+  for (let x = mw - 1; x > minX; x--) if (colInked(x, minY, maxY)) { maxX = x; break }
+
   // back to full-res px, padded a texel outward for the downsample blur
   return { x: minX * 2 - 2, y: minY * 2 - 2, x2: (maxX + 1) * 2 + 2, y2: (maxY + 1) * 2 + 2 }
 }
@@ -511,10 +569,42 @@ export function text(ctx, str, x, y, { font = MONO, size = 32, color = INK, alig
   let w = ctx.measureText(str).width
   if (w > avail) {
     const min = Math.max(14, size * MIN_TEXT_SCALE)
+    // Solve for the size that fits, rather than walking down to it.
+    //
+    // This used to step down 0.5px at a time from `size`, re-measuring at each
+    // step — up to 18 iterations for one long line. Every step assigns a NEW
+    // `ctx.font` string, and a font description Chromium has not seen before
+    // misses its font and shaping caches: measured, a run of 71 measureText
+    // calls costs 0.3 ms at a fixed size and 67 ms when the size changes each
+    // time. That one loop was ~100 ms of the 5-page Projects stack's last
+    // sheet — the single largest hitch on the page-flip path, and it was never
+    // about the drawing at all.
+    //
+    // Text width is very nearly proportional to font size (letterSpacing is set
+    // proportionally too, so it scales with it), so one measurement gives the
+    // answer directly. The estimate is floored onto the same 0.5px grid the
+    // loop used, which makes it conservative — it can land a step small, never
+    // a step large. The two corrections after it recover the exact same answer
+    // the search produced: step down while it still overflows (hinting and
+    // integer advances make the relationship not quite linear), then probe one
+    // step up in case the floor gave away a half-pixel. Typical cost is two
+    // font changes instead of eighteen.
+    const est = Math.floor(((s * avail) / w) * 2) / 2
+    s = Math.max(min, Math.min(s, est))
+    setFace(s)
+    w = ctx.measureText(str).width
     while (w > avail && s - 0.5 >= min) {
       s -= 0.5
       setFace(s)
       w = ctx.measureText(str).width
+    }
+    if (w <= avail && s + 0.5 <= size) {
+      setFace(s + 0.5)
+      const up = ctx.measureText(str).width
+      if (up <= avail) {
+        s += 0.5
+        w = up
+      } else setFace(s)
     }
     if (w > avail && import.meta.env.DEV) {
       console.warn(
@@ -532,13 +622,56 @@ export function text(ctx, str, x, y, { font = MONO, size = 32, color = INK, alig
 /* paper backgrounds                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The paper-fibre speckle, painted once into a small tile and then repeated.
+ *
+ * This used to be a per-page loop of `(W × H) / 600` individual `fillRect`s —
+ * one canvas state change, one colour string allocation and one fill per fleck,
+ * so ~4,000 of each for a full sheet. It was the single most expensive thing on
+ * the paint path: 6–19 ms per page, measured, which is a dropped frame every
+ * time a page turn paints a sheet for the first time, and ~50 ms of the desk's
+ * startup across the five documents' first pages.
+ *
+ * It was also the one cost the mobile tier did NOT reduce. The fleck count is
+ * driven by the AUTHORED page size, while `QUALITY.texScale` only shrinks the
+ * raster underneath — so a phone drew the same four thousand rects into a
+ * quarter of the pixels and paid desktop's full CPU price for them. That is
+ * exactly backwards for the tier that can least afford it.
+ *
+ * One tile, drawn once for the session, costs the same as about 110 of those
+ * flecks and then fills any sheet in a single pattern-filled rect. The look is
+ * unchanged in kind: this is 2 px specks at ≤5% alpha, i.e. noise, and noise
+ * has no features to repeat visibly — the tile is deliberately not a multiple
+ * of any page width so what edge there is never lands on the same column twice.
+ * The seed is fixed rather than per-page for the same reason it can be: no page
+ * is distinguishable by its fibre.
+ */
+const FIBRE_TILE = 512
+let fibrePattern = null
+
+function fibre(ctx, W, H) {
+  if (!fibrePattern) {
+    const t = document.createElement('canvas')
+    t.width = t.height = FIBRE_TILE
+    const tctx = t.getContext('2d')
+    const rnd = mulberry32(hashCode('paper:fibre'))
+    // Same density the per-page loop used: one fleck per 600 px² of paper.
+    for (let i = 0; i < (FIBRE_TILE * FIBRE_TILE) / 600; i++) {
+      tctx.fillStyle = `rgba(${120 + rnd() * 90},${110 + rnd() * 80},${90 + rnd() * 70},${rnd() * 0.05})`
+      tctx.fillRect(rnd() * FIBRE_TILE, rnd() * FIBRE_TILE, 2, 2)
+    }
+    fibrePattern = tctx.createPattern(t, 'repeat')
+  }
+  ctx.save()
+  ctx.fillStyle = fibrePattern
+  ctx.fillRect(0, 0, W, H)
+  ctx.restore()
+}
+
 export function paperBase(ctx, W, H, rnd, tone = '#f3ebd6') {
   ctx.fillStyle = tone
   ctx.fillRect(0, 0, W, H)
-  for (let i = 0; i < (W * H) / 600; i++) {
-    ctx.fillStyle = `rgba(${120 + rnd() * 90},${110 + rnd() * 80},${90 + rnd() * 70},${rnd() * 0.05})`
-    ctx.fillRect(rnd() * W, rnd() * H, 2, 2)
-  }
+  fibre(ctx, W, H)
   for (let i = 0; i < 5; i++) {
     const x = rnd() * W
     const y = rnd() * H

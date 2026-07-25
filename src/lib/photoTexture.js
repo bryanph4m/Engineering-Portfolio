@@ -21,18 +21,38 @@ import { QUALITY } from './quality'
  * session rather than just the first few seconds.
  */
 
-// Longest edge, in px, a photo texture is allowed to keep. A focused album is
-// ~600 device px tall on a phone at the capped DPR and ~850 on a desktop; these
-// leave real headroom above that for the mip chain to sample from, while still
-// cutting a 2160×2880 portrait by ~93% (mobile) / ~70% (desktop) of its pixels.
-const MAX_EDGE = QUALITY.mobile ? 768 : 1600
+// Longest edge, in px, a photo texture is allowed to keep.
+//
+// There are two caps because there are two wildly different photo surfaces on
+// this desk, and for a long time they shared one number sized for the larger:
+//
+//  - ALBUM — the framed photo (desk/PhotoFrame), picked up to fill the view.
+//    Its image plane is 0.78 of the frame's 0.9 world height and the frame is
+//    scaled to FOCUS_POSE.targetHeight, so it covers ~87% of the focused view:
+//    ~1600 device px on a 1440p desktop at the capped DPR. 1600 is that size,
+//    with the mip chain doing the rest.
+//
+//  - POLAROID — a photo pinned to a document page (desk/Polaroids). Its opening
+//    is 0.575 world units on a sheet up to 2.9 tall, so once the sheet is scaled
+//    to the same targetHeight the photo is only ~20% of the sheet's height:
+//    measured at 155 device px on this 1440×900 window, ~372 on a 1440p desktop.
+//
+// One cap for both meant every page polaroid was uploaded at 1000×1250 for a
+// surface that never exceeds ~372 px — roughly 3× oversampled on each axis, so
+// ~11× the texels it can ever sample, at 6.4 MB each. That is texture memory
+// bought for magnification that cannot happen: pinch-to-zoom is touch-only, and
+// touch is the mobile tier, where the cap is smaller again. 512 leaves ~1.4×
+// headroom over the largest desktop case; the mobile 384 covers a phone's
+// ~182 px polaroid all the way through a full DOC_ZOOM.max pinch.
+const ALBUM_MAX_EDGE = QUALITY.mobile ? 768 : 1600
+export const POLAROID_MAX_EDGE = QUALITY.mobile ? 384 : 512
 
-/** Downscale to MAX_EDGE, preserving aspect. Returns the source untouched if
+/** Downscale to `maxEdge`, preserving aspect. Returns the source untouched if
  *  it already fits, so correctly-sized photos cost nothing. */
-function fit(img) {
+function fit(img, maxEdge) {
   const longest = Math.max(img.width, img.height)
-  if (longest <= MAX_EDGE) return img
-  const s = MAX_EDGE / longest
+  if (longest <= maxEdge) return img
+  const s = maxEdge / longest
   const c = document.createElement('canvas')
   c.width = Math.max(1, Math.round(img.width * s))
   c.height = Math.max(1, Math.round(img.height * s))
@@ -46,16 +66,21 @@ function fit(img) {
 }
 
 /**
- * Load `src` as a colour texture, capped to the tier's size.
+ * Load `src` as a colour texture, capped to `maxEdge` px on its longest side.
  * `onLoad(texture)` fires only on success — a missing file is silent, leaving
  * the caller's painted placeholder in place, which is the long-standing
  * contract for a photo that hasn't been dropped in yet.
+ *
+ * The cap defaults to the album's, so the caller that needs the big one does
+ * not have to say so; the polaroids pass POLAROID_MAX_EDGE explicitly. Sizing
+ * a photo is the caller's decision because only the caller knows how large its
+ * surface gets on screen — see the two caps above.
  */
-export function loadPhotoTexture(src, onLoad) {
+export function loadPhotoTexture(src, onLoad, maxEdge = ALBUM_MAX_EDGE) {
   new THREE.TextureLoader().load(
     src,
     (t) => {
-      const sized = fit(t.image)
+      const sized = fit(t.image, maxEdge)
       if (sized !== t.image) {
         t.image = sized
         t.needsUpdate = true

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { IS_MOBILE, QUALITY } from './quality'
 import { HAND, MONO, TYPE } from './docTextures'
+import { perfPaint } from './perfHook'
 
 /**
  * The component page shown under the picked-up rocket — a blueprint-blue spec
@@ -285,8 +286,10 @@ export function paintRocketPage(part, index, count) {
   if (painted && painted.part === part && painted.index === index && painted.count === count) {
     return tex
   }
-  ctx.clearRect(0, 0, W, H)
-  paint(ctx, part, index, count)
+  perfPaint(`rocket-page:${part.id}`, ctx.canvas, () => {
+    ctx.clearRect(0, 0, W, H)
+    paint(ctx, part, index, count)
+  })
   tex.needsUpdate = true
   painted = { part, index, count }
   return tex

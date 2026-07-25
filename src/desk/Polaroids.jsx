@@ -4,7 +4,7 @@ import { useSpring } from '@react-spring/three'
 import { useSceneStore } from '../store/useSceneStore'
 import { texDims } from '../lib/docTextures'
 import { photoPlaceholderTexture, softShadowTexture } from '../lib/textures'
-import { loadPhotoTexture } from '../lib/photoTexture'
+import { loadPhotoTexture, POLAROID_MAX_EDGE } from '../lib/photoTexture'
 import { POLAROID, polaroidFrame } from '../lib/photos'
 import { flipFor, presentedPage } from './pageFlip'
 import { PAPER_T, SHEET_T } from './layout'
@@ -138,6 +138,9 @@ function usePhotoTextures(photos, docId) {
       if (!src || requested.current.has(i)) return
       if (!wantAll && p.page !== 0) return
       requested.current.add(i)
+      // A pinned polaroid is a fraction of the sheet it sits on, so it gets the
+      // small cap rather than the album's — see POLAROID_MAX_EDGE for the two
+      // on-screen sizes the split is derived from.
       loadPhotoTexture(src, (t) => {
         if (!aliveRef.current) return
         setTextures((prev) => {
@@ -145,7 +148,7 @@ function usePhotoTextures(photos, docId) {
           next[i] = t
           return next
         })
-      })
+      }, POLAROID_MAX_EDGE)
     })
   }, [photos, wantAll])
   return textures

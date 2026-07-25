@@ -60,7 +60,25 @@ html, body, #root {
   color: var(--paper);
   font-family: 'Architects Daughter', cursive;
 }
-.loader.is-hidden { opacity: 0; pointer-events: none; }
+/* Faded out AND taken out of compositing.
+   `opacity: 0` alone makes the layer invisible, not absent: this is a fixed,
+   full-viewport element carrying a background gradient and an SVG with a
+   `filter: blur(3px)` on the plume, and at opacity 0 it stayed stacked over the
+   WebGL canvas for the rest of the session. `visibility` is transitioned with a
+   0s duration DELAYED by the length of the opacity fade, so the crossfade still
+   plays in full and the layer is dropped the moment it ends.
+   Honest note on the payoff: this is hygiene, not a measured win. An A/B of 4
+   paired runs could not separate it from run-to-run noise on the machine it was
+   measured on — the mechanism is real (a composited full-screen layer with a
+   filter, permanently over the canvas) but its cost here is below what this
+   setup can resolve. Kept because it is free and obviously correct; do not cite
+   it as a performance fix without numbers. */
+.loader.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+}
 
 /* A fighter jet on a launch-like arc: it starts large and close, then curves up
    and away, shrinking into the distance. The whole flight is one SVG whose arc is

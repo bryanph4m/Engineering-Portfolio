@@ -142,6 +142,30 @@ nothing about the rendering changed.
 
 So: if the desk feels bad, measure a page turn, not the idle scene.
 
+Three things inside that paint were found and fixed (all in `lib/docTextures`),
+and they are worth knowing because none of them are about drawing more pixels:
+
+- **the per-line auto-fit in `text()`** stepped the font size down 0.5px at a
+  time, and every step assigns a new `ctx.font` that misses Chromium's font and
+  shaping caches — 71 `measureText` calls cost 0.3ms at a fixed size and 67ms
+  when the size changes each time. It now solves for the size directly. This
+  alone was 155ms → 11ms on the Projects stack's last sheet;
+- **the paper-fibre speckle in `paperBase()`** was thousands of individual
+  `fillRect`s per page, and the mobile tier did not reduce them (the count comes
+  from the authored page size, `texScale` only shrinks the raster). It is now
+  one cached tiling pattern: 6–19ms → ~0.2ms per page;
+- **`inkBounds()`** scanned every texel of a half-scale sheet; it now sweeps in
+  from the four edges and stops at the ink. Its remaining cost is the
+  `getImageData` readback, which is load-time only — see the note in that file
+  for what was tried against it and rejected on numbers.
+
+Net: the worst frame during a page flip went from 169ms to 44ms, and the
+synchronous paint the desk does before its first frame from 212ms to 150ms
+(paired A/B, medians; the mobile tier is 122ms → 42ms and 159ms → 108ms).
+
+The budget those numbers now live under is in `CLAUDE.md` § "Performance
+budget", and `tools/perf/` is the harness that produces them.
+
 > **Do not measure this in a headless browser.** Headless Chromium falls back to
 > SwiftShader (software rasterisation), where this scene runs at ~4fps and every
 > frame is a 300ms "long task" — the app's JS is 1% of wallclock and *everything*
@@ -189,8 +213,11 @@ src/
   ui/          DOM chrome: StartScreen, HudHints, EdgeHint, Loader
   lib/         quality.js (the device tier every render lever reads) + procedural
                canvas textures + page-flow pagination + photo layout/loading
+               + perfHook.js (the ?perf=1 profiling handles)
   store/       Zustand scene state
 public/assets/ fonts (bundled TTFs) + textures/ (drop-in real photos)
+tools/perf/    performance harness — measures the scene against the budget in
+               CLAUDE.md; see tools/perf/README.md
 ```
 
 ## Editing the content (the only file you should need)

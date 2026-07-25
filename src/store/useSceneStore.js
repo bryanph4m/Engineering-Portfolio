@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { CAMERA_PAN } from '../desk/constants'
+import { PERF_HOOK } from '../lib/perfHook'
 
 /**
  * Single source of truth for what the desk is doing. Kept deliberately tiny:
@@ -121,9 +122,11 @@ export const useSceneStore = create((set) => ({
     }),
 }))
 
-// Dev-only: let QA tooling and the console drive the scene directly
+// Let QA tooling and the console drive the scene directly
 // (e.g. __sceneStore.getState().focus('projects')) instead of having to
-// synthesize clicks against the WebGL canvas.
-if (import.meta.env.DEV && typeof window !== 'undefined') {
+// synthesize clicks against the WebGL canvas. Dev always; in a production
+// build only under ?perf=1, so a budget run can step the scene through the
+// states it has to be measured in (see lib/perfHook).
+if (PERF_HOOK && typeof window !== 'undefined') {
   window.__sceneStore = useSceneStore
 }
