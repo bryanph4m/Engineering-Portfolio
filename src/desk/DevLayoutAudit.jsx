@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { DOCUMENTS } from '../documents/registry'
+import { TAB_PROTRUDE, TAB_SIDE } from './ProjectTabs'
 
 /**
  * Dev-only layout regression check. Warns in the console when
@@ -45,13 +46,24 @@ export default function DevLayoutAudit() {
 
 function docObb(doc) {
   const yaw = doc.rest.yaw || 0
+  const ux = Math.cos(yaw)
+  const uz = -Math.sin(yaw)
+  // Index tabs (desk/ProjectTabs) stick out past the paper's edge on ONE side
+  // only (TAB_SIDE), so a document carrying `tabs` has a real footprint wider
+  // than its paper on that side alone. Widening `hw` symmetrically would (and
+  // once did) inflate the UNprotruded edge just as much, which can hide a real
+  // clip on the other side behind a phantom margin on this one — instead grow
+  // `hw` by half the protrusion and shift the box's centre the other half
+  // toward TAB_SIDE, so only the protruding edge actually moves.
+  const tabInflate = doc.tabs?.length ? TAB_PROTRUDE : 0
+  const shift = (tabInflate / 2) * TAB_SIDE
   return {
     label: `doc:${doc.id}`,
-    cx: doc.rest.position[0],
-    cz: doc.rest.position[2],
-    ux: Math.cos(yaw),
-    uz: -Math.sin(yaw),
-    hw: doc.paper.w / 2 + DOC_INFLATE,
+    cx: doc.rest.position[0] + shift * ux,
+    cz: doc.rest.position[2] + shift * uz,
+    ux,
+    uz,
+    hw: doc.paper.w / 2 + DOC_INFLATE + tabInflate / 2,
     hh: doc.paper.h / 2 + DOC_INFLATE,
   }
 }

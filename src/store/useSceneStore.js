@@ -46,6 +46,21 @@ export const useSceneStore = create((set) => ({
   // has actually come to rest (its spring's onRest clears it).
   flip: null,
 
+  // The multi-hop animated jump currently in flight (desk/ProjectTabs' "jump
+  // to this project" tabs), or null. `{ docId, target, dir }` — `target` is
+  // the final page the chain is heading for, `dir` is the direction every
+  // remaining hop steps in. `jumpToPage` sets the first hop's `flip` directly
+  // (same shape `nextPage`/`prevPage` produce, so MultiPageSheets/Polaroids
+  // need no changes to render a jump's hops); `endFlip` then walks the chain
+  // one hop per landed turn until `pageIndex` reaches `target`.
+  //
+  // `nextPage`/`prevPage` no-op while this is set, so a corner-click, arrow
+  // key or swipe can't interleave a step into an in-flight jump and desync
+  // `pageIndex` from the hop actually animating. `focus`/`close` clear it —
+  // closing the document (or refocusing another) mid-jump must not leave it
+  // set, or the guard above would wedge the document unflippable forever.
+  jump: null,
+
   // How far the view has been panned from centre, in whole edge-taps
   // (-steps…+steps). Stored as a step rather than a distance because the world
   // distance a step covers depends on the viewport — CameraRig owns that math.
@@ -70,15 +85,34 @@ export const useSceneStore = create((set) => ({
   // opens at its readable resting size rather than inheriting the last one's
   // magnification. desk/TouchControls resets the matching docZoom offsets off
   // the same transitions.
-  focus: (id) => set({ focusedId: id, pageIndex: 0, flip: null, zoomDetail: false }),
+  focus: (id) => set({ focusedId: id, pageIndex: 0, flip: null, jump: null, zoomDetail: false }),
   close: () =>
-    set({ focusedId: null, hoveredId: null, pageIndex: 0, flip: null, zoomDetail: false }),
+    set({ focusedId: null, hoveredId: null, pageIndex: 0, flip: null, jump: null, zoomDetail: false }),
 
   /** A turning leaf has come to rest. Scoped to the document that owns the
    *  turn so a late onRest from a document that has since been set down cannot
-   *  clear a flip belonging to the one picked up after it. */
+   *  clear a flip belonging to the one picked up after it.
+   *
+   *  If a multi-hop jump (see `jump` above) is still short of its target, this
+   *  is also the chain driver: rather than clearing the turn, it dispatches
+   *  the next hop in the same update, exactly the way `nextPage`/`prevPage`
+   *  would step it, so MultiPageSheets sees one continuous stream of flips
+   *  with no gap for a stray click to land in. */
   endFlip: (docId) =>
-    set((s) => (s.flip && s.flip.docId === docId ? { flip: null } : s)),
+    set((s) => {
+      if (!s.flip || s.flip.docId !== docId) return s
+      const j = s.jump
+      if (j && j.docId === docId && s.pageIndex !== j.target) {
+        const next = s.pageIndex + j.dir
+        const remaining = Math.abs(j.target - next)
+        return {
+          pageIndex: next,
+          flip: { docId, dir: j.dir, idx: j.dir > 0 ? s.pageIndex : next, fast: remaining > 0 },
+          jump: remaining > 0 ? j : null,
+        }
+      }
+      return { flip: null, jump: null }
+    }),
 
   setHovered: (id) =>
     set((s) => (s.hoveredId === id ? s : { hoveredId: id })),
@@ -97,6 +131,10 @@ export const useSceneStore = create((set) => ({
   // middle of the turn, which is the one moment there is no frame to spare.
   nextPage: (pageCount) =>
     set((s) => {
+      // A multi-hop jump owns the flip chain until it lands (see `jump`
+      // above) — a corner-click here mid-jump would desync `pageIndex` from
+      // whatever hop `flip` is actually animating.
+      if (s.jump) return s
       if (s.focusedId == null || s.pageIndex >= pageCount - 1) return s
       return {
         pageIndex: s.pageIndex + 1,
@@ -109,6 +147,7 @@ export const useSceneStore = create((set) => ({
 
   prevPage: () =>
     set((s) => {
+      if (s.jump) return s
       if (s.focusedId == null || s.pageIndex <= 0) return s
       const back = s.pageIndex - 1
       return {
@@ -117,6 +156,41 @@ export const useSceneStore = create((set) => ({
         // off the pile and lands face-up, which is why the sheet underneath has
         // to keep painting the outgoing page until it does (desk/pageFlip).
         flip: { docId: s.focusedId, dir: -1, idx: back },
+        zoomDetail: false,
+      }
+    }),
+
+  /**
+   * Jump straight to a specific page of document `id`, animated as a chain of
+   * ordinary one-page flips (desk/ProjectTabs' index tabs) rather than a hard
+   * cut. Opens the document at page 0 first if it isn't the focused one, the
+   * same as `focus`; if it's already open, jumps from wherever it currently
+   * is, in either direction. Dispatches only the FIRST hop here — `endFlip`
+   * walks the rest of the chain as each hop's leaf lands.
+   *
+   * Every hop but the last runs at the sped-up `fast` config (desk/props.jsx
+   * MultiPageSheets) so a long jump reads as "flipping through, quickly"
+   * rather than either a slow flip-per-page crawl or a cut; the final hop
+   * lands at normal speed.
+   */
+  jumpToPage: (id, pageCount, target) =>
+    set((s) => {
+      if (s.jump) return s // a jump is already in flight elsewhere — ignore
+      if (s.focusedId != null && s.focusedId !== id) return s // another doc is open
+      const opening = s.focusedId !== id
+      const start = opening ? 0 : s.pageIndex
+      const clamped = Math.max(0, Math.min(pageCount - 1, target))
+      if (clamped === start) {
+        return { focusedId: id, pageIndex: clamped, flip: null, jump: null, zoomDetail: false }
+      }
+      const dir = clamped > start ? 1 : -1
+      const next = start + dir
+      const remaining = Math.abs(clamped - next)
+      return {
+        focusedId: id,
+        pageIndex: next,
+        flip: { docId: id, dir, idx: dir > 0 ? start : next, fast: remaining > 0 },
+        jump: remaining > 0 ? { docId: id, target: clamped, dir } : null,
         zoomDetail: false,
       }
     }),

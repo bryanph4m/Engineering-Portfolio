@@ -7,6 +7,7 @@ import { docTexture } from '../lib/docTextures'
 import { seg } from '../lib/quality'
 import { flipFor, presentedPage } from './pageFlip'
 import { PAPER_T, SHEET_T } from './layout'
+import ProjectTabs from './ProjectTabs'
 
 // The physical "prop" for each document, drawn in its own local XY plane
 // centred on the origin (normal +Z). All readable content is painted canvas
@@ -228,6 +229,17 @@ const FOLD_BASE = 0.55
 const FOLD_VEL = 0.5
 const VEL_REF = 6
 
+// Normal one-page-turn spring, and the sped-up config used for every
+// intervening hop of a multi-page jump (desk/ProjectTabs' index tabs, chained
+// through store/useSceneStore's `jump`). Friction is scaled by
+// sqrt(tension ratio) to hold the same damping ratio as TURN_CONFIG, so a
+// fast hop is a quicker version of the same underdamped turn rather than a
+// differently-shaped one — it settles roughly 1.65x faster. The existing
+// hinge-speed-driven curl (FOLD_VEL/VEL_REF above) already whips a fast turn
+// harder with no changes needed here; it was built anticipating exactly this.
+const TURN_CONFIG = { tension: 140, friction: 15 }
+const FAST_TURN_CONFIG = { tension: 380, friction: 26 }
+
 /** One already-read leaf at rest on the flipped-over pile. */
 function PileLeaf({ doc, idx, depth, back }) {
   const { w, h } = doc.paper
@@ -284,7 +296,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     turn: 0,
     // underdamped on purpose: the overshoot past the rest angle is clamped by
     // applyTurn, which reads as the page pressing flat and springing back
-    config: { tension: 140, friction: 15 },
+    config: TURN_CONFIG,
   }))
   const pivotRef = useRef()
   const slideRef = useRef()
@@ -332,7 +344,15 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     turnApi.start({
       from: { turn: from },
       turn: anim.dir > 0 ? PILE.base : 0,
-      onRest: () => endFlip(doc.id),
+      config: anim.fast ? FAST_TURN_CONFIG : TURN_CONFIG,
+      // react-spring also calls onRest on interruption (result.finished ===
+      // false) — a jump chain's next hop is only ever dispatched from this
+      // callback (store's endFlip), so a cancelled result must not advance
+      // the chain a page it never actually turned.
+      onRest: (result) => {
+        if (result.finished === false) return
+        endFlip(doc.id)
+      },
     })
     // applyTurn is re-created per render but only reads refs + constants
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -463,6 +483,7 @@ export function StackProp({ doc }) {
         <boxGeometry args={[0.5, 0.16, 0.09]} />
         <meshStandardMaterial color="#3b3b40" metalness={0.6} roughness={0.4} />
       </mesh>
+      {doc.tabs?.length ? <ProjectTabs doc={doc} /> : null}
     </group>
   )
 }

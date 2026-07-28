@@ -139,6 +139,12 @@ export const projects = [
     id: 'asideai',
     name: 'Aside AI',
     category: 'Hardware · Software',
+    // Index-tab styling for the desk's Projects stack (desk/ProjectTabs) — a
+    // short manual label + a muted washi-tape color, sibling to the other
+    // editorial fields above. Optional: unset projects fall back to a
+    // rotating palette + drawing number (documents/content/projects.js).
+    tabLabel: 'ASD',
+    tabColor: '#c9704f',
     summary: '1st place, Deepgram track · Berkeley AI Hackathon',
     // substring of `summary` the desk sheet circles in red; must appear verbatim
     highlight: '1st place',
@@ -193,6 +199,8 @@ export const projects = [
     id: 'mission-launch-rocketry',
     name: 'Mission Launch Rocketry',
     category: 'Rocketry',
+    tabLabel: 'MLR',
+    tabColor: '#8a9b6e',
     summary: 'founded & led a 52-member college rocketry club',
     specs: [
       { lead: 'Founder & President', sub: 'budget + design-build-launch, concept → flight' },
@@ -231,6 +239,8 @@ export const projects = [
     id: 'recco',
     name: 'Recco',
     category: 'Software',
+    tabLabel: 'REC',
+    tabColor: '#5b84a6',
     summary: 'YC AI Growth Hackathon · camera-first iOS networking assistant',
     specs: [
       { lead: 'Identifies people at events, live', sub: 'face tracking + cloud vision + identity lookup' },
@@ -281,6 +291,8 @@ export const projects = [
     id: 'rollaway',
     name: 'RollAway',
     category: 'Software',
+    tabLabel: 'ROL',
+    tabColor: '#d9a441',
     summary: '1st place, Beginner track · MLH × DigitalOcean AI for Social Good',
     highlight: '1st place',
     specs: [
@@ -332,6 +344,8 @@ export const projects = [
     id: 'engineering-portfolio',
     name: 'Engineering Portfolio',
     category: 'Software',
+    tabLabel: 'ENG',
+    tabColor: '#a65b7c',
     summary: 'this site, a 3D desk & a wiki view from one shared content source',
     // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
     // hand-edit; manual editorial fields live outside this sub-object.
