@@ -2,7 +2,7 @@ import { restHeightFor } from '../desk/layout'
 import { PHOTO_FRAME_ID, ROCKET_ID } from '../desk/constants'
 import { gallery, research } from '../content/portfolio'
 import { aboutPages, aboutPhotos, ABOUT_PAPER } from './content/about'
-import { projectPages, projectPhotos, projectTabs, PROJECTS_PAPER } from './content/projects'
+import { projectPages, projectPhotos, PROJECTS_PAPER } from './content/projects'
 import { researchPages, researchPhotos, RESEARCH_PAPER } from './content/research'
 import { resumePages } from './content/resume'
 import { contactPages } from './content/contact'
@@ -45,9 +45,6 @@ export const DOCUMENTS = [
     // Polaroids pinned to the pages their photos flowed onto (Polaroids.jsx).
     // Absent/empty on a document simply means no photos.
     photos: projectPhotos,
-    // Sticky-note index tabs, one per project (desk/ProjectTabs.jsx). Absent
-    // on every other document — only Projects has enough pages to need it.
-    tabs: projectTabs,
     paper: PROJECTS_PAPER,
     rest: rest('stack', 1.8, 1.05, -0.12),
   },

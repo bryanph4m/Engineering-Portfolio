@@ -365,7 +365,6 @@ const detailWithPhotos = (p) => {
 }
 
 const sheets = projects.map((p, i) => ({
-  id: p.id,
   decor,
   cont: cont(p.name.toUpperCase()),
   blocks: [
@@ -387,20 +386,3 @@ export const projectPages = flowSheets(sheets, box)
 // Consumed by the desk registry → Polaroids.jsx. Simple mode reads the raw
 // `projects[].photos` instead (it wants the titles/captions too).
 export const projectPhotos = placedPhotos(projectPages)
-
-// One sticky-note index tab per project, for the desk's ProjectTabs. `page`
-// is the first flowed page carrying that project's sheet id (see the `id`
-// passed into `sheets` above and threaded through by pageFlow's flowSheets) —
-// so a tab always lands on a project's opening page even after its content
-// grows enough to spill onto a continuation sheet. `tabLabel`/`tabColor` are
-// optional manual fields on the project entry (src/content/portfolio.js); a
-// project that doesn't set them still gets a tab for free, off this fallback
-// palette and its drawing number, so the tab rail scales with the projects
-// list with no per-project wiring required.
-const TAB_PALETTE = ['#c9704f', '#8a9b6e', '#5b84a6', '#d9a441', '#a65b7c']
-export const projectTabs = projects.map((p, i) => ({
-  id: p.id,
-  label: p.tabLabel ?? `0${i + 1}`,
-  color: p.tabColor ?? TAB_PALETTE[i % TAB_PALETTE.length],
-  page: Math.max(0, projectPages.findIndex((pg) => pg.id === p.id)),
-}))

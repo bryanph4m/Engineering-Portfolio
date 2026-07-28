@@ -18,10 +18,6 @@
  *   blocks: [Block]
  *   cont?: Block                        optional small "cont'd" header
  *                                       prepended to continuation pages
- *   id?: any                            opaque tag carried onto every page
- *                                       this sheet produces, so a caller can
- *                                       find "which page did sheet X start
- *                                       on" without re-deriving the flow
  * }
  * Block: {
  *   h:    advance height in texture px (how far the cursor moves)
@@ -84,11 +80,7 @@ export function flowSheets(sheets, box) {
     let y = box.y
     let float = null // active float on the current page (one at a time)
     const flush = () => {
-      // `id` is optional and passed through verbatim onto every page this
-      // sheet produces (including continuation pages), so callers can find
-      // "which page does sheet X start on" without re-deriving the flow
-      // (documents/content/projects.js uses this for jump-to-project tabs).
-      if (items.length) flowed.push({ decor: sheet.decor, id: sheet.id, items })
+      if (items.length) flowed.push({ decor: sheet.decor, items })
       items = []
       float = null // a float never spans a page break
     }
@@ -170,9 +162,8 @@ export function flowSheets(sheets, box) {
     flush()
   }
 
-  return flowed.map(({ decor, id, items }) => ({
+  return flowed.map(({ decor, items }) => ({
     decor,
-    id,
     // dev-only: the ordered kinds of the blocks that landed on this page, so
     // widow/orphan checks and the debug harness can inspect pagination without
     // re-deriving the flow. Purely metadata; the painters never read it.

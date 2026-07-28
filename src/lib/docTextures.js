@@ -194,41 +194,6 @@ export function docLinks(doc, page = 0) {
   return linkCache.get(keyFor(doc, page)) ?? []
 }
 
-/**
- * The texture for `doc`/`page` if it has already been painted, or undefined —
- * never triggers a paint. For pages that are only being flipped PAST (a
- * multi-hop jump's intervening hops, desk/props.jsx MultiPageSheets), so a
- * page visited earlier in the session is shown for free instead of being
- * demoted to a placeholder just because this particular hop doesn't want to
- * pay for a fresh paint.
- */
-export function docTextureCached(doc, page = 0, detail = false) {
-  return texCache.get(texKeyFor(doc, page, detail))
-}
-
-// One flat-colour texture per tone, shared across every document and reused
-// for the life of the session — stands in for a page's real content while it
-// is only being flipped past, not read (desk/props.jsx). A 4x4 solid fill
-// costs nothing to paint and nothing to keep resident, versus the full
-// canvas `paint()` (text fitting, chrome, the fibre pattern) a real page
-// costs on first paint. Kept as an always-present *texture*, never a null
-// `map`, because toggling a material between "has a map" and "has none"
-// recompiles its shader (needs `material.needsUpdate = true`); swapping the
-// texture a map points at does not.
-const placeholderCache = new Map()
-export function placeholderTexture(tone) {
-  let tex = placeholderCache.get(tone)
-  if (tex) return tex
-  const c = document.createElement('canvas')
-  c.width = c.height = 4
-  c.getContext('2d').fillStyle = tone
-  c.getContext('2d').fillRect(0, 0, 4, 4)
-  tex = new THREE.CanvasTexture(c)
-  tex.colorSpace = THREE.SRGBColorSpace
-  placeholderCache.set(tone, tex)
-  return tex
-}
-
 // Shared offscreen canvases: `layer` catches the content pass so it can be
 // measured and (re)composited; `meas` is a half-scale alpha readback target.
 const scratch = { layer: null, meas: null }

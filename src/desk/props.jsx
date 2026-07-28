@@ -3,11 +3,10 @@ import { useFrame } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
-import { docTexture, docTextureCached, placeholderTexture } from '../lib/docTextures'
+import { docTexture } from '../lib/docTextures'
 import { seg } from '../lib/quality'
 import { flipFor, presentedPage } from './pageFlip'
 import { PAPER_T, SHEET_T } from './layout'
-import ProjectTabs from './ProjectTabs'
 
 // The physical "prop" for each document, drawn in its own local XY plane
 // centred on the origin (normal +Z). All readable content is painted canvas
@@ -229,37 +228,8 @@ const FOLD_BASE = 0.55
 const FOLD_VEL = 0.5
 const VEL_REF = 6
 
-// Normal one-page-turn spring, and the sped-up config used for every
-// intervening hop of a multi-page jump (desk/ProjectTabs' index tabs, chained
-// through store/useSceneStore's `jump`). Friction is scaled by
-// sqrt(tension ratio) to hold the same damping ratio as TURN_CONFIG, so a
-// fast hop is a quicker version of the same underdamped turn rather than a
-// differently-shaped one — it settles roughly 1.65x faster. The existing
-// hinge-speed-driven curl (FOLD_VEL/VEL_REF above) already whips a fast turn
-// harder with no changes needed here; it was built anticipating exactly this.
-const TURN_CONFIG = { tension: 140, friction: 15 }
-const FAST_TURN_CONFIG = { tension: 650, friction: 32 }
-
-/**
- * The texture for a page that is only being FLIPPED PAST during a fast jump
- * hop, not read — real content if it happens to be cached already (a page
- * visited earlier in the session costs nothing to reuse), a flat placeholder
- * otherwise. `cheap` is false for the one page each hop actually has to be
- * correct for (see `finalPage` in MultiPageSheets), which still always gets
- * a real, painted-if-necessary texture via `docTexture`.
- */
-function pageTex(doc, page, cheap, detail, tone = '#e8dfca') {
-  if (!cheap) return docTexture(doc, page, detail)
-  return docTextureCached(doc, page, detail) ?? placeholderTexture(tone)
-}
-
-/** One already-read leaf at rest on the flipped-over pile. Never forces a
- *  fresh paint: a page that landed here without ever being the presented
- *  page (flipped past during a fast jump hop) shows the placeholder — its
- *  textured face is turned away from the camera at this pile angle anyway
- *  (see PILE.base), so the difference is not visible, and a real flip back
- *  onto it later paints it for real at that point. */
-function PileLeaf({ doc, idx, depth, back, blank }) {
+/** One already-read leaf at rest on the flipped-over pile. */
+function PileLeaf({ doc, idx, depth, back }) {
   const { w, h } = doc.paper
   const topZ = stackTopZ(doc)
   return (
@@ -270,10 +240,7 @@ function PileLeaf({ doc, idx, depth, back, blank }) {
       <group position={[0, -PILE.gap, 0]}>
         <mesh position={[0, -h / 2, 0.001]}>
           <planeGeometry args={[w, h]} />
-          <meshStandardMaterial
-            map={docTextureCached(doc, idx) ?? placeholderTexture(blank[0])}
-            roughness={0.9}
-          />
+          <meshStandardMaterial map={docTexture(doc, idx)} roughness={0.9} />
         </mesh>
         <mesh position={[0, -h / 2, -0.001]} rotation={[0, Math.PI, 0]}>
           <planeGeometry args={[w, h]} />
@@ -310,24 +277,14 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   // which is what keeps a photo on the page the paper is painting in BOTH
   // directions (desk/pageFlip).
   const flip = useSceneStore((s) => s.flip)
-  const jump = useSceneStore((s) => s.jump)
   const endFlip = useSceneStore((s) => s.endFlip)
   const anim = flipFor(flip, doc.id)
-
-  // The one page this document will actually be resting on once whatever is
-  // currently in flight settles — the jump's ultimate target while a
-  // multi-hop chain (store's `jump`) is running, else wherever `pageIndex`
-  // already points (nextPage/prevPage set it synchronously at dispatch, so
-  // it's already the destination for an ordinary single-step flip). Every
-  // OTHER page a flip touches along the way is being flipped PAST, not read,
-  // and is fair game for the cheap placeholder below (pageTex).
-  const finalPage = jump && jump.docId === doc.id ? jump.target : pageIndex
 
   const [{ turn }, turnApi] = useSpring(() => ({
     turn: 0,
     // underdamped on purpose: the overshoot past the rest angle is clamped by
     // applyTurn, which reads as the page pressing flat and springing back
-    config: TURN_CONFIG,
+    config: { tension: 140, friction: 15 },
   }))
   const pivotRef = useRef()
   const slideRef = useRef()
@@ -371,30 +328,15 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     // Seed the velocity estimate at the start angle so an opening frame can't
     // read as an enormous jump and slam the sheet to full curl.
     prevTurn.current = from
-    // Real texture only if this leaf carries the page everything is actually
-    // headed for; every other hop of a chain is flipping this page PAST, so
-    // it gets a cheap stand-in unless it's already cached from an earlier
-    // visit (pageTex above).
-    rig.front.material.map = pageTex(doc, anim.idx, anim.idx !== finalPage, false, blank[0])
+    rig.front.material.map = docTexture(doc, anim.idx)
     turnApi.start({
       from: { turn: from },
       turn: anim.dir > 0 ? PILE.base : 0,
-      config: anim.fast ? FAST_TURN_CONFIG : TURN_CONFIG,
-      // react-spring also calls onRest on interruption (result.finished ===
-      // false) — a jump chain's next hop is only ever dispatched from this
-      // callback (store's endFlip), so a cancelled result must not advance
-      // the chain a page it never actually turned.
-      onRest: (result) => {
-        if (result.finished === false) return
-        endFlip(doc.id)
-      },
+      onRest: () => endFlip(doc.id),
     })
-    // applyTurn is re-created per render but only reads refs + constants;
-    // finalPage always changes in the same store update as anim (both are
-    // set together by jumpToPage/endFlip/nextPage/prevPage), so it is
-    // already fresh whenever this effect fires without needing its own entry
+    // applyTurn is re-created per render but only reads refs + constants
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anim, finalPage, turnApi, rig, doc])
+  }, [anim, turnApi, rig, doc])
 
   useFrame((_, delta) => {
     // Clamped so a backgrounded tab or a dropped frame resumes with a sane step
@@ -435,12 +377,6 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   // the turning leaf are mid-animation or edge-on, and a zoom resets on every
   // page turn anyway, so `topIndex` is the only page a pinch can be reading.
   const detail = useDetailPage(doc, topIndex)
-  // Cheap unless this IS the page everything is settling on (see `finalPage`
-  // above) — covers a backward jump's landing hop too, where `topIndex` is
-  // still the OUTGOING page (presentedPage keeps it until the returning leaf
-  // lands) rather than the target, so gating on the hop's own `fast` flag
-  // alone would force a real paint on a page nobody is about to read.
-  const topTex = pageTex(doc, topIndex, !!anim && topIndex !== finalPage, detail, blank[0])
   const blanksBelow = Math.max(count - 1 - topIndex, 0)
   const flipping = anim && anim.idx >= 0 && anim.idx < count
 
@@ -460,7 +396,6 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
           idx={pileCount - 1 - k}
           depth={k + pileDepthShift}
           back={back}
-          blank={blank}
         />
       ))}
       {Array.from({ length: blanksBelow }).map((_, i) => {
@@ -488,7 +423,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
       <mesh name="page-face" receiveShadow position={[0, 0, topZ]}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial
-          map={topTex}
+          map={docTexture(doc, topIndex, detail)}
           roughness={0.9}
           polygonOffset
           polygonOffsetFactor={-2}
@@ -528,7 +463,6 @@ export function StackProp({ doc }) {
         <boxGeometry args={[0.5, 0.16, 0.09]} />
         <meshStandardMaterial color="#3b3b40" metalness={0.6} roughness={0.4} />
       </mesh>
-      {doc.tabs?.length ? <ProjectTabs doc={doc} /> : null}
     </group>
   )
 }
