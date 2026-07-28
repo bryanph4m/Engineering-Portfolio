@@ -79,13 +79,16 @@ function Tab({ doc, tab, y }) {
     if (focusedId != null && focusedId !== doc.id) return // another doc is open
     const start = focusedId === doc.id ? pageIndex : 0
     if (start === tab.page) return
-    // Pre-warm every intervening page's texture before the chain starts, so a
-    // fast hop never has to paint a never-seen sheet inside its own
-    // animation — docTexture is memoized (lib/docTextures' texCache), so this
-    // is a no-op for pages already painted.
-    const lo = Math.min(start, tab.page)
-    const hi = Math.max(start, tab.page)
-    for (let i = lo; i <= hi; i++) docTexture(doc, i)
+    // Pre-warm only the destination page. Pages between `start` and the
+    // target are flipped PAST, not read — props.jsx's MultiPageSheets shows
+    // them as a cheap placeholder during the chain instead of painting each
+    // one (that per-page loop used to be the actual bottleneck here: it ran
+    // a full canvas paint for every intervening page synchronously, all at
+    // once, before the flip even started). The destination is the one page
+    // that must be real the moment the chain lands, so it alone is worth
+    // paying for up front — docTexture is memoized (lib/docTextures'
+    // texCache), so this is a no-op if it's already painted.
+    docTexture(doc, tab.page)
     jumpToPage(doc.id, doc.pages.length, tab.page)
   }
 

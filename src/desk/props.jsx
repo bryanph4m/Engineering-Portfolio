@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
-import { docTexture } from '../lib/docTextures'
+import { docTexture, docTextureCached, placeholderTexture } from '../lib/docTextures'
 import { seg } from '../lib/quality'
 import { flipFor, presentedPage } from './pageFlip'
 import { PAPER_T, SHEET_T } from './layout'
@@ -238,10 +238,28 @@ const VEL_REF = 6
 // hinge-speed-driven curl (FOLD_VEL/VEL_REF above) already whips a fast turn
 // harder with no changes needed here; it was built anticipating exactly this.
 const TURN_CONFIG = { tension: 140, friction: 15 }
-const FAST_TURN_CONFIG = { tension: 380, friction: 26 }
+const FAST_TURN_CONFIG = { tension: 650, friction: 32 }
 
-/** One already-read leaf at rest on the flipped-over pile. */
-function PileLeaf({ doc, idx, depth, back }) {
+/**
+ * The texture for a page that is only being FLIPPED PAST during a fast jump
+ * hop, not read — real content if it happens to be cached already (a page
+ * visited earlier in the session costs nothing to reuse), a flat placeholder
+ * otherwise. `cheap` is false for the one page each hop actually has to be
+ * correct for (see `finalPage` in MultiPageSheets), which still always gets
+ * a real, painted-if-necessary texture via `docTexture`.
+ */
+function pageTex(doc, page, cheap, detail, tone = '#e8dfca') {
+  if (!cheap) return docTexture(doc, page, detail)
+  return docTextureCached(doc, page, detail) ?? placeholderTexture(tone)
+}
+
+/** One already-read leaf at rest on the flipped-over pile. Never forces a
+ *  fresh paint: a page that landed here without ever being the presented
+ *  page (flipped past during a fast jump hop) shows the placeholder — its
+ *  textured face is turned away from the camera at this pile angle anyway
+ *  (see PILE.base), so the difference is not visible, and a real flip back
+ *  onto it later paints it for real at that point. */
+function PileLeaf({ doc, idx, depth, back, blank }) {
   const { w, h } = doc.paper
   const topZ = stackTopZ(doc)
   return (
@@ -252,7 +270,10 @@ function PileLeaf({ doc, idx, depth, back }) {
       <group position={[0, -PILE.gap, 0]}>
         <mesh position={[0, -h / 2, 0.001]}>
           <planeGeometry args={[w, h]} />
-          <meshStandardMaterial map={docTexture(doc, idx)} roughness={0.9} />
+          <meshStandardMaterial
+            map={docTextureCached(doc, idx) ?? placeholderTexture(blank[0])}
+            roughness={0.9}
+          />
         </mesh>
         <mesh position={[0, -h / 2, -0.001]} rotation={[0, Math.PI, 0]}>
           <planeGeometry args={[w, h]} />
@@ -289,8 +310,18 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   // which is what keeps a photo on the page the paper is painting in BOTH
   // directions (desk/pageFlip).
   const flip = useSceneStore((s) => s.flip)
+  const jump = useSceneStore((s) => s.jump)
   const endFlip = useSceneStore((s) => s.endFlip)
   const anim = flipFor(flip, doc.id)
+
+  // The one page this document will actually be resting on once whatever is
+  // currently in flight settles — the jump's ultimate target while a
+  // multi-hop chain (store's `jump`) is running, else wherever `pageIndex`
+  // already points (nextPage/prevPage set it synchronously at dispatch, so
+  // it's already the destination for an ordinary single-step flip). Every
+  // OTHER page a flip touches along the way is being flipped PAST, not read,
+  // and is fair game for the cheap placeholder below (pageTex).
+  const finalPage = jump && jump.docId === doc.id ? jump.target : pageIndex
 
   const [{ turn }, turnApi] = useSpring(() => ({
     turn: 0,
@@ -340,7 +371,11 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
     // Seed the velocity estimate at the start angle so an opening frame can't
     // read as an enormous jump and slam the sheet to full curl.
     prevTurn.current = from
-    rig.front.material.map = docTexture(doc, anim.idx)
+    // Real texture only if this leaf carries the page everything is actually
+    // headed for; every other hop of a chain is flipping this page PAST, so
+    // it gets a cheap stand-in unless it's already cached from an earlier
+    // visit (pageTex above).
+    rig.front.material.map = pageTex(doc, anim.idx, anim.idx !== finalPage, false, blank[0])
     turnApi.start({
       from: { turn: from },
       turn: anim.dir > 0 ? PILE.base : 0,
@@ -354,9 +389,12 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
         endFlip(doc.id)
       },
     })
-    // applyTurn is re-created per render but only reads refs + constants
+    // applyTurn is re-created per render but only reads refs + constants;
+    // finalPage always changes in the same store update as anim (both are
+    // set together by jumpToPage/endFlip/nextPage/prevPage), so it is
+    // already fresh whenever this effect fires without needing its own entry
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anim, turnApi, rig, doc])
+  }, [anim, finalPage, turnApi, rig, doc])
 
   useFrame((_, delta) => {
     // Clamped so a backgrounded tab or a dropped frame resumes with a sane step
@@ -397,6 +435,12 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
   // the turning leaf are mid-animation or edge-on, and a zoom resets on every
   // page turn anyway, so `topIndex` is the only page a pinch can be reading.
   const detail = useDetailPage(doc, topIndex)
+  // Cheap unless this IS the page everything is settling on (see `finalPage`
+  // above) — covers a backward jump's landing hop too, where `topIndex` is
+  // still the OUTGOING page (presentedPage keeps it until the returning leaf
+  // lands) rather than the target, so gating on the hop's own `fast` flag
+  // alone would force a real paint on a page nobody is about to read.
+  const topTex = pageTex(doc, topIndex, !!anim && topIndex !== finalPage, detail, blank[0])
   const blanksBelow = Math.max(count - 1 - topIndex, 0)
   const flipping = anim && anim.idx >= 0 && anim.idx < count
 
@@ -416,6 +460,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
           idx={pileCount - 1 - k}
           depth={k + pileDepthShift}
           back={back}
+          blank={blank}
         />
       ))}
       {Array.from({ length: blanksBelow }).map((_, i) => {
@@ -443,7 +488,7 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
       <mesh name="page-face" receiveShadow position={[0, 0, topZ]}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial
-          map={docTexture(doc, topIndex, detail)}
+          map={topTex}
           roughness={0.9}
           polygonOffset
           polygonOffsetFactor={-2}
