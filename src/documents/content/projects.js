@@ -374,10 +374,12 @@ const sheets = projects.map((p, i) => ({
       p.summary.toUpperCase(),
       p.highlight ? circleHighlight(p.summary, p.highlight) : undefined,
     ),
+    // a project without a hand-drawn figure yet (see FIGURES above) just skips
+    // the block, rather than flowing an undefined entry into pageFlow
     FIGURES[p.id],
     ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),
     ...detailWithPhotos(p),
-  ],
+  ].filter(Boolean),
 }))
 
 export const projectPages = flowSheets(sheets, box)
