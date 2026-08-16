@@ -190,6 +190,43 @@ export const projects = [
     ],
   },
   {
+    // REVIEW: generated from the repo README (no site copy existed before) —
+    // check summary/specs read right. (drafted by /sync-content)
+    id: 'intentguard',
+    name: 'IntentGuard',
+    category: 'Software',
+    summary: 'legacy fixture, corpus generator & reconciliation UI for an AI-rewrite safety checker',
+    github: {
+      repo: 'IntentGuard',
+      url: 'https://github.com/bryanph4m/IntentGuard',
+      language: 'TypeScript',
+      stars: 0,
+      description: null,
+      createdAt: '2026-08-14T03:25:10Z',
+      pushedAt: '2026-08-14T20:01:50Z',
+    },
+    specs: [
+      { lead: 'Own everything the user sees or tests', sub: 'legacy fixture, rewrite candidates, corpus, replay harness, frontend' },
+      { lead: 'Team project, 3-person split', sub: 'Forge/control API/policy and the Daytona · Snyk · RocketRide adapters owned by teammates' },
+      { lead: 'Strict TypeScript', sub: 'React/Vite reconciliation interface' },
+    ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'IntentGuard checks whether an AI-rewritten service is safe to ship by running every rewrite candidate against test inputs built from the business rules recovered from the legacy source, then comparing candidate behavior to what the legacy system actually does — a human approves or blocks based on that evidence, never on a model’s opinion of the diff.',
+        ],
+      },
+      {
+        heading: 'My part',
+        body: [
+          'A three-person team split the system into parallel workstreams. My ownership covered everything the user sees and everything being tested: the legacy fixture and candidate services, the corpus generator, the replay harness, and the strict-TypeScript React/Vite reconciliation frontend. A teammate owned Forge, the control API, and the comparison/policy pipeline; another owned every integration with a third party (Daytona sandboxes, Snyk scans, RocketRide).',
+        ],
+      },
+    ],
+    photos: [],
+  },
+  {
     id: 'mission-launch-rocketry',
     name: 'Mission Launch Rocketry',
     category: 'Rocketry',
@@ -199,11 +236,7 @@ export const projects = [
       { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery (drogue + main)' },
       { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
       { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
-      // REVIEW: the refreshed résumé (2026-07-19) adds a Mission Launch Rocketry
-      // bullet with no home on the site — a minimum-diameter airframe for a
-      // maximum-velocity rocket on an L2-class motor, simulated to Mach 2.6.
-      // That is the most quantified claim in the entry; consider a spec row for
-      // it. Note the PDF misspells it "aiframe". (flagged by /sync-content)
+      { lead: 'Minimum-diameter airframe, L2-class motor', sub: 'simulated top speed Mach 2.6' },
     ],
     photos: [
       {
@@ -226,6 +259,41 @@ export const projects = [
         alt: 'Two college students sitting at a black table indoors with a Mission Launch Rocketry poster, a large orange and black rocket standing on the table, and stickers spread across it.',
       },
     ],
+  },
+  {
+    // REVIEW: generated from the repo README (no site copy existed before) —
+    // check summary/specs read right. (drafted by /sync-content)
+    // TODO: the README splits the build into `perception` (Person 1) and
+    // `enforcement` (Person 2) branches and never names Bryan against either
+    // one. Confirm which half he built before trusting the specs below —
+    // they're written branch-neutral until that's settled.
+    id: 'nightshift',
+    name: 'Night Shift',
+    category: 'Software',
+    summary: 'two AI agents get paged at 2am, each holding only its own engineer’s real GitHub access',
+    github: {
+      repo: 'NightShift',
+      url: 'https://github.com/bryanph4m/NightShift',
+      language: null,
+      stars: 0,
+      description: null,
+      createdAt: '2026-07-25T18:44:15Z',
+      pushedAt: '2026-07-25T23:25:36Z',
+    },
+    specs: [
+      { lead: 'Per-agent OAuth via ScaleKit', sub: 'permission boundary enforced by GitHub itself, not a config file' },
+      { lead: 'Google Meet coordination', sub: 'MeetStream bots, live transcription, Claude Sonnet 5 diagnosis, Groq extraction' },
+      { lead: 'Built for ScaleKit x MeetStream hackathon', sub: '"Agents in Production"' },
+    ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'When CI fails at 2am, Night Shift pages two AI agents instead of two humans. Each agent executes GitHub actions under its own engineer’s real OAuth credentials via ScaleKit, so when an agent lacks write access to fix a bug it hands off to the agent that has it — and when neither does, it escalates to a human on Slack. The permission boundary is enforced by GitHub’s real 403s, not a hardcoded rule.',
+        ],
+      },
+    ],
+    photos: [],
   },
   {
     id: 'recco',
@@ -329,6 +397,37 @@ export const projects = [
     ],
   },
   {
+    // REVIEW: generated from the repo README (no site copy existed before) —
+    // check summary/specs read right. (drafted by /sync-content)
+    id: 'secondcurrent',
+    name: 'SecondCurrent',
+    category: 'Software',
+    summary: 'helps people decide whether to resell, donate, repair, or recycle old electronics',
+    github: {
+      repo: '2ndCurrent',
+      url: 'https://github.com/bryanph4m/2ndCurrent',
+      language: 'TypeScript',
+      stars: 0,
+      description: null,
+      createdAt: '2026-08-15T17:25:03Z',
+      pushedAt: '2026-08-16T02:33:04Z',
+    },
+    specs: [
+      { lead: 'Photo-in, item record out', sub: 'checks visible identity/condition, requests missing evidence, short human review' },
+      { lead: 'Suggests resell, donate, repair, or recycle', sub: 'matches approved local items with buyer requests' },
+      { lead: 'Node/pnpm + Postgres + private object storage', sub: 'photos re-encoded to WebP with metadata stripped before storage' },
+    ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'SecondCurrent helps people decide what to do with old electronics: send photos of an item by text, and the app checks the visible evidence, requests anything missing, runs a short human review when needed, and returns a shareable item record with a suggested next step — resell, donate, repair, or recycle — plus matching against approved local buyer requests.',
+        ],
+      },
+    ],
+    photos: [],
+  },
+  {
     id: 'engineering-portfolio',
     name: 'Engineering Portfolio',
     category: 'Software',
@@ -342,7 +441,7 @@ export const projects = [
       stars: 0,
       description: null,
       createdAt: '2026-07-02T03:25:29Z',
-      pushedAt: '2026-07-20T05:19:06Z',
+      pushedAt: '2026-07-28T19:41:12Z',
     },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
@@ -613,16 +712,9 @@ export const resume = {
           sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
 
-        // REVIEW: the résumé (read 2026-07-22) quantifies this role and the
-        // site's one-liner still carries none of it — "6,000+ students"
-        // represented, and academic/operational recommendations presented
-        // directly to district executives at an institutional leadership retreat.
-        // Consider working the scale figure into `sub`. (Note: the earlier
-        // "SSCCC resolution S26.10.01" this flagged is no longer on the résumé —
-        // that line has since been dropped.) (flagged by /sync-content)
         {
           title: 'Mission College, Associated Student Government Senator',
-          sub: 'Aug 2025 – May 2026 · student advocacy with campus leadership',
+          sub: 'Aug 2025 – May 2026 · represented 6,000+ students · presented recommendations to district executives at a leadership retreat',
         },
       ],
     },
@@ -642,21 +734,18 @@ export const resume = {
           title: 'Languages',
           sub: 'C, C++, Python, TypeScript, JavaScript, MATLAB, Swift, HTML/CSS',
         },
-        // REVIEW: résumé CAD line also lists MecAgent and Zoo.dev, which are
-        // missing here. The résumé is authoritative (CLAUDE.md rule 3), so
-        // either add them or drop them from the PDF. (flagged by /sync-content)
         {
           title: 'CAD',
-          sub: 'SolidWorks, Onshape, AutoCAD, Fusion360',
+          sub: 'SolidWorks, Onshape, AutoCAD, Fusion360, MecAgent, Zoo.dev',
         },
         {
           title: 'Manufacturing & lab tools',
-          sub: '3D printing, soldering, microcontrollers, SimScale, microcomputers, computer vision, PSpice, LTSpice, oscilloscope, function generator',
+          sub: '3D printing, soldering, microcontrollers, SimScale, microcomputers, computer vision, PSpice, LTSpice, oscilloscope, function generator, mechanical systems, manufacturing processes, engineering drawings, technical specifications',
         },
-        // REVIEW: the résumé carries a fourth skills category the site drops
-        // entirely — "Tools & Platforms: Claude Code, Codex, Cursor, Git/Github,
-        // Github Actions, Redis, Mapbox". Add it as an entry here if it should
-        // show, or confirm the omission is deliberate. (flagged by /sync-content)
+        {
+          title: 'Tools & Platforms',
+          sub: 'Claude Code, Codex, Cursor, Git/GitHub, GitHub Actions, Microsoft Office, Redis, Mapbox',
+        },
       ],
     },
   ],
