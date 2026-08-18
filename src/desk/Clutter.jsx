@@ -9,6 +9,7 @@ import {
   paperTexture,
   pcbTexture,
   pennantTexture,
+  softShadowTexture,
   triangleScaleTexture,
 } from '../lib/textures'
 
@@ -202,10 +203,25 @@ const calcKeys = (() => {
  */
 function Calculator({ position, yaw = 0 }) {
   const screen = calcScreenTexture()
+  const contactShadow = useMemo(() => softShadowTexture(), [])
   return (
     <group position={position} rotation={[0, yaw, 0]}>
+      {/* A tight baked contact patch grounds the calculator without the detached,
+          over-long shadow its many little shadow casters used to create. */}
+      <mesh position={[0, 0.002, 0.025]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.76, 1.04]} />
+        <meshBasicMaterial
+          map={contactShadow}
+          transparent
+          opacity={0.25}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+        />
+      </mesh>
       {/* shell */}
-      <mesh castShadow position={[0, 0.08, 0]}>
+      <mesh position={[0, 0.08, 0]}>
         <boxGeometry args={[0.62, 0.16, 0.9]} />
         <meshStandardMaterial color={TI_BODY} roughness={0.5} metalness={0.05} />
       </mesh>
@@ -215,7 +231,7 @@ function Calculator({ position, yaw = 0 }) {
         <meshStandardMaterial color="#141828" roughness={0.25} metalness={0.3} />
       </mesh>
       {/* display bezel + the painted LCD, a real 0.004 above the bezel face */}
-      <mesh castShadow position={[0, 0.166, -0.315]}>
+      <mesh position={[0, 0.166, -0.315]}>
         <boxGeometry args={[0.54, 0.02, 0.21]} />
         <meshStandardMaterial color="#1c1c21" roughness={0.5} />
       </mesh>
@@ -226,7 +242,7 @@ function Calculator({ position, yaw = 0 }) {
       {/* blue-grey four-way arrow pad, top right; the centre disk's base is
           buried in the pad and its face sits a real 0.008 proud — the old
           hairline 0.0005 overlap here is what made the pad flicker */}
-      <mesh castShadow position={[0.2, 0.163, -0.1525]}>
+      <mesh position={[0.2, 0.163, -0.1525]}>
         <cylinderGeometry args={[0.075, 0.08, 0.026, seg(20)]} />
         <meshStandardMaterial color={TI_BLUE} roughness={0.5} />
       </mesh>
@@ -242,7 +258,7 @@ function Calculator({ position, yaw = 0 }) {
           from six draw calls (a 6-material box) to one — ~200 draws saved
           across the pad, the biggest single draw-call cut on the desk. */}
       {calcKeys.map(({ id, label, x, z, w, d, h, color, ink }) => (
-        <mesh key={id} castShadow position={[x, SHELL_TOP + h / 2 - KEY_EMBED, z]}>
+        <mesh key={id} position={[x, SHELL_TOP + h / 2 - KEY_EMBED, z]}>
           <boxGeometry args={[w, h, d]} />
           <meshStandardMaterial map={keyLabelTexture(label, color, ink)} roughness={0.45} />
         </mesh>
