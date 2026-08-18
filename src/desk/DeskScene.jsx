@@ -12,6 +12,7 @@ import Clutter from './Clutter'
 import Documents from './Documents'
 import PhotoFrame from './PhotoFrame'
 import RocketModel from './RocketModel'
+import CalendarModel from './CalendarModel'
 import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
 import TouchControls from './TouchControls'
@@ -110,6 +111,7 @@ export default function DeskScene() {
         <Documents />
         <PhotoFrame />
         <RocketModel />
+        <CalendarModel />
         <FocusScrim />
         <Preload all />
       </Suspense>

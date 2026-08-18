@@ -138,6 +138,15 @@ export const PHOTO_FRAME_ID = 'photos'
  */
 export const ROCKET_ID = 'rocket'
 
+/**
+ * The desk calendar shares the same pick-up/focus machinery as the photo
+ * frame and the rocket — one id, one focus. Unlike either of them it has no
+ * page content of its own to read on the model: once focused, the real UI is
+ * a DOM overlay (ui/CalendarBooking) that reads this id off the store, so the
+ * 3D model itself never needs an `armed` texture plane or extra lights.
+ */
+export const CALENDAR_ID = 'calendar'
+
 export const COLORS = {
   wood: '#6f4c2c',
   woodDark: '#49301a',

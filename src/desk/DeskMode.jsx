@@ -4,6 +4,7 @@ import HudHints from '../ui/HudHints'
 import EdgeHint from '../ui/EdgeHint'
 import KeyControls from '../ui/KeyControls'
 import Loader from '../ui/Loader'
+import CalendarBooking from '../ui/CalendarBooking'
 import { useSceneStore } from '../store/useSceneStore'
 
 /**
@@ -51,6 +52,7 @@ export default function DeskMode({ onSwitchMode }) {
           nothing on a mouse, or once it has been seen */}
       <EdgeHint />
       <KeyControls />
+      <CalendarBooking />
       <Loader />
     </>
   )

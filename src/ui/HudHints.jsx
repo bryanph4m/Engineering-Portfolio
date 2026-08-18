@@ -2,7 +2,7 @@ import { useSceneStore } from '../store/useSceneStore'
 import { pageCountOf } from '../documents/registry'
 import { profile, gallery, research } from '../content/portfolio'
 import { IS_TOUCH } from '../lib/quality'
-import { PHOTO_FRAME_ID, ROCKET_ID } from '../desk/constants'
+import { PHOTO_FRAME_ID, ROCKET_ID, CALENDAR_ID } from '../desk/constants'
 
 /** Flat UI chrome: the title block, the switch to the simple view, a
  *  context-aware nav hint, and — when the photo album is open — a small position
@@ -26,16 +26,22 @@ export default function HudHints({ onSwitchMode }) {
 
   const isPhotos = focusedId === PHOTO_FRAME_ID
   const isRocket = focusedId === ROCKET_ID
+  const isCalendar = focusedId === CALENDAR_ID
   const photoCount = Math.max(1, gallery.photos.length)
   const partCount = Math.max(1, research.vehicle.parts.length)
-  const pages = focusedId && !isPhotos && !isRocket ? pageCountOf(focusedId) : 0
+  const pages = focusedId && !isPhotos && !isRocket && !isCalendar ? pageCountOf(focusedId) : 0
 
   const setDown = IS_TOUCH
     ? 'tap away to set it back down'
     : 'click away or press Esc to set it back down'
 
   let hint
-  if (isRocket) {
+  if (isCalendar) {
+    // The booking panel (ui/CalendarBooking) carries its own in-panel
+    // instructions for the day/slot picking itself — this only needs to say
+    // how to leave it, same as a single-sheet document.
+    hint = setDown
+  } else if (isRocket) {
     // Worded like a multi-page document's hint, because that is exactly what
     // the picked-up rocket is now: one object, stepped part by part.
     hint = partCount > 1
@@ -61,6 +67,10 @@ export default function HudHints({ onSwitchMode }) {
     hint = IS_TOUCH
       ? 'tap the rocket to read it part by part'
       : 'click the rocket to read it part by part'
+  } else if (hoveredId === CALENDAR_ID) {
+    hint = IS_TOUCH
+      ? 'tap the calendar to book a meeting'
+      : 'click the calendar to book a meeting'
   } else if (IS_TOUCH) {
     hint = 'tap a document to pick it up'
   } else {
