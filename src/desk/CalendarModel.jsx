@@ -1,24 +1,37 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
+import * as THREE from 'three'
 import { useSceneStore } from '../store/useSceneStore'
 import { calendarFaceTexture, softShadowTexture } from '../lib/textures'
 import { consumeTap } from './tapGuard'
-import { HOVER_LIFT, CALENDAR_ID } from './constants'
+import { CAMERA, FOCUS_POSE, HOVER_LIFT, CALENDAR_ID } from './constants'
 
 /**
  * A standing wirebound desk calendar, propped up on a kickstand between the
  * coffee mug and the drafting triangle — same reference silhouette as a
  * standard tabletop flip calendar (wire-bound pad + easel back), built the
  * same way PhotoFrame is: rails + face + a kickstand strut that fades out on
- * pickup. Picked up like the photo frame and the rocket: hover lifts it, a
- * click focuses it. Unlike either of them it has no content of its own to
- * read once focused — the actual booking UI is a real DOM overlay
- * (ui/CalendarBooking), gated on the same focusedId — so this model stays
- * idle-cost-near-zero for the whole session: one small static texture, no
- * new light, no armed/detail plane (see RocketModel's header for why a
- * mid-session light mount is the thing to avoid).
+ * pickup. Picked up exactly like the photo frame and the rocket: hover lifts
+ * it, a click floats it up to the shared FOCUS_POSE in front of the camera —
+ * the same "brought up close to the screen" motion every other prop on this
+ * desk uses, so this one doesn't read as a different interaction. Unlike the
+ * photo frame it has no content of its own worth reading up close; the real
+ * UI is a DOM overlay (ui/CalendarBooking) that fades in over the tail of
+ * this same flight, gated on the same focusedId. That overlay is what keeps
+ * this model idle-cost-near-zero for the whole session: one small static
+ * texture, no new light, no armed/detail plane (see RocketModel's header for
+ * why a mid-session light mount is the thing to avoid).
  */
+
+// Camera-to-panel distance at the focus pose — fixed, both poses are.
+const FOCUS_DIST = new THREE.Vector3(...FOCUS_POSE.position).distanceTo(
+  new THREE.Vector3(...CAMERA.position)
+)
+const TAN_HALF_FOV = Math.tan((CAMERA.fov * Math.PI) / 360)
+
+const _v = new THREE.Vector3()
+const _q = new THREE.Quaternion()
 
 // The face texture (lib/textures.js calendarFaceTexture) is a 384x480 canvas
 // — panel proportions match that 4:5 aspect exactly rather than stretching it.
@@ -52,15 +65,44 @@ export default function CalendarModel() {
   const anyFocused = focusedId != null
   const isHovered = hoveredId === CALENDAR_ID && !anyFocused
 
-  const [{ open }, openApi] = useSpring(() => ({ open: 0, config: { tension: 170, friction: 22 } }))
+  // Scale the panel to the same focus height as a document, but never wider
+  // than the viewport can show at the focus distance (matches Document.jsx /
+  // PhotoFrame.jsx).
+  const { width: vw, height: vh } = useThree((s) => s.size)
+  const visH = 2 * TAN_HALF_FOV * FOCUS_DIST
+  const visW = visH * (vw / vh)
+  const focusScale = Math.min(FOCUS_POSE.targetHeight / PANEL.H, (visW * 0.94) / PANEL.W)
+
+  const { restPos, restQuat, focusPos, focusQuat } = useMemo(() => {
+    const qLean = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), REST.lean)
+    const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), REST.yaw)
+    const rq = qYaw.clone().multiply(qLean) // lean the panel back, then yaw it
+    const fq = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(FOCUS_POSE.rotation[0], FOCUS_POSE.rotation[1], FOCUS_POSE.rotation[2])
+    )
+    return {
+      restPos: new THREE.Vector3(...REST.position),
+      restQuat: rq,
+      focusPos: new THREE.Vector3(...FOCUS_POSE.position),
+      focusQuat: fq,
+    }
+  }, [])
+
+  const [{ open }, openApi] = useSpring(() => ({
+    open: 0,
+    config: { tension: 150, friction: 24 },
+  }))
   const [{ hover }, hoverApi] = useSpring(() => ({ hover: 0, config: { tension: 300, friction: 20 } }))
 
+  // Seat the panel at its rest pose before the first paint so it never
+  // flashes at the origin (matches PhotoFrame.jsx).
   useLayoutEffect(() => {
     const g = groupRef.current
     if (!g) return
-    g.position.set(...REST.position)
-    g.rotation.set(REST.lean, REST.yaw, 0)
-  }, [])
+    g.position.copy(restPos)
+    g.quaternion.copy(restQuat)
+    g.scale.setScalar(1)
+  }, [restPos, restQuat])
 
   useEffect(() => {
     openApi.start({ open: isFocused ? 1 : 0 })
@@ -74,17 +116,20 @@ export default function CalendarModel() {
     if (!g) return
     const t = open.get()
     const hv = hover.get()
-    // A small, honest "picked up" motion — lift and tilt further toward the
-    // camera from its resting lean — rather than the paper documents' full
-    // reading pose: nothing on the calendar itself is worth reading up
-    // close, the real content is the DOM overlay that opens alongside this.
-    g.position.set(
-      REST.position[0],
-      REST.position[1] + HOVER_LIFT * hv * (1 - t) + 0.22 * t,
-      REST.position[2] - 0.12 * t
-    )
-    g.rotation.set(REST.lean + (-0.35 - REST.lean) * t, REST.yaw, 0)
-    g.scale.setScalar(1 + 0.03 * hv + 0.08 * t)
+
+    // Same rest -> focus interpolation as Document.jsx / PhotoFrame.jsx: this
+    // panel gets brought up close to the screen exactly like every other
+    // pickable prop on the desk, even though there's nothing on its face
+    // worth reading once it arrives — the DOM overlay is the payload.
+    _q.copy(restQuat).slerp(focusQuat, t)
+    g.quaternion.copy(_q)
+
+    _v.lerpVectors(restPos, focusPos, t)
+    _v.y += HOVER_LIFT * hv * (1 - t)
+    g.position.copy(_v)
+
+    const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
+    g.scale.setScalar(s)
 
     if (shadowMatRef.current) {
       shadowMatRef.current.opacity = (0.16 + 0.1 * hv) * (1 - 0.6 * t)

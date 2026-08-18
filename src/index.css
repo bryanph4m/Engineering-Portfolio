@@ -553,6 +553,15 @@ html, body, #root {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
   padding: 22px 22px 20px;
   font-family: 'Cutive Mono', monospace;
+  /* Settles in over the tail of the calendar's pickup flight (desk/CalendarModel's
+     `open` spring lands in ~500-600ms) rather than popping in the instant the
+     panel mounts, so it reads as arriving with the calendar rather than as a
+     modal thrown over the scene. Same idea as RocketModel's PAGE_FADE_START. */
+  animation: cal-panel-in 0.3s ease-out 0.28s both;
+}
+@keyframes cal-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 .cal-booking__panel h2 {
   margin: 0 0 4px;
