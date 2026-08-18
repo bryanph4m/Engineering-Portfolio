@@ -1052,6 +1052,23 @@ LAYOUT.pageY = -LAYOUT.totalH / 2 + LAYOUT.pageH / 2
  * It buys the removal of a scene-wide shader recompile per interaction. A small
  * constant cost in place of a large intermittent one is the trade, and it is
  * the right way round.
+ *
+ * ## Why it sits this far out, rather than the closer position it started at
+ *
+ * The component page is a flat plane sitting well below the composition's own
+ * centre (LAYOUT.pageY), while this light's position is pinned near the
+ * airframe's height. Parked close (the original 1.6 units out), the inverse
+ * square falloff across the page's own height was steep enough to paint a
+ * visible bright-to-dark band across it — flat drafting-paper material lit
+ * unevenly reads as a sheen, exactly the "glossy" a matte page should never
+ * have. Paper-matte materials (`RocketModel`'s page mesh, `desk/props`'
+ * DocProp) still don't cause that on their own; a point light close enough
+ * for its own falloff to vary noticeably across one small flat surface does.
+ * Standing the light further back and raising intensity to match keeps the
+ * airframe's brightness the same (it's almost exactly at the light's height,
+ * so its distance barely changes) while flattening the gradient across the
+ * page underneath it — the fix is geometry, not material, because the
+ * material was never the thing that was wrong.
  */
 const READING_KEY = {
   // In front of and above the focused composition, on the focus plane's own
@@ -1061,12 +1078,17 @@ const READING_KEY = {
     const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(q)
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q)
     return new THREE.Vector3(...FOCUS_POSE.position)
-      .addScaledVector(normal, 1.6)
+      .addScaledVector(normal, 3.5)
       .addScaledVector(up, 0.6)
   })(),
-  intensity: 3.6,
+  // Raised from the airframe's original 3.6 to hold its brightness at the new,
+  // further-back distance (roughly its square, since intensity/distance^2 is
+  // what decay=2 evaluates).
+  intensity: 17.2,
   // Cut off just short of the desk surface below it, so a light that exists to
   // read the held rocket cannot quietly brighten the dimmed desk behind it.
+  // The light moved further from the desk along with everything else above,
+  // so this margin is, if anything, more conservative than before.
   distance: 4.5,
 }
 
