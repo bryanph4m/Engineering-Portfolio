@@ -3,7 +3,9 @@
 // Receiver does the verification and its Client does the publish/cancel.
 import { Client, Receiver } from '@upstash/qstash'
 
-const client = new Client({ token: process.env.QSTASH_TOKEN })
+// The SDK defaults to QStash's EU endpoint; this account's token is
+// provisioned in the US region, so the base URL has to be set explicitly.
+const client = new Client({ token: process.env.QSTASH_TOKEN, baseUrl: 'https://qstash-us-east-1.upstash.io' })
 
 export async function scheduleAt(url, body, notBefore) {
   const { messageId } = await client.publishJSON({
