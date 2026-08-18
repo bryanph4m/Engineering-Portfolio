@@ -69,9 +69,9 @@ html, body, #root {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 39% 43%, transparent 28%, rgba(5, 7, 5, 0.24) 70%, rgba(2, 3, 2, 0.68) 100%),
-    linear-gradient(112deg, rgba(99, 113, 81, 0.08), transparent 42%, rgba(19, 10, 5, 0.2));
-  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.42);
+    radial-gradient(ellipse at 43% 44%, transparent 35%, rgba(5, 7, 5, 0.1) 76%, rgba(2, 3, 2, 0.34) 100%),
+    linear-gradient(112deg, rgba(99, 113, 81, 0.055), transparent 48%, rgba(19, 10, 5, 0.1));
+  box-shadow: inset 0 0 96px rgba(0, 0, 0, 0.2);
 }
 .desk-grade::after {
   content: '';
@@ -80,7 +80,7 @@ html, body, #root {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.84' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.72'/%3E%3C/svg%3E");
   background-size: 180px 180px;
   mix-blend-mode: soft-light;
-  opacity: 0.075;
+  opacity: 0.06;
   animation: desk-grain 7s steps(7, end) infinite;
   will-change: transform;
 }
@@ -94,10 +94,10 @@ html, body, #root {
 .desk-grade__lamplight {
   position: absolute;
   top: -18%;
-  left: -17%;
-  width: 78vw;
+  left: -19%;
+  width: 92vw;
   height: 92vh;
-  background: radial-gradient(ellipse, rgba(242, 168, 86, 0.12), rgba(221, 139, 62, 0.035) 42%, transparent 72%);
+  background: radial-gradient(ellipse, rgba(242, 168, 86, 0.105), rgba(221, 139, 62, 0.03) 46%, transparent 76%);
   mix-blend-mode: screen;
   opacity: 0.72;
   transform-origin: 32% 30%;

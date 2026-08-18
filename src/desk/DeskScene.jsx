@@ -80,9 +80,10 @@ export default function DeskScene() {
       gl={{ antialias: QUALITY.antialias, powerPreference: 'high-performance' }}
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping
-        // Preserve a bright lamp pool while letting the room fall into
-        // olive-black shadow. The old exposure flattened the prop values.
-        gl.toneMappingExposure = 0.88
+        // Keep the room dark without making the side props disappear. The
+        // lamp still owns the highlights, while the higher exposure leaves
+        // enough midtone range for paper copy and worn material edges.
+        gl.toneMappingExposure = 1.02
         // Renderer + scene handles for the performance budget check in
         // CLAUDE.md § "Performance budget" — see lib/perfHook for why they are
         // reachable from a production build at all.
@@ -92,8 +93,8 @@ export default function DeskScene() {
         }
       }}
     >
-      <color attach="background" args={['#0a0c08']} />
-      <fog attach="fog" args={['#0a0c08', 10.5, 22]} />
+      <color attach="background" args={['#10120e']} />
+      <fog attach="fog" args={['#10120e', 11.5, 25]} />
 
       <PerspectiveCamera makeDefault position={CAMERA.position} fov={CAMERA.fov} near={0.1} far={100} />
       <CameraRig />
@@ -101,12 +102,15 @@ export default function DeskScene() {
           inert on a mouse. */}
       <TouchControls />
 
-      {/* Low fills preserve paper legibility without erasing the lamp's shape. */}
-      <ambientLight intensity={0.16} color="#e7d2ad" />
-      <hemisphereLight intensity={0.17} color="#ddc79d" groundColor="#10150e" />
-      <directionalLight position={[0, 5, 9]} intensity={0.3} color="#f1dfc3" />
-      {/* A restrained green-black rim separates silhouettes from the room. */}
-      <directionalLight position={[5, 2.5, -5]} intensity={0.16} color="#748066" />
+      {/* Broad cabin fill keeps the whole work surface legible. Directional
+          side lights reveal silhouettes without competing with the lamp. */}
+      <ambientLight intensity={0.27} color="#ead8b7" />
+      <hemisphereLight intensity={0.29} color="#e2cda8" groundColor="#182016" />
+      <directionalLight position={[0, 5, 9]} intensity={0.44} color="#f2dfbf" />
+      <directionalLight position={[-7, 4, -2]} intensity={0.24} color="#cda879" />
+      <directionalLight position={[7, 3, 1]} intensity={0.22} color="#939b80" />
+      {/* A restrained olive rim separates silhouettes from the room. */}
+      <directionalLight position={[5, 2.5, -5]} intensity={0.2} color="#7f896f" />
 
       <Suspense fallback={null}>
         <DeskLamp />

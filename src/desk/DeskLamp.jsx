@@ -58,10 +58,10 @@ export default function DeskLamp() {
       <spotLight
         position={[2.35, 3.9, 0.1]}
         target-position={[1.4, 0, 0.6]}
-        angle={0.61}
-        penumbra={0.5}
-        distance={14}
-        intensity={118}
+        angle={0.76}
+        penumbra={0.68}
+        distance={16}
+        intensity={138}
         color={COLORS.lampWarm}
         castShadow
         // 1024² is plenty for a desk-sized pool of soft contact shadows, and
@@ -75,7 +75,7 @@ export default function DeskLamp() {
         shadow-bias={-0.0004}
       />
       {/* tiny point light so the bulb itself reads as a glow source */}
-      <pointLight position={[2.55, 2.1, 0]} intensity={1.4} distance={3.2} color={COLORS.lampWarm} />
+      <pointLight position={[2.55, 2.1, 0]} intensity={1.9} distance={4} color={COLORS.lampWarm} />
     </group>
   )
 }
