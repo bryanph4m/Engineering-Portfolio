@@ -42,6 +42,10 @@ export async function createEvent({ name, start, attendeeEmail }) {
       eventTypeId: Number(process.env.CALCOM_EVENT_TYPE_ID),
       start: start.toISOString(),
       attendee: { name, email: attendeeEmail, timeZone: 'UTC' },
+      // src/content/availability.js + slots.js is the single source of truth
+      // for bookable hours, not this event type's own Cal.com schedule — the
+      // freeBusy() call above already guards against real double-booking.
+      allowBookingOutOfBounds: true,
     }),
   })
   if (!res.ok) throw new Error(`Cal.com createEvent failed: ${res.status} ${await res.text()}`)
