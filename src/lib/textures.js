@@ -109,19 +109,6 @@ export function woodTexture() {
     ctx.stroke()
   }
 
-  // A few ghosted cup rings and rubbed patches keep the procedural slab from
-  // reading as a perfectly clean material swatch.
-  for (let i = 0; i < 4; i++) {
-    const x = W * (0.18 + Math.random() * 0.64)
-    const y = H * (0.18 + Math.random() * 0.64)
-    const r = 34 + Math.random() * 54
-    ctx.strokeStyle = `rgba(24,17,10,${0.08 + Math.random() * 0.06})`
-    ctx.lineWidth = 3 + Math.random() * 4
-    ctx.beginPath()
-    ctx.ellipse(x, y, r, r * (0.72 + Math.random() * 0.18), Math.random(), 0, Math.PI * 2)
-    ctx.stroke()
-  }
-
   // soft edge grime / vignette — spans the whole desk exactly once
   const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.62)
   vg.addColorStop(0, 'rgba(0,0,0,0)')
