@@ -25,6 +25,13 @@
   --paper-edge: #d8cbaa;
   --rule: #b9c4b1;
   --margin: #c07b74;
+  --desk-void: #0a0c08;
+  --desk-shadow: #11130d;
+  --desk-amber: #d99b55;
+  --desk-amber-bright: #f0bd7a;
+  --desk-parchment: #e2d2ae;
+  --desk-olive: #b7bea8;
+  --desk-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * { box-sizing: border-box; }
@@ -45,6 +52,63 @@ html, body, #root {
 /* The Canvas fills everything; DOM chrome floats above it. */
 .scene-canvas { position: fixed !important; inset: 0; touch-action: none; }
 
+/* Desk-only cinematic grade. This is two compositor layers over the existing
+   canvas, not another WebGL pass: one vignette/grain sheet and one lamp bloom.
+   It preserves the scene's tight GPU budget while joining the procedural props
+   into the same smoky, rough-edged room. */
+.desk-mode { position: fixed; inset: 0; background: var(--desk-void); }
+.desk-grade {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  overflow: hidden;
+  pointer-events: none;
+}
+.desk-grade::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 39% 43%, transparent 28%, rgba(5, 7, 5, 0.24) 70%, rgba(2, 3, 2, 0.68) 100%),
+    linear-gradient(112deg, rgba(99, 113, 81, 0.08), transparent 42%, rgba(19, 10, 5, 0.2));
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.42);
+}
+.desk-grade::after {
+  content: '';
+  position: absolute;
+  inset: -42px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.84' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.72'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: soft-light;
+  opacity: 0.075;
+  animation: desk-grain 7s steps(7, end) infinite;
+  will-change: transform;
+}
+@keyframes desk-grain {
+  0% { transform: translate3d(-1%, -1%, 0); }
+  28% { transform: translate3d(1.4%, -0.6%, 0); }
+  56% { transform: translate3d(-0.7%, 1.2%, 0); }
+  82% { transform: translate3d(1%, 0.5%, 0); }
+  100% { transform: translate3d(-1%, -1%, 0); }
+}
+.desk-grade__lamplight {
+  position: absolute;
+  top: -18%;
+  left: -17%;
+  width: 78vw;
+  height: 92vh;
+  background: radial-gradient(ellipse, rgba(242, 168, 86, 0.12), rgba(221, 139, 62, 0.035) 42%, transparent 72%);
+  mix-blend-mode: screen;
+  opacity: 0.72;
+  transform-origin: 32% 30%;
+}
+.desk-grade__frame {
+  position: absolute;
+  inset: 11px;
+  border: 1px solid rgba(199, 154, 91, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(2, 3, 2, 0.5);
+}
+
 /* ------------------------------------------------------------------ */
 /* Loading doodle                                                      */
 /* ------------------------------------------------------------------ */
@@ -54,7 +118,7 @@ html, body, #root {
   z-index: 50;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 40%, #2a2013, #140d06 75%);
+  background: radial-gradient(circle at 50% 40%, #282116, #090a07 76%);
   /* crossfade into the (already drawn — see FirstFramesGate) desk scene */
   transition: opacity 0.5s ease;
   color: var(--paper);
@@ -430,12 +494,34 @@ html, body, #root {
 /* ------------------------------------------------------------------ */
 .hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
 .hud__title {
-  position: absolute; top: 22px; left: 26px;
+  position: absolute;
+  top: 24px;
+  left: 26px;
+  max-width: min(560px, calc(100vw - 52px));
+  padding: 12px 20px 12px 17px;
+  border-left: 2px solid rgba(217, 155, 85, 0.78);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--desk-shadow) 82%, transparent), color-mix(in srgb, var(--desk-shadow) 42%, transparent) 72%, transparent);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
   font-family: 'Special Elite', monospace;
-  color: #f1e6cd; text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  color: var(--desk-parchment);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.72);
 }
-.hud__title h1 { margin: 0; font-size: 19px; letter-spacing: 1px; }
-.hud__title p { margin: 2px 0 0; font-size: 12px; opacity: 0.7; }
+.hud__title h1 {
+  margin: 0;
+  color: var(--desk-amber);
+  font-size: clamp(20px, 2vw, 25px);
+  line-height: 1;
+  letter-spacing: 2px;
+}
+.hud__title p {
+  margin: 5px 0 0;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: 0.7px;
+  color: var(--desk-olive);
+  opacity: 0.86;
+}
 /* Mode switch, under the name. The .hud layer is pointer-events: none so the
    chrome can never eat a click meant for the desk; this is the one control in
    it, so it takes pointer events back for itself alone. Styled as a pencilled
@@ -445,28 +531,33 @@ html, body, #root {
 .hud__switch {
   pointer-events: auto;
   display: inline-block;
-  margin: 9px 0 0;
-  padding: 2px 0;
+  min-height: 44px;
+  margin: 5px 0 -8px;
+  padding: 10px 0 8px;
   border: 0;
-  border-bottom: 1px dashed rgba(241, 230, 205, 0.45);
+  border-bottom: 1px dashed rgba(217, 155, 85, 0.54);
   background: none;
   cursor: pointer;
   font-family: 'Cutive Mono', monospace;
   font-size: 12px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #f1e6cd;
-  opacity: 0.62;
+  color: var(--desk-amber);
+  opacity: 0.82;
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
-  transition: opacity 0.25s ease, border-color 0.25s ease;
+  transition: color 0.25s var(--desk-ease), opacity 0.25s var(--desk-ease), border-color 0.25s var(--desk-ease);
   -webkit-tap-highlight-color: transparent;
 }
 .hud__switch:hover,
 .hud__switch:focus-visible {
+  color: var(--desk-amber-bright);
   opacity: 1;
-  border-bottom-color: rgba(241, 230, 205, 0.9);
+  border-bottom-color: rgba(240, 189, 122, 0.92);
 }
-.hud__switch:focus-visible { outline: none; }
+.hud__switch:focus-visible {
+  outline: 2px solid rgba(240, 189, 122, 0.85);
+  outline-offset: 4px;
+}
 /* Album position indicator ("2 / 5"), shown while the photo frame is picked
    up. Sits just above the hint band in the same reserved bottom strip, in the
    desk's typewriter face. */
@@ -484,10 +575,14 @@ html, body, #root {
   position: absolute; left: 50%; transform: translateX(-50%);
   bottom: max(20px, env(safe-area-inset-bottom));
   max-width: min(92vw, 640px);
-  font-family: 'Architects Daughter', cursive;
-  color: #efe3c8; font-size: 15px; line-height: 1.35; opacity: 0.85;
-  text-shadow: 0 1px 5px rgba(0,0,0,0.7);
-  text-align: center; transition: opacity 0.4s ease;
+  padding: 8px 14px 7px;
+  border-top: 1px solid rgba(190, 141, 78, 0.34);
+  border-bottom: 1px solid rgba(105, 116, 91, 0.3);
+  background: linear-gradient(90deg, transparent, rgba(6, 8, 5, 0.76) 12%, rgba(6, 8, 5, 0.76) 88%, transparent);
+  font-family: 'Cutive Mono', monospace;
+  color: var(--desk-parchment); font-size: 14px; line-height: 1.35; letter-spacing: 0.55px; opacity: 0.88;
+  text-shadow: 0 1px 5px rgba(0,0,0,0.82);
+  text-align: center; transition: opacity 0.4s var(--desk-ease);
 }
 
 /* First-visit-only nudge toward the invisible edge-tap panning (ui/EdgeHint).
@@ -727,17 +822,24 @@ html, body, #root {
 }
 
 @media (max-width: 480px) {
-  .hud__title h1 { font-size: 16px; }
+  .desk-grade__frame { inset: 7px; }
+  .hud__title h1 { font-size: 18px; }
   /* The disciplines line is a single long string ("mechanical engineering ·
      rocketry · ai · embedded systems") and ran straight off the right edge of a
      phone. Give the block a real width budget and let it wrap inside it. */
-  .hud__title { right: 26px; max-width: calc(100vw - 52px); }
-  .hud__title p { font-size: 11px; line-height: 1.35; }
+  .hud__title {
+    top: max(16px, env(safe-area-inset-top));
+    left: 18px;
+    right: 18px;
+    max-width: calc(100vw - 36px);
+    padding: 11px 14px 10px;
+  }
+  .hud__title p { font-size: 12px; line-height: 1.35; }
   /* the block above it wraps to two lines on a phone, so keep the switch's own
      tap target honest rather than letting it crowd the disciplines line */
-  .hud__switch { margin-top: 7px; font-size: 11px; padding: 4px 0; }
+  .hud__switch { margin-top: 2px; font-size: 11px; padding: 10px 0 8px; }
   /* keep the (wrapping) hint inside the reserved bottom band on phones */
-  .hud__hint { font-size: 13px; }
+  .hud__hint { max-width: calc(100vw - 28px); padding-inline: 10px; font-size: 13px; }
   .edge-hint { font-size: 12px; }
 }
 
@@ -746,6 +848,7 @@ html, body, #root {
   .start__sheet { animation: none; transition: opacity 0.3s ease; }
   .start.is-leaving .start__sheet { transform: rotate(-0.6deg); }
   .edge-hint { animation: none; }
+  .desk-grade::after { animation: none; }
   /* The start screen's added richness is all still there — the grain, the ticks,
      the sketch, the lamplight — it simply arrives already finished instead of
      drifting and drawing itself in. */
