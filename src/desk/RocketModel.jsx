@@ -1053,22 +1053,23 @@ LAYOUT.pageY = -LAYOUT.totalH / 2 + LAYOUT.pageH / 2
  * constant cost in place of a large intermittent one is the trade, and it is
  * the right way round.
  *
- * ## Why it sits this far out, rather than the closer position it started at
+ * ## Why the component page never sees this light
  *
- * The component page is a flat plane sitting well below the composition's own
- * centre (LAYOUT.pageY), while this light's position is pinned near the
- * airframe's height. Parked close (the original 1.6 units out), the inverse
- * square falloff across the page's own height was steep enough to paint a
- * visible bright-to-dark band across it — flat drafting-paper material lit
- * unevenly reads as a sheen, exactly the "glossy" a matte page should never
- * have. Paper-matte materials (`RocketModel`'s page mesh, `desk/props`'
- * DocProp) still don't cause that on their own; a point light close enough
- * for its own falloff to vary noticeably across one small flat surface does.
- * Standing the light further back and raising intensity to match keeps the
- * airframe's brightness the same (it's almost exactly at the light's height,
- * so its distance barely changes) while flattening the gradient across the
- * page underneath it — the fix is geometry, not material, because the
- * material was never the thing that was wrong.
+ * The page is a flat plane sitting well below the composition's own centre
+ * (LAYOUT.pageY). A point light anywhere close enough to shade the 3D
+ * airframe properly will always vary noticeably across a flat surface's
+ * extent — repositioning and re-intensifying this light (further out, more
+ * output, holding the airframe's own brightness constant) was tried first
+ * and measurably did not flatten the page's gradient: rendering with the
+ * light zeroed barely changed the page's shading, so the unevenness was
+ * never proportional to this light's distance in the way that fix assumed.
+ * The page doesn't need directional shading cues anyway — it's a texture —
+ * so instead of continuing to tune position/intensity around a light this
+ * page shouldn't be receiving, it simply isn't: this light and the rocket
+ * body share layer 1 (see the `armed` effect below), while the page stays on
+ * the default layer and reads only the scene's uniform ambient/hemisphere/
+ * directional fill, which cannot produce a gradient on a flat plane at all.
+ * The distance/intensity pair below is tuned for the airframe alone.
  */
 const READING_KEY = {
   // In front of and above the focused composition, on the focus plane's own
@@ -1224,6 +1225,21 @@ export default function RocketModel() {
   useEffect(() => {
     if (isFocused) setArmed(true)
   }, [isFocused])
+
+  // Confine READING_KEY to the rocket body, layer 1, so the flat component
+  // page below it never sees the light at all. Two rounds of repositioning
+  // and re-intensifying that light (see READING_KEY's own header) failed to
+  // flatten the gradient it leaves on a flat plane, because a point source
+  // close enough to shade a real 3D airframe will always vary across a flat
+  // surface's extent, at any distance and any compensating intensity — the
+  // page never needed that shading (it's a texture), so it simply stops
+  // being one of the light's targets instead of being tuned around. Re-run
+  // when `armed` flips true: that is when Airframe mounts the extra detail
+  // hardware this traversal has to reach too.
+  useEffect(() => {
+    keyRef.current?.layers.set(1)
+    groupRef.current?.traverse((o) => o.layers.enable(1))
+  }, [armed])
 
   // Repaint the shared page whenever the part being read changes. Idempotent in
   // rocketTextures, so the hover and resize re-renders that also reach here
@@ -1544,6 +1560,7 @@ export default function RocketModel() {
               roughness={0.85}
               metalness={0}
             />
+
           </mesh>
         </group>
       )}

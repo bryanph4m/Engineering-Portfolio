@@ -235,7 +235,15 @@ export default function Document({ doc }) {
   }
   const onClick = (e) => {
     if (isFocused) {
-      // never let a click on the sheet fall through to the scrim behind it
+      // Only the readable page itself claims the click — the fanned blank
+      // leaves peeking out from under it, the flipped-over pile past the
+      // bound edge, and hardware like the bulldog clip / paperclip are all
+      // unnamed siblings in this same group, so without this check every one
+      // of them read as "the sheet" too and swallowed a click that looked,
+      // to the eye, like it landed on the desk. A miss on the actual page
+      // (hotspotAt returns null) still doesn't fall through — see the
+      // comment below — only a click that never reached the page at all does.
+      if (e.object?.name !== 'page-face') return
       e.stopPropagation()
       const hit = hotspotAt(e)
       if (!hit) return

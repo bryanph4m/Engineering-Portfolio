@@ -18,10 +18,14 @@ import { CAMERA, FOCUS_POSE, HOVER_LIFT, CALENDAR_ID } from './constants'
  * desk uses, so this one doesn't read as a different interaction. Unlike the
  * photo frame it has no content of its own worth reading up close; the real
  * UI is a DOM overlay (ui/CalendarBooking) that fades in over the tail of
- * this same flight, gated on the same focusedId. That overlay is what keeps
- * this model idle-cost-near-zero for the whole session: one small static
- * texture, no new light, no armed/detail plane (see RocketModel's header for
- * why a mid-session light mount is the thing to avoid).
+ * this same flight, gated on the same focusedId. The panel itself fades out
+ * over that same last stretch (see the `panelFade` read in useFrame below),
+ * so the physical prop hands off to the DOM card instead of sitting behind
+ * it at full size — the two never read as separate, stacked calendars. That
+ * overlay is what keeps this model idle-cost-near-zero for the whole
+ * session: one small static texture, no new light, no armed/detail plane
+ * (see RocketModel's header for why a mid-session light mount is the thing
+ * to avoid).
  */
 
 // Camera-to-panel distance at the focus pose — fixed, both poses are.
@@ -52,6 +56,9 @@ const SHADOW_POS = [REST.position[0], 0.0012, REST.position[2] + 0.14]
 export default function CalendarModel() {
   const groupRef = useRef()
   const kickRef = useRef()
+  const boardRef = useRef()
+  const faceRef = useRef()
+  const spineRef = useRef()
   const shadowMatRef = useRef()
   const faceTex = useMemo(() => calendarFaceTexture(), [])
   const shadowTex = useMemo(() => softShadowTexture(), [])
@@ -131,8 +138,23 @@ export default function CalendarModel() {
     const s = THREE.MathUtils.lerp(1 + 0.03 * hv, focusScale, t)
     g.scale.setScalar(s)
 
+    // The panel itself has nothing worth reading up close (see the header) —
+    // the DOM booking card is the actual content, and it fades in over the
+    // tail of this same flight (index.css's cal-panel-in). Without this, the
+    // physical panel arrives at full size right as the card appears, and the
+    // two sit stacked on screen reading as two separate calendars. Fading
+    // the panel out over the flight's own last third hands off to the card
+    // instead of competing with it, so only one is ever visible at rest.
+    const panelFade = 1 - THREE.MathUtils.clamp((t - 0.7) / 0.3, 0, 1)
+    for (const ref of [boardRef, faceRef, spineRef]) {
+      const m = ref.current?.material
+      if (!m) continue
+      m.transparent = true
+      m.opacity = panelFade
+    }
+
     if (shadowMatRef.current) {
-      shadowMatRef.current.opacity = (0.16 + 0.1 * hv) * (1 - 0.6 * t)
+      shadowMatRef.current.opacity = (0.16 + 0.1 * hv) * (1 - 0.6 * t) * panelFade
     }
     // The kickstand only makes sense while the calendar rests on the desk —
     // fade it out early in the pickup and hide it once airborne, exactly
@@ -195,17 +217,17 @@ export default function CalendarModel() {
         {/* wooden backing board — does not castShadow, like the photo frame's
             rails: grounding is the animated blob above, so nothing pops on
             pickup */}
-        <mesh castShadow={false}>
+        <mesh ref={boardRef} castShadow={false}>
           <boxGeometry args={[W, H, D]} />
           <meshStandardMaterial {...WOOD} />
         </mesh>
         {/* printed calendar face, recessed just in front of the backing */}
-        <mesh position={[0, 0, D / 2 + 0.001]}>
+        <mesh ref={faceRef} position={[0, 0, D / 2 + 0.001]}>
           <planeGeometry args={[W * 0.94, H * 0.94]} />
           <meshStandardMaterial map={faceTex} roughness={0.6} />
         </mesh>
         {/* wire-bound spine along the top edge */}
-        <mesh position={[0, H / 2 - 0.02, D / 2 + 0.012]}>
+        <mesh ref={spineRef} position={[0, H / 2 - 0.02, D / 2 + 0.012]}>
           <boxGeometry args={[W * 0.96, 0.04, 0.024]} />
           <meshStandardMaterial {...SPINE} />
         </mesh>
