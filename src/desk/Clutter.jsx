@@ -17,8 +17,8 @@ import {
  * mid-project" read: T-square, a drafting compass, mechanical pencils,
  * kneaded eraser, slide rule, a vellum roll, a coffee mug, a drafting
  * triangle, a pin dish, stray circuit boards with loose components, a
- * TI-36X Pro calculator and a meshed pair of gears filling the middle of
- * the desk. (The framed photo that used to lean at the back is now its own
+ * TI-36X Pro calculator filling the middle of the desk. (The framed photo
+ * that used to lean at the back is now its own
  * interactive album — see PhotoFrame.jsx.)
  *
  * Layout rules (enforced by DevLayoutAudit in dev builds):
@@ -251,67 +251,6 @@ function Calculator({ position, yaw = 0 }) {
   )
 }
 
-/**
- * A loose steel spur gear lying flat, cut like the real thing: trapezoidal
- * teeth with angled flanks around a round root circle, a true through-bore,
- * and a raised brass hub ring. `phase` spins the tooth pattern into the
- * geometry (the prop itself never rotates) so two touching gears can be
- * clocked to interlock: give both the same `module`, set their centre
- * distance to the sum of their pitch radii (module * teeth / 2), and phase
- * one with a tooth on the centre line and the other with a gap.
- * Shape-space angle b lands at world angle -b once the extrusion is laid
- * flat, so a tooth aimed at world angle t needs phase = -t.
- */
-function Gear({ position, teeth = 12, module = 0.04, thickness = 0.05, phase = 0, bore = 0.05 }) {
-  const pitchR = (module * teeth) / 2
-  const { plate, hub } = useMemo(() => {
-    const tip = pitchR + module * 0.9 // addendum
-    const root = pitchR - module * 1.1 // dedendum
-    const p = (Math.PI * 2) / teeth
-    const s = new THREE.Shape()
-    for (let i = 0; i < teeth; i++) {
-      const a = phase + i * p
-      // one tooth: root -> leading flank -> tip flat -> trailing flank,
-      // then the root arc across the gap to the next tooth
-      const pts = [
-        [a - p * 0.24, root],
-        [a - p * 0.1, tip],
-        [a + p * 0.1, tip],
-        [a + p * 0.24, root],
-      ]
-      for (const [ang, rad] of pts) {
-        if (i === 0 && ang === pts[0][0]) s.moveTo(Math.cos(ang) * rad, Math.sin(ang) * rad)
-        else s.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad)
-      }
-      for (let k = 1; k <= 3; k++) {
-        const ang = a + p * 0.24 + ((p * 0.52) * k) / 3
-        s.lineTo(Math.cos(ang) * root, Math.sin(ang) * root)
-      }
-    }
-    s.closePath()
-    s.holes.push(new THREE.Path().absarc(0, 0, bore, 0, Math.PI * 2, true))
-    const plate = new THREE.ExtrudeGeometry(s, { depth: thickness, bevelEnabled: false })
-
-    const hs = new THREE.Shape()
-    hs.absarc(0, 0, bore * 2.1, 0, Math.PI * 2, false)
-    hs.holes.push(new THREE.Path().absarc(0, 0, bore, 0, Math.PI * 2, true))
-    const hub = new THREE.ExtrudeGeometry(hs, { depth: 0.024, bevelEnabled: false })
-    return { plate, hub }
-  }, [teeth, module, thickness, phase, bore, pitchR])
-
-  return (
-    <group position={position} rotation={[-Math.PI / 2, 0, 0]}>
-      <mesh castShadow geometry={plate}>
-        <meshStandardMaterial {...steel} />
-      </mesh>
-      {/* hub ring sits proud of the plate; the bore stays open through both */}
-      <mesh castShadow geometry={hub} position={[0, 0, thickness]}>
-        <meshStandardMaterial {...brass} />
-      </mesh>
-    </group>
-  )
-}
-
 /** A bare PCB set down mid-project; children are its through-hole parts. */
 function CircuitBoard({ position, yaw = 0, w = 0.95, d = 0.62, mask = 'green', children }) {
   const tex = pcbTexture(mask)
@@ -425,23 +364,9 @@ export default function Clutter() {
            keeps it off the desk slab, like the flat papers). ---- */}
       <Pennant position={[4.05, 0.004, 0.55]} yaw={0.5} />
 
-      {/* ---- Middle-of-desk fillers: calculator pushed aside mid-use, and a
-           meshed gear pair between the papers. Both sit in the open pocket
-           bounded by the about card, resume, blueprint and project stack —
-           re-run window.__deskLayoutAudit() after moving either. ----
-           Gear mesh: pitch radii 0.24 + 0.16 = the 0.40 centre distance, and
-           the phases clock a wheel tooth into a pinion gap along the centre
-           line (world angle -2.7172 rad from the wheel; see Gear docs). */}
+      {/* ---- Calculator pushed aside mid-use in the open pocket bounded by
+           the about card, resume, blueprint and project stack. ---- */}
       <Calculator position={[-0.62, 0, 1.25]} yaw={-0.38} />
-      <Gear position={[-0.12, 0, -0.1]} teeth={12} module={0.04} phase={2.7172} bore={0.05} />
-      <Gear
-        position={[-0.485, 0, -0.265]}
-        teeth={8}
-        module={0.04}
-        thickness={0.04}
-        phase={-0.0317}
-        bore={0.035}
-      />
 
       {/* ---- Mechanical pencils + kneaded eraser, front-left. All three slid
            left off their old spots so the rocket model's aft end and motor have

@@ -153,8 +153,8 @@ function auditLayout(scene) {
   const rocket = measure('rocket')
 
   // The rocket against the clutter. Only these two groups are cross-tested —
-  // within a group, props are allowed to touch (the mug pins the pennant, the
-  // gears mesh), and that is deliberate composition rather than a mistake.
+  // within a group, props are allowed to touch (the mug pins the pennant),
+  // and that is deliberate composition rather than a mistake.
   for (const r of rocket) {
     for (const c of clutter) {
       if (overlaps(r, c)) warnings.push(`rocket ${r.label} intersects clutter ${c.label}`)

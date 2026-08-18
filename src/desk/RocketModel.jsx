@@ -287,7 +287,7 @@ function surfaceGeometry({ tip, rootChord, tipChord, sweep, thick }) {
 // makes for the black parts applies just as well to the hull. Dropping it and
 // raising roughness therefore hands back the broad diffuse gradient that tells
 // you the tube is round, and only takes away the hotspot. Judge any change to
-// these against the LIT desk beside the drafting compass and the gears, not in
+// these against the LIT desk beside the drafting compass and calculator, not in
 // isolation: the target is the same reflectivity range as those, not flatness.
 const HULL = { color: '#6b7f9e', metalness: 0.12, roughness: 0.62 }
 const PRINT = { color: '#191c21', metalness: 0.08, roughness: 0.64 }
