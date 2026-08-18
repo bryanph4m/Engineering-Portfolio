@@ -166,11 +166,11 @@ function paintGrid(ctx, regions, s) {
 
 /**
  * The calendar is only a few centimetres wide in its desk pose, so the full
- * month grid turns into visual noise there. Its closed face is therefore a
- * cover: one unmistakable purpose, one useful bit of context, and one clear
- * action. Picking it up swaps this for the complete interactive month view.
+ * month grid turns into visual noise there. Its cover therefore stays visible
+ * through pickup, then offers one explicit Start action before the visitor
+ * enters the complete interactive month view.
  */
-function paintRestingFace(ctx, s) {
+function paintCoverFace(ctx, regions, s) {
   const month = MONTH_NAMES[s.viewYM.m - 1].toUpperCase()
 
   // Double rule and binding-side marks keep this in the same hand-built,
@@ -239,9 +239,28 @@ function paintRestingFace(ctx, s) {
   ctx.font = `600 31px ${MONO}`
   ctx.fillText('30 MIN  ·  ONLINE', FACE_W / 2, 958)
 
-  ctx.fillStyle = ACCENT
-  ctx.font = `700 38px ${MONO}`
-  ctx.fillText('PICK UP TO VIEW TIMES  →', FACE_W / 2, 1086)
+  if (s.focused) {
+    closeButton(ctx, regions)
+    const x = 180
+    const y = 1010
+    const w = FACE_W - x * 2
+    const h = 108
+    ctx.fillStyle = INK
+    ctx.fillRect(x, y, w, h)
+    ctx.strokeStyle = ACCENT
+    ctx.lineWidth = 5
+    ctx.strokeRect(x + 8, y + 8, w - 16, h - 16)
+    ctx.fillStyle = PAPER
+    ctx.font = `700 46px ${MONO}`
+    ctx.textBaseline = 'middle'
+    ctx.fillText('START  →', FACE_W / 2, y + h / 2 + 2)
+    ctx.textBaseline = 'alphabetic'
+    regions.push(pxRegion(x, y, x + w, y + h, { action: 'start' }))
+  } else {
+    ctx.fillStyle = ACCENT
+    ctx.font = `700 38px ${MONO}`
+    ctx.fillText('PICK UP TO START  →', FACE_W / 2, 1086)
+  }
 }
 
 function paintSlots(ctx, regions, s) {
@@ -381,7 +400,7 @@ function paintCalendarFace(ctx, s) {
   ctx.fillRect(0, 0, FACE_W, FACE_H)
 
   const regions = []
-  if (s.resting) paintRestingFace(ctx, s)
+  if (s.cover) paintCoverFace(ctx, regions, s)
   else if (s.confirmation) paintConfirmed(ctx, regions, s)
   else if (s.selectedSlot) paintDetails(ctx, regions, s)
   else if (s.selectedDate) paintSlots(ctx, regions, s)

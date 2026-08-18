@@ -75,10 +75,10 @@ export default function CalendarModel() {
   const faceRef = useRef()
   const shadowMatRef = useRef()
   const regionsRef = useRef([])
-  const detailedFaceRef = useRef(false)
+  const bookingStartedRef = useRef(false)
   const shadowTex = useMemo(() => softShadowTexture(), [])
   const faceTex = useMemo(() => calendarFaceTexture(), [])
-  const [showDetailedFace, setShowDetailedFace] = useState(false)
+  const [bookingStarted, setBookingStarted] = useState(false)
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const hoveredId = useSceneStore((s) => s.hoveredId)
@@ -111,7 +111,8 @@ export default function CalendarModel() {
   useEffect(() => {
     const s = useBookingStore.getState()
     regionsRef.current = paintCalendarSheet({
-      resting: !showDetailedFace,
+      cover: !bookingStarted,
+      focused: isFocused,
       viewYM,
       monthDays: s.monthDays(),
       isDayBookable: s.isDayBookable,
@@ -125,7 +126,7 @@ export default function CalendarModel() {
       confirmation,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDetailedFace, viewYM, selectedDate, slots, loadingSlots, selectedSlot, error, confirmation])
+  }, [bookingStarted, isFocused, viewYM, selectedDate, slots, loadingSlots, selectedSlot, error, confirmation])
 
   // Scale the panel to the same focus height as a document, but never wider
   // than the viewport can show at the focus distance (matches Document.jsx /
@@ -179,17 +180,13 @@ export default function CalendarModel() {
     const t = open.get()
     const hv = hover.get()
 
-    // Keep the cover on while the calendar first leaves the desk, then keep
-    // the useful month view through almost the entire return flight. Besides
-    // avoiding a tiny unreadable grid at rest, this hides the state reset until
-    // the prop is effectively back down instead of changing its face mid-air.
-    if (isFocused && !detailedFaceRef.current && t > 0.12) {
-      detailedFaceRef.current = true
-      setShowDetailedFace(true)
-    } else if (!isFocused && detailedFaceRef.current && t < 0.08) {
+    // The explicit Start action owns the cover -> calendar transition. Keep
+    // the active calendar visible through the return flight, then restore the
+    // cover and reset the booking only once the prop is effectively back down.
+    if (!isFocused && bookingStartedRef.current && t < 0.08) {
       resetBooking()
-      detailedFaceRef.current = false
-      setShowDetailedFace(false)
+      bookingStartedRef.current = false
+      setBookingStarted(false)
     }
 
     // Rest -> focus interpolation, same as Document.jsx / PhotoFrame.jsx.
@@ -265,6 +262,10 @@ export default function CalendarModel() {
     e.stopPropagation()
     const b = useBookingStore.getState()
     switch (hit.action) {
+      case 'start':
+        bookingStartedRef.current = true
+        setBookingStarted(true)
+        break
       case 'close':
         close()
         break
