@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useSpring } from '@react-spring/three'
 import * as THREE from 'three'
@@ -75,8 +75,10 @@ export default function CalendarModel() {
   const faceRef = useRef()
   const shadowMatRef = useRef()
   const regionsRef = useRef([])
+  const detailedFaceRef = useRef(false)
   const shadowTex = useMemo(() => softShadowTexture(), [])
   const faceTex = useMemo(() => calendarFaceTexture(), [])
+  const [showDetailedFace, setShowDetailedFace] = useState(false)
 
   const focusedId = useSceneStore((s) => s.focusedId)
   const hoveredId = useSceneStore((s) => s.hoveredId)
@@ -97,11 +99,10 @@ export default function CalendarModel() {
   const confirmation = useBookingStore((s) => s.confirmation)
   const resetBooking = useBookingStore((s) => s.reset)
 
-  // Full reset whenever the panel closes, so the next open always starts
-  // fresh rather than resuming a half-finished booking from last time.
-  useEffect(() => {
-    if (!isFocused) resetBooking()
-  }, [isFocused, resetBooking])
+  // Switching to simple mode can unmount the desk before a closing spring
+  // reaches the reset threshold below. Never carry a partial or confirmed
+  // booking into the next desk session.
+  useEffect(() => () => useBookingStore.getState().reset(), [])
 
   // Repaint the face whenever what it should show changes. isDayBookable /
   // canGoPrev / canGoNext / monthDays are cheap pure functions of the state
@@ -110,6 +111,7 @@ export default function CalendarModel() {
   useEffect(() => {
     const s = useBookingStore.getState()
     regionsRef.current = paintCalendarSheet({
+      resting: !showDetailedFace,
       viewYM,
       monthDays: s.monthDays(),
       isDayBookable: s.isDayBookable,
@@ -123,7 +125,7 @@ export default function CalendarModel() {
       confirmation,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewYM, selectedDate, slots, loadingSlots, selectedSlot, error, confirmation])
+  }, [showDetailedFace, viewYM, selectedDate, slots, loadingSlots, selectedSlot, error, confirmation])
 
   // Scale the panel to the same focus height as a document, but never wider
   // than the viewport can show at the focus distance (matches Document.jsx /
@@ -176,6 +178,19 @@ export default function CalendarModel() {
     if (!g) return
     const t = open.get()
     const hv = hover.get()
+
+    // Keep the cover on while the calendar first leaves the desk, then keep
+    // the useful month view through almost the entire return flight. Besides
+    // avoiding a tiny unreadable grid at rest, this hides the state reset until
+    // the prop is effectively back down instead of changing its face mid-air.
+    if (isFocused && !detailedFaceRef.current && t > 0.12) {
+      detailedFaceRef.current = true
+      setShowDetailedFace(true)
+    } else if (!isFocused && detailedFaceRef.current && t < 0.08) {
+      resetBooking()
+      detailedFaceRef.current = false
+      setShowDetailedFace(false)
+    }
 
     // Rest -> focus interpolation, same as Document.jsx / PhotoFrame.jsx.
     // Unlike the earlier version of this file, the panel is the payload now

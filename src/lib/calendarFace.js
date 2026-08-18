@@ -31,8 +31,8 @@ export const MONTH_NAMES = [
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 const INK = '#33291d'
-const INK_DIM = 'rgba(51,41,29,0.55)'
-const INK_FAINT = 'rgba(51,41,29,0.3)'
+const INK_DIM = 'rgba(51,41,29,0.72)'
+const INK_FAINT = 'rgba(51,41,29,0.42)'
 const ACCENT = '#b3563f'
 const PAPER = '#f4ecd8'
 
@@ -162,6 +162,86 @@ function paintGrid(ctx, regions, s) {
   ctx.font = `28px ${HAND}`
   ctx.textAlign = 'center'
   ctx.fillText('pick a day, pick a time', FACE_W / 2, gridTop + rows * cell + 56)
+}
+
+/**
+ * The calendar is only a few centimetres wide in its desk pose, so the full
+ * month grid turns into visual noise there. Its closed face is therefore a
+ * cover: one unmistakable purpose, one useful bit of context, and one clear
+ * action. Picking it up swaps this for the complete interactive month view.
+ */
+function paintRestingFace(ctx, s) {
+  const month = MONTH_NAMES[s.viewYM.m - 1].toUpperCase()
+
+  // Double rule and binding-side marks keep this in the same hand-built,
+  // weathered paper language as the other desk documents.
+  ctx.strokeStyle = INK
+  ctx.lineWidth = 9
+  ctx.strokeRect(42, 42, FACE_W - 84, FACE_H - 84)
+  ctx.strokeStyle = ACCENT
+  ctx.lineWidth = 3
+  ctx.strokeRect(58, 58, FACE_W - 116, FACE_H - 116)
+  for (let x = 112; x <= FACE_W - 112; x += 92) {
+    ctx.strokeStyle = INK_DIM
+    ctx.lineWidth = 8
+    ctx.beginPath()
+    ctx.moveTo(x, 42)
+    ctx.lineTo(x, 88)
+    ctx.stroke()
+  }
+
+  ctx.textAlign = 'center'
+  ctx.fillStyle = INK_DIM
+  ctx.font = `600 28px ${MONO}`
+  ctx.fillText('BRYAN PHAM  /  AVAILABILITY', FACE_W / 2, 154)
+
+  ctx.fillStyle = INK
+  ctx.font = `400 104px ${TYPE}`
+  ctx.fillText('BOOK', FACE_W / 2, 310)
+  ctx.fillText('A MEETING', FACE_W / 2, 420)
+
+  ctx.strokeStyle = ACCENT
+  ctx.lineWidth = 8
+  ctx.beginPath()
+  ctx.moveTo(188, 463)
+  ctx.bezierCurveTo(350, 442, 620, 480, 772, 454)
+  ctx.stroke()
+
+  // A compact calendar glyph reads even after the texture is reduced to the
+  // resting prop's on-screen size.
+  const iconX = 250
+  const iconY = 530
+  const iconW = 460
+  const iconH = 270
+  ctx.strokeStyle = INK
+  ctx.lineWidth = 10
+  ctx.strokeRect(iconX, iconY, iconW, iconH)
+  ctx.fillStyle = ACCENT
+  ctx.fillRect(iconX, iconY, iconW, 60)
+  ctx.fillStyle = INK
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 4; col++) {
+      ctx.beginPath()
+      ctx.arc(iconX + 82 + col * 98, iconY + 118 + row * 82, 13, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+  ctx.strokeStyle = ACCENT
+  ctx.lineWidth = 8
+  ctx.beginPath()
+  ctx.arc(iconX + 82 + 2 * 98, iconY + 118 + 82, 27, 0, Math.PI * 2)
+  ctx.stroke()
+
+  ctx.fillStyle = INK
+  ctx.font = `700 62px ${MONO}`
+  ctx.fillText(`${month}  ${s.viewYM.y}`, FACE_W / 2, 896)
+  ctx.fillStyle = INK_DIM
+  ctx.font = `600 31px ${MONO}`
+  ctx.fillText('30 MIN  ·  ONLINE', FACE_W / 2, 958)
+
+  ctx.fillStyle = ACCENT
+  ctx.font = `700 38px ${MONO}`
+  ctx.fillText('PICK UP TO VIEW TIMES  →', FACE_W / 2, 1086)
 }
 
 function paintSlots(ctx, regions, s) {
@@ -301,7 +381,8 @@ function paintCalendarFace(ctx, s) {
   ctx.fillRect(0, 0, FACE_W, FACE_H)
 
   const regions = []
-  if (s.confirmation) paintConfirmed(ctx, regions, s)
+  if (s.resting) paintRestingFace(ctx, s)
+  else if (s.confirmation) paintConfirmed(ctx, regions, s)
   else if (s.selectedSlot) paintDetails(ctx, regions, s)
   else if (s.selectedDate) paintSlots(ctx, regions, s)
   else paintGrid(ctx, regions, s)
