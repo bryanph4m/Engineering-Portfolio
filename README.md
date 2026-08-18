@@ -277,29 +277,30 @@ authoritative, no invented projects, manual vs auto-managed fields) live in
 A small desk calendar prop lets a visitor book a real 30-minute meeting slot,
 synced against a connected calendar via Cal.com's free API (no card
 required). It's the one part of the site with a real backend: Vercel
-serverless functions under `api/`, calling Cal.com, Resend, and Upstash
-QStash/Redis directly over `fetch` (no heavy SDKs — see `api/_lib/`).
+serverless functions under `api/`, calling Cal.com and Upstash Redis
+directly over `fetch` (no heavy SDKs — see `api/_lib/`).
 
 **Flow:** click the calendar on the desk → pick a bookable day (weekdays,
-5–9pm Pacific by default — change this in `src/content/availability.js`,
-the single source of truth both the API and the UI read) → pick an open
-30-minute slot (shown in the visitor's own local time) → name + email →
-confirm. That reads busy time from Cal.com and creates the booking there,
-emails an immediate confirmation with a cancel link, and schedules a day-of
-email and a T-minus-30-minute email (each carrying a static Zoom link) via
-QStash. A booking inside the next 30 minutes skips the delayed sends and
-puts the Zoom link straight in the confirmation instead. `slots.js` and
-`availability.js` stay the one source of truth for bookable hours — Cal.com
-is only used for busy-time lookups and holding the booking, so turn off that
-event type's own confirmation email/workflow on Cal.com's side to avoid the
-visitor getting two.
+5–9pm Pacific by default, capped at 7 days out — change this in
+`src/content/availability.js`, the single source of truth both the API and
+the UI read) → pick an open 30-minute slot (shown in the visitor's own
+local time) → name + email → confirm. That reads busy time from Cal.com and
+creates the booking there; Cal.com sends its own confirmation email (with
+the Zoom link, since that's the event type's location) and, per its
+configured Workflow, a reminder before the event — this app sends no email
+itself. `slots.js` and `availability.js` stay the one source of truth for
+bookable hours — Cal.com is only used for busy-time lookups and holding the
+booking (`allowBookingOutOfBounds: true` on booking creation defers to our
+own check rather than the event type's own schedule).
 
 **Env vars** (see `.env.example` for the full list): a Cal.com API key +
-event type ID + connected-calendar credential/external ID, a Resend API key
-and sender address, a static Zoom room link, Upstash QStash + Redis
+event type ID + connected-calendar credential/external ID, Upstash Redis
 credentials, and an admin secret. Find the calendar credential/external ID
 with `CALCOM_API_KEY=... node scripts/list-calcom-calendars.mjs` after
-connecting a calendar in Cal.com's settings.
+connecting a calendar in Cal.com's settings. In Cal.com's dashboard, set the
+event type's location to your Zoom link and add a Workflow with a "before
+event" reminder — the free plan can't customize the wording, but it's
+enough to replicate the day-of/T-minus-30 reminders.
 
 **Admin.** Cancelling or listing bookings is curl-only for v1 — no dashboard:
 
@@ -310,8 +311,7 @@ curl -X POST -H "x-admin-key: $ADMIN_SECRET" -H "Content-Type: application/json"
 ```
 
 `api/_lib/slots.js` has the one piece of genuinely branchy logic here (working
-hours ∩ freebusy ∩ the near-term email-scheduling guards); run its self-check
-with `node api/_lib/slots.selfcheck.mjs`.
+hours ∩ freebusy); run its self-check with `node api/_lib/slots.selfcheck.mjs`.
 
 ## Photo frame album
 

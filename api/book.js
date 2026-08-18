@@ -1,11 +1,9 @@
 import crypto from 'node:crypto'
 import { freeBusy, createEvent } from './_lib/calendar.js'
-import { slotsForDate, isNearTerm, dayOfSendTime } from './_lib/slots.js'
-import { scheduleAt } from './_lib/qstash.js'
+import { slotsForDate } from './_lib/slots.js'
 import { saveBooking } from './_lib/redis.js'
 import { checkRateLimit } from './_lib/rateLimit.js'
 import { validateName, validateEmail, validateSlotStart } from './_lib/validate.js'
-import { sendConfirmationEmail } from './_lib/email.js'
 import { availability } from '../src/content/availability.js'
 
 const SITE_URL = process.env.SITE_URL || 'https://bryan-pham-portfolio.vercel.app'
@@ -38,6 +36,9 @@ export default async function handler(req, res) {
     const stillOpen = slotsForDate(dateStr, busy).some((s) => s.getTime() === slotStart.getTime())
     if (!stillOpen) return res.status(409).json({ error: 'That slot is no longer available' })
 
+    // Cal.com sends its own confirmation email (with the Zoom link, since
+    // that's the event type's location) and, per its configured workflow,
+    // reminder emails before the event — nothing left for this app to send.
     const event = await createEvent({ name, start: slotStart, attendeeEmail: email })
 
     const id = crypto.randomUUID()
@@ -51,36 +52,10 @@ export default async function handler(req, res) {
       calendarEventId: event.id,
       status: 'confirmed',
       cancelToken,
-      qstashDayOfId: null,
-      qstashReminderId: null,
     }
-
-    const now = new Date()
-    const cancelUrl = `${SITE_URL}/api/cancel?bookingId=${id}&token=${cancelToken}`
-
-    if (isNearTerm(slotStart, now)) {
-      // Both delayed sends would already be moot — hand over the Zoom link
-      // immediately instead of scheduling emails that fire seconds apart.
-      await sendConfirmationEmail({ to: email, name, slotStart, cancelUrl, zoomLink: process.env.ZOOM_LINK })
-    } else {
-      await sendConfirmationEmail({ to: email, name, slotStart, cancelUrl })
-      const dayOf = dayOfSendTime(slotStart, now)
-      const reminder = new Date(slotStart.getTime() - 30 * 60000)
-      if (dayOf) {
-        booking.qstashDayOfId = await scheduleAt(
-          `${SITE_URL}/api/send-reminder`,
-          { bookingId: id, kind: 'dayOf' },
-          dayOf
-        )
-      }
-      booking.qstashReminderId = await scheduleAt(
-        `${SITE_URL}/api/send-reminder`,
-        { bookingId: id, kind: 'reminder' },
-        reminder
-      )
-    }
-
     await saveBooking(booking)
+
+    const cancelUrl = `${SITE_URL}/api/cancel?bookingId=${id}&token=${cancelToken}`
     res.status(200).json({ id, slotStart: booking.slotStart, cancelUrl })
   } catch (err) {
     console.error('[book]', err)

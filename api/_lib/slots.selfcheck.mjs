@@ -1,8 +1,8 @@
 // Runnable self-check for the branchy logic in slots.js — working hours
-// intersected with freebusy exclusion, past/window filtering, and the
-// near-term email-scheduling guards. Run with: node api/_lib/slots.selfcheck.mjs
+// intersected with freebusy exclusion and past/window filtering.
+// Run with: node api/_lib/slots.selfcheck.mjs
 import assert from 'node:assert'
-import { slotsForDate, isNearTerm, dayOfSendTime } from './slots.js'
+import { slotsForDate } from './slots.js'
 import { zonedTimeToUtc } from './tz.js'
 import { availability } from '../../src/content/availability.js'
 
@@ -30,17 +30,5 @@ assert.ok(!withBusy.some((s) => s.getTime() === first.getTime()), 'the busy slot
 // A slot already in the past is excluded even with no busy intervals.
 const past = slotsForDate(MONDAY, [], new Date(first.getTime() + 3600000))
 assert.ok(!past.some((s) => s.getTime() === first.getTime()), 'a past slot must not appear')
-
-// Near-term boundary: exactly 30 minutes out is near-term, 31 is not.
-const t = new Date('2027-03-01T20:00:00Z')
-assert.strictEqual(isNearTerm(new Date(t.getTime() + 30 * 60000), t), true, '30 min out is near-term')
-assert.strictEqual(isNearTerm(new Date(t.getTime() + 31 * 60000), t), false, '31 min out is not near-term')
-
-// day-of send time is null once 9am Pacific on that date has already passed.
-const slotLaterToday = zonedTimeToUtc(2027, 3, 1, 19, 0, availability.timezone) // 7pm Pacific
-const beforeNine = zonedTimeToUtc(2027, 3, 1, 8, 0, availability.timezone)
-const afterNine = zonedTimeToUtc(2027, 3, 1, 10, 0, availability.timezone)
-assert.ok(dayOfSendTime(slotLaterToday, beforeNine) !== null, 'day-of send should be scheduled before 9am')
-assert.strictEqual(dayOfSendTime(slotLaterToday, afterNine), null, 'day-of send should be skipped after 9am')
 
 console.log('slots.selfcheck: all assertions passed')

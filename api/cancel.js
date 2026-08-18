@@ -1,8 +1,6 @@
 import crypto from 'node:crypto'
 import { getBooking, updateBooking } from './_lib/redis.js'
 import { deleteEvent } from './_lib/calendar.js'
-import { cancelMessage } from './_lib/qstash.js'
-import { sendCancellationEmail } from './_lib/email.js'
 
 function timingSafeStringEqual(a, b) {
   const bufA = Buffer.from(String(a || ''))
@@ -14,12 +12,11 @@ function isAdmin(req) {
   return timingSafeStringEqual(req.headers['x-admin-key'], process.env.ADMIN_SECRET)
 }
 
+// Cal.com sends its own cancellation notification when the event is
+// cancelled, so there's nothing left for this app to email.
 async function doCancel(booking) {
   await deleteEvent(booking.calendarEventId)
-  await cancelMessage(booking.qstashDayOfId)
-  await cancelMessage(booking.qstashReminderId)
   await updateBooking(booking.id, { status: 'cancelled' })
-  await sendCancellationEmail({ to: booking.email, name: booking.name, slotStart: new Date(booking.slotStart) })
 }
 
 export default async function handler(req, res) {

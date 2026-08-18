@@ -34,22 +34,3 @@ export function slotsForDate(dateStr, busy, now = new Date()) {
   }
   return slots
 }
-
-/** A booking is "near-term" once its own T-30 reminder would already be moot
- *  — the confirmation email gets the Zoom link directly instead of scheduling
- *  delayed sends that would fire seconds apart from the confirmation itself. */
-export function isNearTerm(slotStart, now = new Date()) {
-  return slotStart.getTime() - now.getTime() <= 30 * 60000
-}
-
-/** 9am Pacific on the slot's calendar date, or null if that's already past —
- *  callers skip scheduling the day-of send in that case. */
-export function dayOfSendTime(slotStart, now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: availability.timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(slotStart)
-  const get = (t) => Number(parts.find((p) => p.type === t).value)
-  const send = zonedTimeToUtc(get('year'), get('month'), get('day'), 9, 0, availability.timezone)
-  return send > now ? send : null
-}
