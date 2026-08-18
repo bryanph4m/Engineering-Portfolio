@@ -1408,11 +1408,17 @@ export default function RocketModel() {
     document.body.style.cursor = cornerAt(e) ? 'pointer' : 'auto'
   }
   const onPageClick = (e) => {
-    e.stopPropagation()
     if (!isFocused) return
     const hit = cornerAt(e)
+    // Only claim the click if it actually landed on a page-turn corner. This
+    // card isn't a readable sheet with links like the paper documents — a
+    // miss should fall through to the FocusScrim behind it and set the
+    // rocket down, not get silently swallowed (which left Escape as the only
+    // way out).
+    if (!hit) return
+    e.stopPropagation()
     if (hit === 'next') nextPage(parts.length)
-    else if (hit === 'prev') prevPage()
+    else prevPage()
   }
 
   return (
