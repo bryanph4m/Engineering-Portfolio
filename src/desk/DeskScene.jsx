@@ -1,4 +1,4 @@
-import { Suspense, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { PerspectiveCamera, AdaptiveDpr, Preload } from '@react-three/drei'
 import * as THREE from 'three'
@@ -56,6 +56,75 @@ function ShadowBake({ frames = 20 }) {
       gl.shadowMap.autoUpdate = false // …then never again
     }
   })
+  return null
+}
+
+const FACETED_GEOMETRY = /Cylinder|Cone|Sphere|Torus|Lathe|Polyhedron/
+
+/**
+ * Makes the procedural props feel carved and handled without adding another
+ * texture sample to the fill-rate-bound scene. Roughness is a uniform change;
+ * only curved, unprinted primitives opt into flat normals. A delayed rescan on
+ * pickup catches the rocket's intentionally lazy-mounted detail hardware.
+ */
+function SceneSurfaceTreatment() {
+  const scene = useThree((state) => state.scene)
+  const focusedId = useSceneStore((state) => state.focusedId)
+  const originals = useRef(new Map())
+
+  const treatScene = useCallback(() => {
+    scene.traverse((object) => {
+      if (!object.isMesh) return
+      const materials = Array.isArray(object.material) ? object.material : [object.material]
+      const isCurvedPrimitive = FACETED_GEOMETRY.test(object.geometry?.type ?? '')
+
+      materials.forEach((material) => {
+        if (!material?.isMeshStandardMaterial && !material?.isMeshPhysicalMaterial) return
+        if (!originals.current.has(material)) {
+          originals.current.set(material, {
+            roughness: material.roughness,
+            metalness: material.metalness,
+            flatShading: material.flatShading,
+          })
+        }
+
+        material.roughness = Math.max(material.roughness ?? 0.5, 0.6)
+        material.metalness = Math.min(material.metalness ?? 0, 0.76)
+
+        const preservePrintedSurface = Boolean(material.map) || material.transparent
+        const preserveGlow = material.emissiveIntensity > 0.2
+        if (isCurvedPrimitive && !preservePrintedSurface && !preserveGlow && !material.flatShading) {
+          material.flatShading = true
+          material.needsUpdate = true
+        }
+      })
+    })
+  }, [scene])
+
+  useLayoutEffect(() => {
+    treatScene()
+    return () => {
+      originals.current.forEach((values, material) => {
+        const shadingChanged = material.flatShading !== values.flatShading
+        Object.assign(material, values)
+        if (shadingChanged) material.needsUpdate = true
+      })
+      originals.current.clear()
+    }
+  }, [treatScene])
+
+  useEffect(() => {
+    if (!focusedId) return undefined
+    let secondFrame = 0
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(treatScene)
+    })
+    return () => {
+      cancelAnimationFrame(firstFrame)
+      cancelAnimationFrame(secondFrame)
+    }
+  }, [focusedId, treatScene])
+
   return null
 }
 
@@ -122,6 +191,7 @@ export default function DeskScene() {
         <CalendarModel />
         <FocusScrim />
         <DeskAtmosphere />
+        <SceneSurfaceTreatment />
         <Preload all />
       </Suspense>
 

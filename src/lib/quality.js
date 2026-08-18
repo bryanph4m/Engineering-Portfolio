@@ -73,6 +73,8 @@ export const IS_MOBILE =
  *  - `anisotropy` — the desk slab is viewed at a grazing angle, so this is the
  *    texture-sampling cost that actually shows up; 2 taps instead of 8.
  *  - `segScale` — radial segment multiplier for round props (see `seg` below).
+ *    Desktop intentionally keeps a little faceting: the props should read as
+ *    carved game pieces rather than showroom-perfect CAD primitives.
  */
 export const QUALITY = IS_MOBILE
   ? {
@@ -91,7 +93,7 @@ export const QUALITY = IS_MOBILE
       shadowMapSize: 1024,
       texScale: 1,
       anisotropy: 8,
-      segScale: 1,
+      segScale: 0.78,
     }
 
 /**
