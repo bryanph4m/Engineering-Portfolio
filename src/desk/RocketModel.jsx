@@ -1226,19 +1226,28 @@ export default function RocketModel() {
     if (isFocused) setArmed(true)
   }, [isFocused])
 
-  // Confine READING_KEY to the rocket body, layer 1, so the flat component
-  // page below it never sees the light at all. Two rounds of repositioning
-  // and re-intensifying that light (see READING_KEY's own header) failed to
-  // flatten the gradient it leaves on a flat plane, because a point source
-  // close enough to shade a real 3D airframe will always vary across a flat
-  // surface's extent, at any distance and any compensating intensity — the
-  // page never needed that shading (it's a texture), so it simply stops
-  // being one of the light's targets instead of being tuned around. Re-run
-  // when `armed` flips true: that is when Airframe mounts the extra detail
-  // hardware this traversal has to reach too.
+  // Confine every light that belongs to the rocket alone — READING_KEY, and
+  // any local fill mounted inside Airframe's own subtree (AvionicsSled's
+  // cutaway light is the one that exists today) — to layer 1, and give the
+  // rocket's own meshes that layer too, in addition to their default 0.
+  // Without this, a light meant to read the inside of an open cutaway has no
+  // way to stop at the airframe's own silhouette: AvionicsSled's fill is a
+  // `distance={0.62}` point light, and the component page sits close enough
+  // beneath the assembled rocket that its glow was spilling onto the top
+  // edge of the page — a static bright patch that never moved when the page
+  // content changed, because it was never coming from the page at all (see
+  // AvionicsSled's own comment for why that light exists). Lights get the
+  // exclusive `.set(1)` — they should ONLY reach the rocket, never layer 0 —
+  // while meshes get the additive `.enable(1)` so they keep receiving the
+  // scene's general lighting too. Re-run when `armed` flips true: that is
+  // when Airframe mounts the extra detail hardware this traversal has to
+  // reach.
   useEffect(() => {
     keyRef.current?.layers.set(1)
-    groupRef.current?.traverse((o) => o.layers.enable(1))
+    groupRef.current?.traverse((o) => {
+      if (o.isLight) o.layers.set(1)
+      else o.layers.enable(1)
+    })
   }, [armed])
 
   // Repaint the shared page whenever the part being read changes. Idempotent in

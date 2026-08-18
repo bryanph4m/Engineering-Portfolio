@@ -235,18 +235,21 @@ export default function Document({ doc }) {
   }
   const onClick = (e) => {
     if (isFocused) {
-      // Only the readable page itself claims the click — the fanned blank
-      // leaves peeking out from under it, the flipped-over pile past the
-      // bound edge, and hardware like the bulldog clip / paperclip are all
-      // unnamed siblings in this same group, so without this check every one
-      // of them read as "the sheet" too and swallowed a click that looked,
-      // to the eye, like it landed on the desk. A miss on the actual page
-      // (hotspotAt returns null) still doesn't fall through — see the
-      // comment below — only a click that never reached the page at all does.
+      // Only the readable page itself is a candidate for a real hit — the
+      // fanned blank leaves peeking out from under it, the flipped-over pile
+      // past the bound edge, and hardware like the bulldog clip / paperclip
+      // are all unnamed siblings in this same group, so without this check
+      // every one of them read as "the sheet" too and swallowed a click that
+      // looked, to the eye, like it landed on the desk.
       if (e.object?.name !== 'page-face') return
-      e.stopPropagation()
       const hit = hotspotAt(e)
+      // A genuine hit (link or page-turn corner) claims the click. Anything
+      // else — body text, margin, the space between lines — is the same as
+      // clicking the desk around it: fall through to the scrim and close.
+      // The sheet nearly fills the viewport once focused, so "click away"
+      // needs to mean the page too, not just the sliver of desk outside it.
       if (!hit) return
+      e.stopPropagation()
       if (hit.type === 'link') openLink(hit.href)
       else if (hit.type === 'next') nextPage(doc.pages.length)
       else prevPage()
