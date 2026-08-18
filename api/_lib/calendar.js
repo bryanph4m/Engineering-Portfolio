@@ -34,14 +34,13 @@ export async function freeBusy(timeMin, timeMax) {
   return data.map((b) => ({ start: new Date(b.start), end: new Date(b.end) }))
 }
 
-export async function createEvent({ name, start, end, attendeeEmail }) {
+export async function createEvent({ name, start, attendeeEmail }) {
   const res = await fetch(`${CAL_BASE}/bookings`, {
     method: 'POST',
     headers: calHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       eventTypeId: Number(process.env.CALCOM_EVENT_TYPE_ID),
       start: start.toISOString(),
-      lengthInMinutes: Math.round((end.getTime() - start.getTime()) / 60000),
       attendee: { name, email: attendeeEmail, timeZone: 'UTC' },
     }),
   })

@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     const stillOpen = slotsForDate(dateStr, busy).some((s) => s.getTime() === slotStart.getTime())
     if (!stillOpen) return res.status(409).json({ error: 'That slot is no longer available' })
 
-    const event = await createEvent({ name, start: slotStart, end: slotEnd, attendeeEmail: email })
+    const event = await createEvent({ name, start: slotStart, attendeeEmail: email })
 
     const id = crypto.randomUUID()
     const cancelToken = crypto.randomBytes(24).toString('hex')
