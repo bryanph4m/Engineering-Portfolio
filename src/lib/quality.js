@@ -19,6 +19,9 @@
 
 const mq = (q) => typeof window !== 'undefined' && window.matchMedia(q).matches
 
+/** Shared motion preference for DOM and WebGL animation owners. */
+export const PREFERS_REDUCED_MOTION = mq('(prefers-reduced-motion: reduce)')
+
 /** A finger is the primary input — drives interaction, not render quality. */
 export const IS_TOUCH = mq('(pointer: coarse)') && !mq('(pointer: fine)')
 

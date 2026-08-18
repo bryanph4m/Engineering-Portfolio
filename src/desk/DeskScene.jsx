@@ -17,6 +17,7 @@ import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
 import TouchControls from './TouchControls'
 import DevLayoutAudit from './DevLayoutAudit'
+import DeskAtmosphere from './DeskAtmosphere'
 
 /**
  * Flags the store once the canvas has really put frames on screen (shaders
@@ -79,7 +80,9 @@ export default function DeskScene() {
       gl={{ antialias: QUALITY.antialias, powerPreference: 'high-performance' }}
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.05
+        // Preserve a bright lamp pool while letting the room fall into
+        // olive-black shadow. The old exposure flattened the prop values.
+        gl.toneMappingExposure = 0.88
         // Renderer + scene handles for the performance budget check in
         // CLAUDE.md § "Performance budget" — see lib/perfHook for why they are
         // reachable from a production build at all.
@@ -89,8 +92,8 @@ export default function DeskScene() {
         }
       }}
     >
-      <color attach="background" args={['#160f07']} />
-      <fog attach="fog" args={['#160f07', 12, 24]} />
+      <color attach="background" args={['#0a0c08']} />
+      <fog attach="fog" args={['#0a0c08', 10.5, 22]} />
 
       <PerspectiveCamera makeDefault position={CAMERA.position} fov={CAMERA.fov} near={0.1} far={100} />
       <CameraRig />
@@ -98,11 +101,12 @@ export default function DeskScene() {
           inert on a mouse. */}
       <TouchControls />
 
-      {/* soft, warm fill so shadows never go pure black */}
-      <ambientLight intensity={0.35} color="#ffe9c9" />
-      <hemisphereLight intensity={0.28} color="#fff2da" groundColor="#2a1c0e" />
-      {/* gentle front fill to lift the picked-up document toward the camera */}
-      <directionalLight position={[0, 5, 9]} intensity={0.35} color="#fff4e2" />
+      {/* Low fills preserve paper legibility without erasing the lamp's shape. */}
+      <ambientLight intensity={0.16} color="#e7d2ad" />
+      <hemisphereLight intensity={0.17} color="#ddc79d" groundColor="#10150e" />
+      <directionalLight position={[0, 5, 9]} intensity={0.3} color="#f1dfc3" />
+      {/* A restrained green-black rim separates silhouettes from the room. */}
+      <directionalLight position={[5, 2.5, -5]} intensity={0.16} color="#748066" />
 
       <Suspense fallback={null}>
         <DeskLamp />
@@ -113,6 +117,7 @@ export default function DeskScene() {
         <RocketModel />
         <CalendarModel />
         <FocusScrim />
+        <DeskAtmosphere />
         <Preload all />
       </Suspense>
 

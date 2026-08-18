@@ -12,23 +12,23 @@ export default function DeskLamp() {
       {/* weighted base */}
       <mesh castShadow position={[0, 0.08, 0]}>
         <cylinderGeometry args={[0.55, 0.62, 0.16, seg(32)]} />
-        <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial color={COLORS.brass} metalness={0.52} roughness={0.58} />
       </mesh>
 
       {/* lower arm */}
       <mesh castShadow position={[0.35, 1.0, 0]} rotation={[0, 0, -0.5]}>
         <cylinderGeometry args={[0.045, 0.045, 2.0, seg(16)]} />
-        <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial color={COLORS.brass} metalness={0.52} roughness={0.58} />
       </mesh>
       {/* elbow */}
       <mesh castShadow position={[0.83, 1.9, 0]}>
         <sphereGeometry args={[0.1, seg(16), seg(16)]} />
-        <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial color={COLORS.brass} metalness={0.52} roughness={0.58} />
       </mesh>
       {/* upper arm reaching over the desk */}
       <mesh castShadow position={[1.75, 2.15, 0]} rotation={[0, 0, -1.28]}>
         <cylinderGeometry args={[0.045, 0.045, 2.0, seg(16)]} />
-        <meshStandardMaterial color={COLORS.brass} metalness={0.7} roughness={0.35} />
+        <meshStandardMaterial color={COLORS.brass} metalness={0.52} roughness={0.58} />
       </mesh>
 
       {/* shade */}
@@ -36,9 +36,9 @@ export default function DeskLamp() {
         <mesh castShadow>
           <coneGeometry args={[0.62, 0.7, seg(32), 1, true]} />
           <meshStandardMaterial
-            color="#8a6a2f"
-            metalness={0.6}
-            roughness={0.4}
+            color="#655127"
+            metalness={0.48}
+            roughness={0.64}
             side={2}
           />
         </mesh>
@@ -48,7 +48,7 @@ export default function DeskLamp() {
           <meshStandardMaterial
             color={COLORS.lampWarm}
             emissive={COLORS.lampWarm}
-            emissiveIntensity={2.4}
+            emissiveIntensity={2.1}
             toneMapped={false}
           />
         </mesh>
@@ -58,10 +58,10 @@ export default function DeskLamp() {
       <spotLight
         position={[2.35, 3.9, 0.1]}
         target-position={[1.4, 0, 0.6]}
-        angle={0.72}
-        penumbra={0.65}
-        distance={16}
-        intensity={95}
+        angle={0.61}
+        penumbra={0.5}
+        distance={14}
+        intensity={118}
         color={COLORS.lampWarm}
         castShadow
         // 1024² is plenty for a desk-sized pool of soft contact shadows, and
@@ -75,7 +75,7 @@ export default function DeskLamp() {
         shadow-bias={-0.0004}
       />
       {/* tiny point light so the bulb itself reads as a glow source */}
-      <pointLight position={[2.55, 2.1, 0]} intensity={2.2} distance={4} color={COLORS.lampWarm} />
+      <pointLight position={[2.55, 2.1, 0]} intensity={1.4} distance={3.2} color={COLORS.lampWarm} />
     </group>
   )
 }

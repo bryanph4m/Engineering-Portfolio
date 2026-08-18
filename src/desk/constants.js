@@ -148,13 +148,13 @@ export const ROCKET_ID = 'rocket'
 export const CALENDAR_ID = 'calendar'
 
 export const COLORS = {
-  wood: '#6f4c2c',
-  woodDark: '#49301a',
-  paper: '#efe6d0',
-  paperBright: '#f8f2e4',
-  blueprint: '#1f4468',
-  ink: '#2b2620',
-  lampWarm: '#ffd8a1',
-  brass: '#b9963f',
-  graphite: '#3a3a3f',
+  wood: '#574027',
+  woodDark: '#302318',
+  paper: '#ddcfad',
+  paperBright: '#eee1c4',
+  blueprint: '#203b45',
+  ink: '#28231b',
+  lampWarm: '#ffbd72',
+  brass: '#88703a',
+  graphite: '#292d29',
 }

@@ -59,9 +59,9 @@ export function woodTexture() {
   const c = canvas(W, H)
   const ctx = c.getContext('2d')
   const base = ctx.createLinearGradient(0, 0, W, H * 0.88)
-  base.addColorStop(0, '#7c5734')
-  base.addColorStop(0.5, '#6a4a2b')
-  base.addColorStop(1, '#573b22')
+  base.addColorStop(0, '#634829')
+  base.addColorStop(0.48, '#513a23')
+  base.addColorStop(1, '#342619')
   ctx.fillStyle = base
   ctx.fillRect(0, 0, W, H)
 
@@ -92,6 +92,36 @@ export function woodTexture() {
     ctx.fill()
   }
 
+  // Long, low-contrast knife and compass scratches catch the lamp obliquely.
+  // They are baked into the existing colour map, so the extra surface history
+  // costs no texture allocation or draw call at runtime.
+  ctx.lineCap = 'round'
+  for (let i = 0; i < detail(54); i++) {
+    const x = Math.random() * W
+    const y = Math.random() * H
+    const length = 30 + Math.random() * 260
+    const angle = (Math.random() - 0.5) * 0.28
+    ctx.strokeStyle = `rgba(218,184,128,${0.025 + Math.random() * 0.045})`
+    ctx.lineWidth = 0.5 + Math.random()
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length)
+    ctx.stroke()
+  }
+
+  // A few ghosted cup rings and rubbed patches keep the procedural slab from
+  // reading as a perfectly clean material swatch.
+  for (let i = 0; i < 4; i++) {
+    const x = W * (0.18 + Math.random() * 0.64)
+    const y = H * (0.18 + Math.random() * 0.64)
+    const r = 34 + Math.random() * 54
+    ctx.strokeStyle = `rgba(24,17,10,${0.08 + Math.random() * 0.06})`
+    ctx.lineWidth = 3 + Math.random() * 4
+    ctx.beginPath()
+    ctx.ellipse(x, y, r, r * (0.72 + Math.random() * 0.18), Math.random(), 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
   // soft edge grime / vignette — spans the whole desk exactly once
   const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.62)
   vg.addColorStop(0, 'rgba(0,0,0,0)')
@@ -109,7 +139,7 @@ export function paperTexture(bright = false) {
   if (cache[key]) return cache[key]
   const c = canvas(512, 512)
   const ctx = c.getContext('2d')
-  ctx.fillStyle = bright ? '#f8f2e4' : '#efe6d0'
+  ctx.fillStyle = bright ? '#eee1c4' : '#ddcfad'
   ctx.fillRect(0, 0, 512, 512)
   for (let i = 0; i < detail(1400); i++) {
     ctx.fillStyle = `rgba(${120 + Math.random() * 90},${110 + Math.random() * 80},${90 + Math.random() * 70},${Math.random() * 0.05})`
