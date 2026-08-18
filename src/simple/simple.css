@@ -23,6 +23,7 @@
   --wiki-active: #dadde3;
   --wiki-rule: #eaecf0; /* hairline between nav rows */
   --wiki-input-border: #72777d;
+  --wiki-error: #b3563f; /* booking-form error text — same rust accent as the desk calendar's circled day */
   --wiki-ph-a: #eeeeee; /* photo-placeholder hatching */
   --wiki-ph-b: #f4f4f4;
   --wiki-chrome-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -591,6 +592,141 @@
   outline-offset: 1px;
 }
 
+/* ---- inline booking widget (Contact article) -------------------------- */
+/* Same flow as the desk calendar's floating panel (index.css .cal-booking),
+   reworked as plain page content: a table for the day grid — Wikipedia's own
+   convention for a calendar — and inputs/buttons built from the same border,
+   link and panel tokens the rest of this file already uses, so Appearance's
+   dark mode covers it for free. */
+.wiki__booking {
+  clear: both;
+  max-width: 420px;
+  font-family: var(--wiki-chrome-font);
+  font-size: 14px;
+}
+.wiki__booking-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 8px;
+  font-family: var(--wiki-serif);
+  font-size: 16px;
+}
+.wiki__booking-nav button {
+  padding: 2px 10px;
+  border: 1px solid var(--wiki-border);
+  border-radius: 2px;
+  background: var(--wiki-panel);
+  color: var(--wiki-text);
+  cursor: pointer;
+  font: inherit;
+}
+.wiki__booking-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.wiki__booking-nav button:not(:disabled):hover {
+  background: var(--wiki-hover);
+}
+.wiki__booking-cal {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.wiki__booking-cal th {
+  padding: 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wiki-muted);
+  border-bottom: 1px solid var(--wiki-border-light);
+}
+.wiki__booking-cal td {
+  padding: 2px;
+  text-align: center;
+}
+.wiki__booking-cal button {
+  width: 100%;
+  padding: 6px 0;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  color: var(--wiki-link);
+  cursor: pointer;
+  font: inherit;
+}
+.wiki__booking-cal button:hover:not(:disabled) {
+  border-color: var(--wiki-border);
+  background: var(--wiki-hover);
+}
+.wiki__booking-cal button:disabled {
+  color: var(--wiki-muted);
+  opacity: 0.45;
+  cursor: default;
+}
+.wiki__booking-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+.wiki__booking-slot {
+  padding: 6px 12px;
+  border: 1px solid var(--wiki-border);
+  border-radius: 2px;
+  background: var(--wiki-panel);
+  color: var(--wiki-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.wiki__booking-slot:hover {
+  border-color: var(--wiki-link);
+  color: var(--wiki-link);
+}
+.wiki__booking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wiki-muted);
+}
+.wiki__booking-field input {
+  padding: 6px 8px;
+  border: 1px solid var(--wiki-input-border);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: normal;
+  color: var(--wiki-text);
+  background: var(--wiki-bg);
+}
+.wiki__booking-field input:focus {
+  outline: none;
+  border-color: var(--wiki-link);
+  box-shadow: inset 0 0 0 1px var(--wiki-link);
+}
+.wiki__booking-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+.wiki__booking-submit {
+  cursor: pointer;
+}
+.wiki__booking-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.wiki__booking-error {
+  margin: 6px 0;
+  color: var(--wiki-error);
+  font-size: 13px;
+}
+
 /* ---- embedded resume PDF (the whole Resume article) ------------------ */
 /* The <object> renders the real file inline; its children only surface when a  */
 /* browser has no inline PDF viewer, so the fallback is styled as a real card,  */
@@ -713,6 +849,7 @@
   --wiki-active: #404244;
   --wiki-rule: #27292d;
   --wiki-input-border: #72777d;
+  --wiki-error: #d97a63;
   --wiki-ph-a: #2e3136;
   --wiki-ph-b: #27292d;
   color-scheme: dark; /* form controls, scrollbars and the embedded PDF chrome */

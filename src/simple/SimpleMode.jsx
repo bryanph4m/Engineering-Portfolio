@@ -3,6 +3,7 @@ import {
   profile, projects, research, resume, contact, sections, disciplineLabels,
 } from '../content/portfolio'
 import { IS_MOBILE } from '../lib/quality'
+import ContactBooking from './ContactBooking'
 import './simple.css'
 
 /**
@@ -350,6 +351,11 @@ function buildArticles(go) {
             </ul>
           ),
         },
+        {
+          id: 'book-a-meeting',
+          heading: 'Book a meeting',
+          render: () => <ContactBooking />,
+        },
       ],
     },
   }
@@ -387,6 +393,10 @@ const SEARCH_INDEX = [
   {
     section: 'contact', anchor: 'contact-links', label: 'Contact',
     text: `${contact.intro} ${contact.links.map((l) => `${l.kind} ${l.label}`).join(' ')}`,
+  },
+  {
+    section: 'contact', anchor: 'book-a-meeting', label: 'Book a meeting',
+    text: 'book a meeting schedule calendar call',
   },
 ].map((e, i) => ({ ...e, key: i, haystack: `${e.label} ${e.text}`.toLowerCase() }))
 
