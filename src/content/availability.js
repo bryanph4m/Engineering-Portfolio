@@ -10,5 +10,8 @@ export const availability = {
   startHour: 17, // 5pm local
   endHour: 21, // 9pm local
   slotMinutes: 30,
-  bookingWindowDays: 30, // how far out a visitor can book
+  // QStash's plan caps scheduled-message delay at 7 days, and the day-of /
+  // T-minus-30 reminder emails are scheduled via QStash at booking time —
+  // going higher breaks booking for any slot past that horizon.
+  bookingWindowDays: 7,
 }

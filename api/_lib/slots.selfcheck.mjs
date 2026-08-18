@@ -10,7 +10,7 @@ import { availability } from '../../src/content/availability.js'
 // edge cases at "now".
 const MONDAY = '2027-03-01'
 const SATURDAY = '2027-03-06'
-const now = zonedTimeToUtc(2027, 2, 1, 0, 0, availability.timezone) // a month before
+const now = zonedTimeToUtc(2027, 2, 26, 0, 0, availability.timezone) // 3 days before, within the 7-day booking window
 
 // Weekday with no busy intervals: one slot per 30 minutes across the window.
 const openSlots = slotsForDate(MONDAY, [], now)
