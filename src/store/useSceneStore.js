@@ -120,6 +120,14 @@ export const useSceneStore = create((set) => ({
         zoomDetail: false,
       }
     }),
+
+  /** Jump straight to a page, from a cover's index link (Document.jsx's
+   *  hotspotAt) rather than stepping one flip at a time. No `flip` entry —
+   *  a multi-page skip has no single turning leaf, so the sheet stack just
+   *  presents the target page directly, the same as the first frame after
+   *  `focus()`. */
+  gotoPage: (pageIndex) =>
+    set((s) => (s.focusedId == null ? s : { pageIndex, flip: null, zoomDetail: false })),
 }))
 
 // Let QA tooling and the console drive the scene directly

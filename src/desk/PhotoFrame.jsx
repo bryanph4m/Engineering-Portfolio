@@ -274,10 +274,15 @@ export default function PhotoFrame() {
   }
   const onClick = (e) => {
     if (isFocused) {
-      e.stopPropagation()
+      // A miss (the wood rails, the kickstand, the dead half at either end of
+      // the album) is the same as clicking the desk around the frame: fall
+      // through to the scrim and close it, matching Document.jsx's onClick.
       const hit = hotspotAt(e)
+      if (!hit) return
+      e.stopPropagation()
+      consumeTap(e) // claimed — click-away stands down (desk/tapGuard)
       if (hit === 'next') nextPage(count)
-      else if (hit === 'prev') prevPage()
+      else prevPage()
       return
     }
     if (anyFocused) return
@@ -285,7 +290,7 @@ export default function PhotoFrame() {
     document.body.style.cursor = 'auto'
     // Claim the tap so the edge-tap panning stands down (desk/tapGuard) — the
     // frame rests well right of centre and lands under a pan zone on a phone.
-    consumeTap()
+    consumeTap(e)
     focus(PHOTO_FRAME_ID)
   }
 

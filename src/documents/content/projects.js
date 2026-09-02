@@ -382,7 +382,50 @@ const sheets = projects.map((p, i) => ({
   ].filter(Boolean),
 }))
 
-export const projectPages = flowSheets(sheets, box)
+// Each project's own drawing(s), flowed independently so its first page's
+// index can be read off before they're all concatenated — a sheet never
+// shares a page with its neighbour (flowSheets flushes at the end of every
+// sheet), so this reproduces exactly the split the combined flow produces.
+const flowedByProject = sheets.map((s) => flowSheets([s], box))
+const projectStartPage = [] // index into the FINAL pages array (cover at 0)
+{
+  let page = 1
+  for (const pages of flowedByProject) {
+    projectStartPage.push(page)
+    page += pages.length
+  }
+}
+
+/**
+ * The stack's front page: an index of every drawing, so a visitor can open a
+ * specific project straight away instead of flipping through the whole pile.
+ * Same idea as the desk calendar's cover (ui/CalendarBooking's model,
+ * desk/CalendarModel), reached through the same `link()` hotspot mechanism
+ * every document already paints its content through (docLinks, Document.jsx's
+ * hotspotAt) — a row's whole strip is one `jump:<page>` link.
+ */
+function coverDraw(ctx, W, H, rnd, link) {
+  text(ctx, 'DRAWING INDEX', 130, 172, { font: TYPE, size: 74 })
+  ctx.strokeStyle = INK
+  ctx.lineWidth = 4
+  handLine(ctx, 130, 196, 620, 190, rnd, 3)
+  text(ctx, 'PICK A PROJECT TO OPEN IT DIRECTLY', 130, 244, { size: 25, color: FAINT, spacing: 3 })
+
+  const top = 300
+  const rowH = (box.y + box.h - top) / projects.length
+  projects.forEach((p, i) => {
+    const y = top + i * rowH
+    text(ctx, `0${i + 1}`, 130, y + 52, { font: TYPE, size: 38, color: FAINT })
+    text(ctx, p.name.toUpperCase(), 210, y + 56, { font: TYPE, size: 44 })
+    text(ctx, p.category.toUpperCase(), 210, y + 96, { size: 24, color: '#5c5340', spacing: 2 })
+    ctx.strokeStyle = 'rgba(51,41,29,0.3)'
+    ctx.lineWidth = 2
+    handLine(ctx, 130, y + rowH - 18, box.x + box.w, y + rowH - 22, rnd, 1.5)
+    link(box.x, y - 10, box.w, rowH - 10, `jump:${projectStartPage[i]}`)
+  })
+}
+
+export const projectPages = [{ decor, draw: coverDraw }, ...flowedByProject.flat()]
 
 // Placed polaroids for the stack, keyed to the page each photo landed on.
 // Consumed by the desk registry → Polaroids.jsx. Simple mode reads the raw

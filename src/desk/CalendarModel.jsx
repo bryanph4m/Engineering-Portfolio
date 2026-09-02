@@ -233,7 +233,7 @@ export default function CalendarModel() {
     e.stopPropagation()
     // Claim the tap so the edge-tap panning stands down (desk/tapGuard) — the
     // same reason PhotoFrame/RocketModel do this.
-    consumeTap()
+    consumeTap(e)
     focus(CALENDAR_ID)
   }
 
@@ -260,6 +260,7 @@ export default function CalendarModel() {
     // click-off behaviour (Document.jsx's onClick).
     if (!hit) return
     e.stopPropagation()
+    consumeTap(e) // claimed — click-away stands down (desk/tapGuard)
     const b = useBookingStore.getState()
     switch (hit.action) {
       case 'start':

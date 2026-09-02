@@ -16,6 +16,7 @@ import CalendarModel from './CalendarModel'
 import FocusScrim from './FocusScrim'
 import CameraRig from './CameraRig'
 import TouchControls from './TouchControls'
+import ClickAway from './ClickAway'
 import DevLayoutAudit from './DevLayoutAudit'
 import DeskAtmosphere from './DeskAtmosphere'
 
@@ -80,13 +81,26 @@ function SceneSurfaceTreatment() {
 
       materials.forEach((material) => {
         if (!material?.isMeshStandardMaterial && !material?.isMeshPhysicalMaterial) return
-        if (!originals.current.has(material)) {
-          originals.current.set(material, {
-            roughness: material.roughness,
-            metalness: material.metalness,
-            flatShading: material.flatShading,
-          })
-        }
+        // Each material is treated exactly ONCE, the first time it is seen.
+        //
+        // This pass re-runs on every pickup to catch lazily-mounted hardware
+        // (see the effect below), and the decisions underneath read two
+        // properties that the desk MUTATES WHILE IT ANIMATES: `transparent` is
+        // switched on for the photo frame's and calendar's kickstands as they
+        // fade out on pickup (desk/PhotoFrame, desk/CalendarModel), and
+        // `emissiveIntensity` is the rocket's hover/active glow channel
+        // (desk/RocketModel `mat`). Re-deciding on a later pass therefore lets
+        // the same material be shaded one way or the other depending on which
+        // frame of an animation the visitor happened to click on — a shading
+        // change, and a shader recompile with it, landing on an interaction for
+        // no reason the visitor can see. Treating once makes the result depend
+        // only on what a material IS, never on when it was looked at.
+        if (originals.current.has(material)) return
+        originals.current.set(material, {
+          roughness: material.roughness,
+          metalness: material.metalness,
+          flatShading: material.flatShading,
+        })
 
         material.roughness = Math.max(material.roughness ?? 0.5, 0.6)
         material.metalness = Math.min(material.metalness ?? 0, 0.76)
@@ -170,6 +184,11 @@ export default function DeskScene() {
       {/* touch-only: edge-tap panning + swipe-to-flip. Renders nothing, and is
           inert on a mouse. */}
       <TouchControls />
+      {/* Sets a picked-up document/prop back down on any click the desk did not
+          claim. Mounted unconditionally and outside the Suspense boundary: it is
+          the ONLY owner of click-away, so it must never be the thing that is
+          missing (see desk/ClickAway). */}
+      <ClickAway />
 
       {/* Broad cabin fill keeps the whole work surface legible. Directional
           side lights reveal silhouettes without competing with the lamp. */}

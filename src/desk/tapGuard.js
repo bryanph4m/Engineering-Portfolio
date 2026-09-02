@@ -1,6 +1,15 @@
 /**
  * A one-bit handshake between "something on the desk handled this tap" and the
- * edge-tap panning that would otherwise also fire for it (desk/TouchControls).
+ * two things that would otherwise also fire for it: the edge-tap panning
+ * (desk/TouchControls) and click-away, which sets a picked-up document back
+ * down (desk/ClickAway).
+ *
+ * Those two are the only readers, and both ask the same question. Click-away
+ * is the reason this is now load-bearing rather than a touch-only nicety: it
+ * is what lets "a click sets the focused thing down" be the DEFAULT, with
+ * hotspots opting out by claiming their click, instead of every object in the
+ * scene having to remember to let a click fall through to a scrim behind it.
+ * See desk/ClickAway's header for the five separate bugs that contract caused.
  *
  * The rule the panning needs is "an object outranks the pan zone it overlaps".
  * The tempting way to implement that is to raycast the tap yourself and bail if
@@ -29,12 +38,49 @@ const WINDOW_MS = 150
 
 let consumedAt = -Infinity
 
-/** Called by whatever acted on a tap (picking a document or the frame up). */
-export function consumeTap() {
+/**
+ * The claim is ALSO stamped on the event itself, and that is the reading
+ * click-away actually trusts. A module-level timestamp is a shared-state
+ * channel, and it has two failure modes this file cannot see from the inside:
+ *
+ *  - **Two copies of this module.** Vite's dev server appends `?t=` to a
+ *    module's URL when HMR invalidates it, so an edited importer can end up
+ *    holding a *different instance* of this one — writer and reader then have
+ *    separate `consumedAt` variables and the handshake silently reads false.
+ *    Measured: exactly that, an index row that fired its jump and was then
+ *    closed anyway by desk/ClickAway a millisecond later.
+ *  - **Order.** The timestamp says "recently", not "for this event", so it
+ *    depends on the reader running after the writer.
+ *
+ * A plain string key on the native event has neither problem: it is the same
+ * object every listener for that click receives, it says "this click", and a
+ * string (rather than a Symbol) survives even the duplicated-module case.
+ */
+const CLAIMED = '__deskClaimed'
+
+/** The native event behind an r3f synthetic one, or the event itself. */
+const nativeOf = (e) => (e && typeof e === 'object' ? (e.nativeEvent ?? e) : null)
+
+/**
+ * Called by whatever acted on a tap — picking a document up, or a hotspot that
+ * used the click (a link, a page corner, a cover's index row). Pass the event
+ * whenever there is one; the timestamp alone still covers the caller that has
+ * no click event to stamp (desk/TouchControls resolves a swipe on `pointerup`,
+ * and the browser may synthesise the `click` afterwards).
+ */
+export function consumeTap(e) {
   consumedAt = performance.now()
+  const native = nativeOf(e)
+  if (native) native[CLAIMED] = true
 }
 
 /** True if the tap being handled right now was already claimed by an object. */
 export function tapWasConsumed() {
   return performance.now() - consumedAt < WINDOW_MS
+}
+
+/** True if THIS click was claimed — see CLAIMED for why this is the strong one. */
+export function clickWasClaimed(e) {
+  const native = nativeOf(e)
+  return !!(native && native[CLAIMED])
 }

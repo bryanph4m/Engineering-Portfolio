@@ -66,6 +66,7 @@ export default function Document({ doc }) {
   const setHovered = useSceneStore((s) => s.setHovered)
   const nextPage = useSceneStore((s) => s.nextPage)
   const prevPage = useSceneStore((s) => s.prevPage)
+  const gotoPage = useSceneStore((s) => s.gotoPage)
 
   const isFocused = focusedId === doc.id
   const anyFocused = focusedId != null
@@ -190,6 +191,10 @@ export default function Document({ doc }) {
     const pageIndex = useSceneStore.getState().pageIndex
     for (const l of docLinks(doc, pageIndex)) {
       if (u >= l.u0 && u <= l.u1 && v >= l.v0 && v <= l.v1) {
+        // A cover's index rows are painted through the same `link()` callback
+        // as a real URL, tagged with a "jump:" href instead of one — cheaper
+        // than a parallel hotspot mechanism for one extra hit kind.
+        if (l.href?.startsWith('jump:')) return { type: 'jump', page: Number(l.href.slice(5)) }
         return { type: 'link', href: l.href }
       }
     }
@@ -243,14 +248,18 @@ export default function Document({ doc }) {
       // looked, to the eye, like it landed on the desk.
       if (e.object?.name !== 'page-face') return
       const hit = hotspotAt(e)
-      // A genuine hit (link or page-turn corner) claims the click. Anything
-      // else — body text, margin, the space between lines — is the same as
-      // clicking the desk around it: fall through to the scrim and close.
-      // The sheet nearly fills the viewport once focused, so "click away"
-      // needs to mean the page too, not just the sliver of desk outside it.
+      // A genuine hit (link, page-turn corner, or a cover's index row) claims
+      // the click. Anything else — body text, margin, the space between lines
+      // — is the same as clicking the desk around it, and sets the sheet down
+      // (desk/ClickAway). The sheet nearly fills the viewport once focused, so
+      // "click away" has to mean the page too, not just the sliver of desk
+      // outside it.
       if (!hit) return
       e.stopPropagation()
+      // …and say so, so click-away stands down for this one (desk/tapGuard).
+      consumeTap(e)
       if (hit.type === 'link') openLink(hit.href)
+      else if (hit.type === 'jump') gotoPage(hit.page)
       else if (hit.type === 'next') nextPage(doc.pages.length)
       else prevPage()
       return
@@ -270,7 +279,7 @@ export default function Document({ doc }) {
     document.body.style.cursor = 'auto'
     // Claim the tap so the edge-tap panning stands down: this document may be
     // sitting over a pan zone, and picking it up must win (desk/tapGuard).
-    consumeTap()
+    consumeTap(e)
     focus(doc.id)
   }
 

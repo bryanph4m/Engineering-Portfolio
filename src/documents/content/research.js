@@ -254,7 +254,49 @@ const sheets = research.sheets.map((s) => {
   return { decor, cont: cont(s.title.toUpperCase()), blocks }
 })
 
-export const researchPages = flowSheets(sheets, box)
+// Each sheet flowed independently so its first page's index can be read off
+// before they're all concatenated — see projects.js's matching comment for
+// why this reproduces exactly the split the combined flow produces.
+const flowedBySheet = sheets.map((s) => flowSheets([s], box))
+const sheetStartPage = [] // index into the FINAL pages array (cover at 0)
+{
+  let page = 1
+  for (const pages of flowedBySheet) {
+    sheetStartPage.push(page)
+    page += pages.length
+  }
+}
+
+/**
+ * The roll's front page: an index of the program's sheets, so a visitor can
+ * open the vehicle overview, the CFD validation or the control loop directly
+ * instead of flipping through in order. Same `link()`/`jump:` mechanism as
+ * projects.js's cover.
+ */
+function coverDraw(ctx, W, H, rnd, link) {
+  text(ctx, 'BLUEPRINT INDEX', 124, 190, { font: TYPE, size: 96, color: WHITE, spacing: 4 })
+  ctx.strokeStyle = DIM
+  ctx.lineWidth = 4
+  handLine(ctx, 124, 218, 900, 212, rnd, 3)
+  text(ctx, 'PICK A SHEET TO OPEN IT DIRECTLY', 124, 268, { size: 30, color: DIM, spacing: 3 })
+
+  const top = 360
+  const rowH = (box.y + box.h - top) / research.sheets.length
+  research.sheets.forEach((s, i) => {
+    const y = top + i * rowH
+    text(ctx, `SHT ${i + 1}`, 124, y + 50, { font: TYPE, size: 34, color: DIM })
+    text(ctx, s.title.toUpperCase(), 300, y + 58, { font: TYPE, size: 52, color: WHITE })
+    text(ctx, s.sub.toUpperCase(), 300, y + 100, { size: 28, color: DIM, spacing: 2 })
+    ctx.strokeStyle = 'rgba(233,241,251,0.25)'
+    ctx.lineWidth = 2
+    handLine(ctx, 124, y + rowH - 20, box.x + box.w, y + rowH - 24, rnd, 1.5)
+    link(box.x, y - 10, box.w, rowH - 10, `jump:${sheetStartPage[i]}`)
+  })
+}
+
+const coverDecor = (ctx, W, H, rnd) => blueprintBase(ctx, W, H, rnd)
+
+export const researchPages = [{ decor: coverDecor, draw: coverDraw }, ...flowedBySheet.flat()]
 
 // Placed polaroids for the blueprint roll, keyed to the page each landed on.
 // Consumed by the desk registry → Polaroids.jsx (simple mode reads the raw

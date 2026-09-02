@@ -1411,12 +1411,11 @@ export default function RocketModel() {
     document.body.style.cursor = 'auto'
   }
   const onClick = (e) => {
-    // A click on the focused model is a click on the thing you are already
-    // holding: swallow it so it never reaches the scrim and sets it down.
-    if (isFocused) {
-      e.stopPropagation()
-      return
-    }
+    // The airframe has no click targets of its own (only the page's corners
+    // do, in onPageClick below) — a click here is the same as clicking the
+    // desk around the model: fall through to the scrim and close it, rather
+    // than swallowing it and leaving Escape as the only way out.
+    if (isFocused) return
     if (anyFocused) return
     // Not gated on the return animation, for the reason written out in
     // desk/Document's matching handler.
@@ -1424,7 +1423,7 @@ export default function RocketModel() {
     document.body.style.cursor = 'auto'
     // Claim the tap so the edge-tap panning stands down: the model lies along
     // the desk's right half and sits squarely under a pan zone on a phone.
-    consumeTap()
+    consumeTap(e)
     focus(ROCKET_ID)
   }
 
@@ -1442,6 +1441,7 @@ export default function RocketModel() {
     // way out).
     if (!hit) return
     e.stopPropagation()
+    consumeTap(e) // claimed — click-away stands down (desk/tapGuard)
     if (hit === 'next') nextPage(parts.length)
     else prevPage()
   }

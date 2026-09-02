@@ -4,7 +4,7 @@ import { useSceneStore } from '../store/useSceneStore'
 import { pageCountOf } from '../documents/registry'
 import { IS_TOUCH } from '../lib/quality'
 import { disposeDetailTextures } from '../lib/docTextures'
-import { tapWasConsumed } from './tapGuard'
+import { consumeTap, tapWasConsumed } from './tapGuard'
 import { beginPinch, endPinch, isZoomed, pinchBy, pinchWasActive, resetZoom } from './docZoom'
 import { CAMERA_PAN, DOC_ZOOM } from './constants'
 
@@ -215,6 +215,12 @@ export default function TouchControls() {
       if (e.pointerId !== pointerId) return
       pointerId = null
       if (!moved) return
+      // The finger travelled, so this gesture is a drag and not a tap however
+      // it resolves below. Claim it before anything downstream can read the
+      // browser's synthesised click as "set the document down" — a swipe to
+      // turn a page must never also put the sheet back on the desk
+      // (desk/ClickAway, desk/tapGuard).
+      consumeTap()
 
       const store = useSceneStore.getState()
       if (store.focusedId == null) return
