@@ -41,7 +41,11 @@ html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #1c150d;
+  /* The simple view is what loads first, so the page's base colour is its
+     paper, not the desk's. Anything darker shows as a flash of the old start
+     screen while the mode's chunk is still in flight. The desk paints its own
+     ground on `.desk-mode` below, so it is unaffected. */
+  background: #ffffff;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
