@@ -364,12 +364,16 @@ const detailWithPhotos = (p) => {
   ]
 }
 
+// Sheet number, zero-padded. Was a literal `0${i + 1}`, which silently became
+// "DRAWING 010" the moment the stack passed nine projects.
+const drawingNo = (i) => String(i + 1).padStart(2, '0')
+
 const sheets = projects.map((p, i) => ({
   decor,
   cont: cont(p.name.toUpperCase()),
   blocks: [
     head(
-      `DRAWING 0${i + 1} · ${p.category.toUpperCase()}`,
+      `DRAWING ${drawingNo(i)} · ${p.category.toUpperCase()}`,
       p.name.toUpperCase(),
       p.summary.toUpperCase(),
       p.highlight ? circleHighlight(p.summary, p.highlight) : undefined,
@@ -413,15 +417,25 @@ function coverDraw(ctx, W, H, rnd, link) {
 
   const top = 300
   const rowH = (box.y + box.h - top) / projects.length
+  // Every offset and type size below is a fraction of the row, not a fixed
+  // pixel figure, because the row height is whatever `projects.length` leaves
+  // it. `s` is 1 at the eight projects this page was drawn around and shrinks
+  // from there, so adding a project makes the index type smaller rather than
+  // making the rows collide — at eleven it lands at ~0.72, which is still large
+  // on a sheet that covers ~1870 device px when focused. The divider scales with
+  // the rest so it always clears the category line under the name; it used to be
+  // pinned 18px off the row bottom and struck through that line at any row
+  // height near or below the original.
+  const s = Math.min(1, rowH / 108)
   projects.forEach((p, i) => {
     const y = top + i * rowH
-    text(ctx, `0${i + 1}`, 130, y + 52, { font: TYPE, size: 38, color: FAINT })
-    text(ctx, p.name.toUpperCase(), 210, y + 56, { font: TYPE, size: 44 })
-    text(ctx, p.category.toUpperCase(), 210, y + 96, { size: 24, color: '#5c5340', spacing: 2 })
+    text(ctx, drawingNo(i), 130, y + 52 * s, { font: TYPE, size: 38 * s, color: FAINT })
+    text(ctx, p.name.toUpperCase(), 210, y + 56 * s, { font: TYPE, size: 44 * s })
+    text(ctx, p.category.toUpperCase(), 210, y + 88 * s, { size: 24 * s, color: '#5c5340', spacing: 2 })
     ctx.strokeStyle = 'rgba(51,41,29,0.3)'
     ctx.lineWidth = 2
-    handLine(ctx, 130, y + rowH - 18, box.x + box.w, y + rowH - 22, rnd, 1.5)
-    link(box.x, y - 10, box.w, rowH - 10, `jump:${projectStartPage[i]}`)
+    handLine(ctx, 130, y + rowH - 12 * s, box.x + box.w, y + rowH - 16 * s, rnd, 1.5)
+    link(box.x, y - 10 * s, box.w, rowH - 10 * s, `jump:${projectStartPage[i]}`)
   })
 }
 

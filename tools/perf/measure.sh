@@ -17,12 +17,12 @@ if [ "$SCALE" = "1" ]; then $B $BFLAGS viewport "$VP" >/dev/null; else $B $BFLAG
 # cold-cache cost, not the thing an A/B of the paint path is trying to compare.
 $B $BFLAGS goto "$URL" >/dev/null
 sleep 1
-$B $BFLAGS js "[...document.querySelectorAll('button')].find(b=>b.textContent.includes('enter the desk')).click(); 'warm'" >/dev/null
+$B $BFLAGS js "[...document.querySelectorAll('button,a')].find(b=>/enter the.*desk/i.test(b.textContent)).click(); 'warm'" >/dev/null
 sleep 10
 
 $B $BFLAGS goto "$URL" >/dev/null
 sleep 2
-$B $BFLAGS js "[...document.querySelectorAll('button')].find(b=>b.textContent.includes('enter the desk')).click(); 'clicked'" >/dev/null
+$B $BFLAGS js "[...document.querySelectorAll('button,a')].find(b=>/enter the.*desk/i.test(b.textContent)).click(); 'clicked'" >/dev/null
 sleep 12
 $B $BFLAGS eval tools/perf/probe.js
 $B $BFLAGS eval tools/perf/walk.js

@@ -88,7 +88,14 @@ export const profile = {
     // is no longer in this array, and every role below is résumé-backed. This
     // comment can be deleted. (re-checked by /sync-content)
     { lead: 'Design & Manufacturing Engineering Intern, ', emphasis: 'Mission College' },
-    { lead: 'Founder & President, ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
+    // REVIEW: set to "Co-founder" to match the résumé's role title (re-read
+    // 2026-09-02), which is authoritative. Note the résumé disagrees with itself:
+    // the title line reads "Co-founder & President of Mission Launch Rocketry"
+    // while its own bullet underneath reads "Founded and served as President". If
+    // "Founder" is the right word, fix the résumé and this line together — the
+    // matching wording in projects[mission-launch-rocketry] was changed with it.
+    // (flagged by /sync-content)
+    { lead: 'Co-founder & President, ', emphasis: 'Mission Launch Rocketry', section: 'projects' },
   ],
   motto: 'design it on paper first & let the airframe speak for itself.',
   // current focus; `section` is where the simple mode's About article links each one
@@ -142,10 +149,26 @@ export const projects = [
     summary: '1st place, Deepgram track · Berkeley AI Hackathon',
     // substring of `summary` the desk sheet circles in red; must appear verbatim
     highlight: '1st place',
+    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
+    // hand-edit; manual editorial fields live outside this sub-object.
+    // NOTE: bryanph4m/AsideAI is a FORK of the team repo (Da0t/AsideAI, the URL
+    // the photo below links). `createdAt` is therefore the fork date, not the
+    // project's — do not surface these dates as project dates.
+    github: {
+      repo: 'AsideAI',
+      url: 'https://github.com/bryanph4m/AsideAI',
+      language: null,
+      stars: 0,
+      description: null,
+      createdAt: '2026-07-30T20:16:35Z',
+      pushedAt: '2026-06-24T21:14:55Z',
+    },
     specs: [
       { lead: 'Clip-on camera + mic', sub: 'narrates surroundings live via AI personalities' },
       { lead: 'Raspberry Pi on QNX 8.0', sub: 'Python coordination · React Native app' },
-      { lead: 'End-to-end narration in 1–2 s', sub: 'Deepgram speech + Redis' },
+      // matched to the résumé's figure (1.8–2.2 s on 24 KB frames every 0.5 s);
+      // this read "1–2 s" before, which the résumé does not support
+      { lead: 'End-to-end narration in 1.8–2.2 s', sub: 'Deepgram speech + Redis' },
     ],
     detail: [
       {
@@ -190,6 +213,97 @@ export const projects = [
     ],
   },
   {
+    // REVIEW: drafted from the résumé (re-read 2026-09-02) plus the repo README
+    // at github.com/bryanph4m/Atrium. Every figure below traces to one of those
+    // two: the award line and the "my part" paragraph are the résumé's, the
+    // pipeline names, node labels and the grouping story are the README's.
+    // Check the copy reads right before treating it as final. (drafted by
+    // /sync-content)
+    id: 'atrium',
+    name: 'Atrium',
+    category: 'Software',
+    summary: '1st place overall · Devnovate Memory Meets Motion hackathon',
+    // substring of `summary` the desk sheet circles in red; must appear verbatim
+    highlight: '1st place overall',
+    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
+    // hand-edit; manual editorial fields live outside this sub-object.
+    // NOTE: bryanph4m/Atrium is a FORK of the team repo (nathansso/Atrium).
+    // `createdAt` is the fork date, not the project's — the hackathon was
+    // August 3 2026, which `pushedAt` reflects and `createdAt` does not.
+    github: {
+      repo: 'Atrium',
+      url: 'https://github.com/bryanph4m/Atrium',
+      language: null,
+      stars: 0,
+      description:
+        '1st Place Overall, Memory Meets Motion. Learn anything with a single search — researches the web, builds a cited curriculum, and rewrites it around the misconception a simulated classroom actually produced.',
+      createdAt: '2026-08-21T23:21:49Z',
+      pushedAt: '2026-08-06T07:36:02Z',
+    },
+    specs: [
+      { lead: 'Reads lesson material and student work', sub: 'groups students by shared misunderstanding, not by score' },
+      { lead: 'Four RocketRide pipelines', sub: 'concept extraction · variant generation · misconception explanation · lesson-plan synthesis' },
+      { lead: '11 schema-validated events', sub: 'one contract every layer speaks, over an 8-node FalkorDB graph' },
+      { lead: 'Firecrawl research, cited per claim', sub: 'no draft reaches a student without an educator approving it' },
+    ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'Atrium turns one search into a taught lesson. It researches a topic on the web, binds every claim to a citation, and chunks the material into sequenced lessons — then runs those lessons against a simulated class to find out who each one fails and why, and rewrites the next day around the answer.',
+          'The premise is that a score is not a diagnosis. Two students who both get 40% on integer operations can be failing for opposite reasons — one drops the sign on negatives, the other applies the operations out of order — and a gradebook puts them in the same remediation bucket. Atrium makes the misconception its own node in a graph, so a room is whoever shares that node.',
+        ],
+      },
+      {
+        heading: 'My part',
+        body: [
+          'I built the four-stage RocketRide pipeline: extracting concepts from an uploaded assignment, generating room-level assignment variants that preserve the objective and the rigour, diagnosing what a wrong answer actually shows, and synthesising the next day’s lesson plan. The stages are coordinated by 11 schema-validated events over an 8-node FalkorDB graph, and each stage is fed by the decision before it rather than restarting from the event topic.',
+        ],
+      },
+      {
+        heading: 'Why a graph',
+        body: [
+          'Grouping students is a two-hop traversal — student to misconception to concept — and the room is formed by the middle node, not the endpoint. A flat table cannot express that, and a vector search actively hides it, because in embedding space two students who failed the same concept for opposite reasons look nearly identical. So the grouping is a Cypher query rather than a prompt, and every room traces back to a path the interface can show you.',
+        ],
+      },
+    ],
+    photos: [],
+  },
+  {
+    // REVIEW: drafted from the résumé (re-read 2026-09-02), which is the ONLY
+    // source for this project — there is no repo under github.com/bryanph4m, so
+    // there is no README to check the copy against and no `github` sub-object.
+    // Everything below is a restatement of the résumé's two bullets; nothing is
+    // extrapolated. (drafted by /sync-content)
+    // TODO: the 2026-07-22 résumé described this as a "sub-250 g" drone and the
+    // 2026-09-02 one describes a 7-inch airframe. Those are different vehicles —
+    // a 7-inch build is well over 250 g. Confirm which is current; the copy below
+    // follows the newer résumé.
+    // TODO: no photos yet. A bench shot of the tracking prototype or a CAD render
+    // would carry this entry, which is currently the only project with neither a
+    // figure nor a photo.
+    id: 'camera-tracking-drone',
+    name: 'Camera Tracking Drone',
+    category: 'Hardware · Software',
+    summary: 'an autonomous drone that follows only the people it has been told to',
+    specs: [
+      { lead: '7-inch autonomous tracking airframe', sub: 'follows only knowingly registered users' },
+      { lead: 'CUDA-accelerated YOLO11n detection', sub: 'ByteTrack persistent IDs across frames, real-time Python' },
+      { lead: 'Click-to-select targeting', sub: 'emits a normalized frame-center error signal' },
+      { lead: 'Validated Raspberry Pi prototype', sub: 'tracking pipeline and CAD design ahead of the airframe' },
+    ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'The goal is a 7-inch autonomous drone that tracks a person and follows only users who have knowingly registered to be followed — consent is the design constraint, not an afterthought bolted onto a tracker that works on anyone.',
+          'It is being built prototype-first. The real-time Python pipeline runs CUDA-accelerated YOLO11n detection with ByteTrack for persistent identities across frames, and click-to-select targeting that emits a normalized frame-center error signal — the one number a flight controller needs to keep a subject centred. That pipeline and the CAD design are validated on a Raspberry Pi bench setup before anything flies.',
+        ],
+      },
+    ],
+    photos: [],
+  },
+  {
     // REVIEW: generated from the repo README (no site copy existed before) —
     // check summary/specs read right. (drafted by /sync-content)
     id: 'intentguard',
@@ -230,9 +344,10 @@ export const projects = [
     id: 'mission-launch-rocketry',
     name: 'Mission Launch Rocketry',
     category: 'Rocketry',
-    summary: 'founded & led a 52-member college rocketry club',
+    summary: 'co-founded & led a 52-member college rocketry club',
     specs: [
-      { lead: 'Founder & President', sub: 'budget + design-build-launch, concept → flight' },
+      // "Co-founder" per the résumé's role title; see the note in profile.roles
+      { lead: 'Co-founder & President', sub: 'Aug 2025 – Aug 2026 · budget + design-build-launch, concept → flight' },
       { lead: 'Two-stage high-power rocket', sub: 'dual-deployment recovery (drogue + main)' },
       { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
       { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
@@ -300,6 +415,19 @@ export const projects = [
     name: 'Recco',
     category: 'Software',
     summary: 'YC AI Growth Hackathon · camera-first iOS networking assistant',
+    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
+    // hand-edit; manual editorial fields live outside this sub-object.
+    // NOTE: bryanph4m/Recco is a FORK of the team repo (Cheemasukh962/Recco, the
+    // URL the photo below links). `createdAt` is the fork date, not the project's.
+    github: {
+      repo: 'Recco',
+      url: 'https://github.com/bryanph4m/Recco',
+      language: null,
+      stars: 0,
+      description: 'YC AI Growth Hackathon',
+      createdAt: '2026-07-30T20:17:41Z',
+      pushedAt: '2026-06-30T17:07:28Z',
+    },
     specs: [
       { lead: 'Identifies people at events, live', sub: 'face tracking + cloud vision + identity lookup' },
       { lead: 'SwiftUI + AVFoundation pipeline', sub: 'Apple Vision tracking · target-lock reticle · AR overlay' },
@@ -351,6 +479,20 @@ export const projects = [
     category: 'Software',
     summary: '1st place, Beginner track · MLH × DigitalOcean AI for Social Good',
     highlight: '1st place',
+    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
+    // hand-edit; manual editorial fields live outside this sub-object.
+    // NOTE: bryanph4m/RollAway is a FORK of the team repo (nathansso/RollAway, the
+    // URL the photo below links). `createdAt` is the fork date, not the project's.
+    github: {
+      repo: 'RollAway',
+      url: 'https://github.com/bryanph4m/RollAway',
+      language: null,
+      stars: 0,
+      description:
+        "An location intelligence tool for food truck operators, powered by Digital Ocean's Gradient AI: forecasts foot traffic, dodges saturated blocks, and get your permits in order.",
+      createdAt: '2026-08-29T22:06:24Z',
+      pushedAt: '2026-07-20T18:08:04Z',
+    },
     specs: [
       { lead: 'Permit planning for SF food vendors', sub: 'ranks legal, low-competition spots per time window' },
       { lead: 'React + TypeScript', sub: 'DigitalOcean serverless backend · permit checklist' },
@@ -397,6 +539,39 @@ export const projects = [
     ],
   },
   {
+    // REVIEW: drafted from the résumé (re-read 2026-09-02), the only source —
+    // this is professional drafting work, not a repo, so there is no `github`
+    // sub-object and nothing here can be checked against source. Every number
+    // below is the résumé's own. (drafted by /sync-content)
+    // TODO: the résumé links a "Document" for this project; if that is a public
+    // drawing set or a sheet excerpt that can be shown, add it as a photo or a
+    // link so the entry has something to look at.
+    // TODO: `category` is a guess — 'Mechanical · Electrical' matches the three
+    // sheets drafted, but this is the only non-software, non-rocketry project on
+    // the site and the desk prints the category as the drawing kicker. Confirm it
+    // reads right there.
+    id: 'rwf-daf-tank',
+    name: 'RWF DAF Saturation Tank',
+    category: 'Mechanical · Electrical',
+    summary: 'replacement-in-kind design for a regional wastewater facility',
+    specs: [
+      { lead: 'DAF saturation tank, replacement in kind', sub: 'San José–Santa Clara Regional Wastewater Facility' },
+      { lead: 'Drafted 3 of 12 engineering sheets', sub: 'process mechanical · P&ID · electrical single-line' },
+      { lead: '6 process streams, 42 valves', sub: '14 check valves · 4 pumps · 1–8 in. piping · Ø48 in. tank' },
+      { lead: 'AutoCAD', sub: 'mechanical, instrumentation, civil, tank and electrical scope' },
+    ],
+    detail: [
+      {
+        heading: 'Overview',
+        body: [
+          'A replacement in kind of a dissolved air flotation (DAF) saturation tank at the San José–Santa Clara Regional Wastewater Facility. "In kind" is the whole constraint: the replacement has to drop into a plant that keeps running, so the design spans mechanical, instrumentation, civil, tank and electrical scope rather than redesigning any one of them in isolation.',
+          'I drafted 3 of the 12 engineering sheets in AutoCAD — the process mechanical, the P&ID, and the electrical single-line — covering 6 process streams, 1–8 in. piping, 42 valves, 14 check valves, 4 pumps, and the 48-inch-diameter saturation tank itself.',
+        ],
+      },
+    ],
+    photos: [],
+  },
+  {
     // REVIEW: generated from the repo README (no site copy existed before) —
     // check summary/specs read right. (drafted by /sync-content)
     id: 'secondcurrent',
@@ -441,7 +616,7 @@ export const projects = [
       stars: 0,
       description: null,
       createdAt: '2026-07-02T03:25:29Z',
-      pushedAt: '2026-07-28T19:41:12Z',
+      pushedAt: '2026-09-02T07:46:39Z',
     },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
@@ -481,14 +656,18 @@ export const projects = [
       },
     ],
   },
-  // REVIEW: the résumé (read 2026-07-22) carries a fifth project with no entry
-  // on the site — "Camera Tracking Drone": a sub-250g autonomous tracking drone
-  // that follows only registered users, with a validated desktop prototype (a
-  // CUDA-accelerated YOLO11n + ByteTrack real-time pipeline in Python, typed
-  // YAML config, pytest-covered). No matching repo exists under
-  // github.com/bryanph4m (only `bryanph4m` and `Engineering-Portfolio` are
-  // public), so it is résumé-backed only. This is a candidate for /draft-project;
-  // do not hand-author the entry here. (flagged by /sync-content)
+  // REVIEW: every project on the résumé (re-read 2026-09-02) now has an entry
+  // above — Atrium, Camera Tracking Drone and RWF DAF Saturation Tank were all
+  // drafted in this pass and are marked with their own REVIEW blocks. Two of the
+  // three are résumé-backed only, with no repo to check them against, so they are
+  // the ones to read closely.
+  //
+  // Going the other way, three projects on this site are NOT on the résumé:
+  // IntentGuard, Night Shift and SecondCurrent. All three are backed by real
+  // repos under github.com/bryanph4m, so they are legitimate site content under
+  // the content rules — but if the résumé is the front door, they are invisible
+  // from it. Worth deciding whether they belong on the PDF too.
+  // (flagged by /sync-content)
 ]
 
 /**
@@ -592,8 +771,12 @@ export const research = {
           // The project's CAD assembly (github.com/Thrust-Stack/ABGSWebsite) names
           // four "Airfoil Canard" parts, while this file's own control-system prose
           // (from the Avionics-Bay README) describes the firmware driving a mirrored
-          // PAIR. Both can be true — four in structure, two currently driven — but
-          // confirm against the build before treating either as settled.
+          // PAIR. The résumé (re-read 2026-09-02) sides with the pair — "driving two
+          // mirrored micro-servo canards clamped to ±7.5° in flight and ±15° in
+          // firmware" — which supports the "four in structure, two driven" reading
+          // and matches the ±15° Travel row below. Still worth one confirmation
+          // against the build before the four-canard Surfaces row is treated as
+          // settled. (re-checked by /sync-content)
           { label: 'Surfaces', value: 'Four airfoil canards (CFD-analyzed profile)' },
           { label: 'Servos', value: 'BlueBird BMS-127WV+ digital, high-voltage' },
           { label: 'Mounts', value: 'In-house SolidWorks design, bearing-supported' },
@@ -663,11 +846,14 @@ export const research = {
         'Airframe design informed by 3000+ hours of CFD',
         'Simulated prior to fabrication',
       ],
-      // TODO: The Avionics-Bay README documents a dedicated CFD model variant and
-      // STEP export but records no CFD setup or results (no drag/pressure/stability
-      // numbers, mesh, or the "3000+ hours" figure the bullets cite). The paragraph
-      // below sticks to what the README supports; confirm the quantitative claims in
-      // the bullets against a primary source before treating them as verified.
+      // REVIEW: RESOLVED — the bullets above are now résumé-backed. The résumé
+      // (re-read 2026-09-02) states "Conducted 3000+ simulation hours of
+      // computational fluid dynamics (CFD) simulations in SimScale, validating
+      // aerodynamic performance, drag, pressure distribution, and stability prior
+      // to fabrication", which is the primary source the earlier TODO asked for.
+      // The Avionics-Bay README still records no CFD results, so the paragraph
+      // below stays as written. This comment can be deleted.
+      // (re-checked by /sync-content)
       extended: [
         'Before anything got fabricated, the airframe went through CFD to check that the aerodynamics held up. The repo keeps a dedicated CFD variant of the SolidWorks assembly, cleaned up and exported to STEP so it drops into the solver without the mechanical detail that would choke a mesh, and the motor is stubbed out with an inert fake-motor part so it still contributes mass and fit without standing in as a real thrust source. I ran the aerodynamic work in SimScale. The point was to understand how the airframe and canards sit in the flow before committing to cut parts, so the fin and canard geometry could be settled on the model rather than discovered on the pad.',
       ],
@@ -698,41 +884,73 @@ export const resume = {
     {
       label: 'Education',
       entries: [
+        // REVIEW: the "transfer" qualifier was dropped to match the résumé, which
+        // says plainly "GPA: 4.0" under the UCLA heading. Nothing on the résumé
+        // supports calling it a transfer GPA, and the two read very differently to
+        // a recruiter. If it IS the transfer GPA, say so on the résumé first and
+        // then restore the word here. Dates and location match.
+        // (flagged by /sync-content)
         {
           title: 'UCLA, B.S. Mechanical Engineering',
-          sub: 'transfer GPA 4.0 · June 2026 – May 2028 · Los Angeles, CA',
+          sub: 'GPA 4.0 · June 2026 – May 2028 · Los Angeles, CA',
         },
       ],
     },
+    // REVIEW: this list now mirrors the résumé's Experience section as re-read on
+    // 2026-09-02, which rewrote it. Two changes, both reversible:
+    //   · Mission Launch Rocketry was ADDED — it is the résumé's second Experience
+    //     entry and was missing here entirely.
+    //   · "Associated Student Government Senator" was REMOVED, because the current
+    //     PDF no longer carries it and nothing else backs it. If it should stay on
+    //     the site, put it back on the résumé first, then paste this entry back:
+    //       {
+    //         title: 'Mission College, Associated Student Government Senator',
+    //         sub: 'Aug 2025 – May 2026 · represented 6,000+ students · presented
+    //               recommendations to district executives at a leadership retreat',
+    //       },
+    // (reconciled by /sync-content)
     {
       label: 'Experience',
       entries: [
         {
           title: 'Mission College, Design & Manufacturing Engineering Intern',
-          sub: 'June 2026 – present · high-powered rocket airframe · SolidWorks · SimScale CFD',
+          sub: 'June 2026 – present · Santa Clara, CA · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
 
         {
-          title: 'Mission College, Associated Student Government Senator',
-          sub: 'Aug 2025 – May 2026 · represented 6,000+ students · presented recommendations to district executives at a leadership retreat',
+          title: 'Mission College, Co-founder & President, Mission Launch Rocketry',
+          sub: 'Aug 2025 – Aug 2026 · Santa Clara, CA · 52 members · budget, events, and design-build-launch from concept to flight',
         },
       ],
     },
+    // REVIEW: rewritten to match the résumé's Projects section (Camera Tracking
+    // Drone · RWF DAF Saturation Tank · Aside AI · Recco · Atrium). RollAway and
+    // Mission Launch Rocketry came out: the résumé dropped RollAway from Projects
+    // and moved the club to Experience, where it now appears above. The two
+    // 1st-place finishes counted below are Aside AI (Deepgram track, Berkeley) and
+    // Atrium (overall, Memory Meets Motion) — Recco carries no award.
+    // (reconciled by /sync-content)
     {
       label: 'Projects',
       entries: [
         {
-          title: 'Aside AI · Recco · RollAway · Mission Launch Rocketry',
-          sub: 'two hackathon wins · a 52-member rocketry club',
+          title: 'Aside AI · Atrium · Recco · Camera Tracking Drone · RWF DAF Tank',
+          sub: 'two 1st-place hackathon finishes · consent-gated drone tracking · municipal process design',
         },
       ],
     },
     {
       label: 'Skills',
       entries: [
+        // REVIEW: set to the résumé's Languages line exactly (re-read 2026-09-02),
+        // which dropped C and Swift. Worth one look before this is settled: the
+        // résumé's own Recco bullet still says "Engineered a SwiftUI and
+        // AVFoundation pipeline", so Swift IS résumé-backed elsewhere and arguably
+        // belongs back on both. C is backed by nothing on the current résumé.
+        // (reconciled by /sync-content)
         {
           title: 'Languages',
-          sub: 'C, C++, Python, TypeScript, JavaScript, MATLAB, Swift, HTML/CSS',
+          sub: 'MATLAB, C++, Python, TypeScript, JavaScript, HTML/CSS',
         },
         {
           title: 'CAD',

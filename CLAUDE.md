@@ -79,6 +79,41 @@ covers ~1870 device px on a 1440p display at the capped DPR, so 1280 texels of
 paper height is if anything under-sampled — so that ~68 MB is simply what this
 scene is, and the budget is set around it rather than against it.
 
+#### Re-measured 2026-09-02 — draw calls are close to the ceiling
+
+The table above is the original hardware-referenced measurement. Re-measuring
+HEAD found it had drifted before anything in that session touched the scene, so
+the current numbers are recorded here rather than overwritten into it — these
+were taken headless, where texture memory, draw calls and triangles are valid
+(CPU rasterisation does not change them) but frame rate is not, so nothing in
+the per-frame table below has been restated.
+
+Paired runs, 8 projects → 11 (the résumé's Atrium, Camera Tracking Drone and
+RWF DAF tank getting entries), same machine, same session:
+
+| idle | before | after | ceiling |
+|---|---|---|---|
+| desktop draw calls | 260 | **268** | 270 |
+| desktop texture memory | 91.7 MB | 91.7 MB | 95 MB |
+| desktop peak, everything opened | 122.8 MB | 122.8 MB | 125 MB |
+| mobile draw calls | 149 | **157** | 160 |
+| mobile texture memory | 24.1 MB | 24.1 MB | 26 MB |
+| mobile peak, everything opened | 33.7 MB | 33.7 MB | 36 MB |
+
+Two things to take from this. First, adding projects costs **no** texture memory
+at idle — the projects stack went 29 → 37 pages and idle memory did not move,
+because a sheet is painted on the flip that first reaches it, not at mount. That
+is the deferral pattern working, and it is why the memory column is boring.
+
+Second, and the reason this note exists: **draw calls are the number with almost
+nothing left.** Each project adds ~2.7 calls on both tiers, and the desktop idle
+figure is now 2 under its ceiling, the mobile 3. The scene passed the ceiling for
+triangles and memory long ago in the safe direction, so draw calls are what a
+twelfth project spends. Anyone adding one should expect to batch something in
+the same change rather than treat the ceiling as advisory — and the original 247
+in the table above is no longer reachable without finding the 13 calls that went
+missing between it and HEAD.
+
 ### Per-frame and per-interaction
 
 Frame figures are from an AMD Radeon 860M laptop iGPU at 1440×900, DPR 1.
