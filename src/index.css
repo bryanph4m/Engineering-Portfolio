@@ -42,13 +42,23 @@ html, body, #root {
   width: 100%;
   overflow: hidden;
   /* The simple view is what loads first, so the page's base colour is its
-     paper, not the desk's. Anything darker shows as a flash of the old start
-     screen while the mode's chunk is still in flight. The desk paints its own
-     ground on `.desk-mode` below, so it is unaffected. */
+     paper, not the desk's. This is the colour of the gap between the browser
+     painting the HTML and React mounting — anything that is not the view's own
+     background shows there as a flash. The desk paints its own ground on
+     `.desk-mode` below, so it is unaffected. */
   background: #ffffff;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+}
+
+/* The wiki's Appearance panel defaults to 'Automatic', so the theme it will
+   resolve to before any JS runs is the OS preference. Matching it here means
+   a dark-mode visitor gets no white flash either. An explicit Light/Dark
+   override that disagrees with the OS is the one case this cannot see — that
+   would need the saved setting read before paint, and it is one frame. */
+@media (prefers-color-scheme: dark) {
+  html, body, #root { background: #101418; } /* simple.css --wiki-bg, dark */
 }
 
 .app-root { position: fixed; inset: 0; }

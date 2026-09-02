@@ -1,11 +1,12 @@
 import { lazy, Suspense, useState } from 'react'
+import SimpleMode from './simple/SimpleMode'
 
-// Both site modes are code-split. The desk chunk carries all of three.js /
-// r3f / drei; the simple chunk is a few KB of DOM. The site opens in the
-// simple mode, so a visitor who never asks for the desk never downloads
-// (let alone mounts) the 3D scene.
+// The desk is code-split because its chunk carries all of three.js / r3f /
+// drei; a visitor who never asks for it never downloads (let alone mounts)
+// the 3D scene. The simple mode is NOT split: it is what the site opens in,
+// so splitting it only buys a gap between first paint and its chunk landing —
+// which is visible, as a flash of bare background. It is a few KB of DOM.
 const DeskMode = lazy(() => import('./desk/DeskMode'))
-const SimpleMode = lazy(() => import('./simple/SimpleMode'))
 
 export default function App() {
   // Which site mode is mounted. Routing is a hard fork between separate
@@ -24,11 +25,7 @@ export default function App() {
         </Suspense>
       )}
 
-      {mode === 'simple' && (
-        <Suspense fallback={null}>
-          <SimpleMode onEnterDesk={() => setMode('desk')} />
-        </Suspense>
-      )}
+      {mode === 'simple' && <SimpleMode onEnterDesk={() => setMode('desk')} />}
     </div>
   )
 }
