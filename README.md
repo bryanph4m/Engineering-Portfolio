@@ -251,6 +251,18 @@ Notes:
   a role or `now` entry is where the simple mode cross-links it.
 - Projects and Research sheets paginate automatically (`src/lib/pageFlow.js`)
   — longer entries flow onto extra flip-pages without touching desk code.
+- **Every project has the same five fields.** Three prose sections in `detail`,
+  in this order and with these headings — **Objective** (what it set out to do
+  and why), **Approach** (how it was built), **Result** (what it actually
+  reached) — plus two small secondary fields, `tools` (a short list) and
+  `status` (a short label, or `'TODO'` where the real status genuinely isn't
+  knowable). Both modes render the three sections as headed prose and the two
+  fields as quieter metadata: a ruled fact list under the entry in simple mode,
+  a stamp block at the foot of the drawing on the desk. Each `detail` section
+  also takes its own `photos: []` in the usual shape, so an Approach or Result
+  image travels with that section through pagination.
+  `npm run check:projects` fails if a project is missing one of the five, if a
+  page ends on an orphaned section header, or if a block outgrows the sheet.
 - The one intentional exception: the `<title>`/`<meta description>` in
   `index.html` are static HTML (they can't import JS) — update them by hand
   if the name or tagline changes.

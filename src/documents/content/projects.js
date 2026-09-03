@@ -157,12 +157,54 @@ const para = (str) => {
   }
 }
 
-/** Flatten a project's `detail` sections into subhead + paragraph blocks. */
+/**
+ * Flatten a project's `detail` sections into subhead + paragraph blocks.
+ * A section's own `photos` reserve their footprint right after that section's
+ * prose, so an Approach image paginates with the Approach text rather than
+ * being collected at the end of the drawing with the project-level photos.
+ */
 const detailBlocks = (detail = []) =>
   detail.flatMap((sec) => [
     ...(sec.heading ? [subhead(sec.heading)] : []),
     ...sec.body.map(para),
+    ...photoBlocks(sec.photos, PROJECTS_PAPER, box),
   ])
+
+// ---- Secondary metadata (tools used · project status) ----
+// Deliberately quieter than the prose: smaller type, a hairline rule above it,
+// and a label column, so it reads as the stamp block at the foot of a drawing
+// rather than as another section. One block, so it never splits across a page.
+const META_SIZE = 24
+const META_LINE = 32
+const META_VAL_X = BODY_X + 176
+
+const metaBlock = (tools, status) => {
+  const valW = box.x + box.w - META_VAL_X
+  const rows = []
+  if (tools?.length) rows.push(['TOOLS', wrapMono(tools.join(' · '), META_SIZE, valW)])
+  if (status) rows.push(['STATUS', wrapMono(status, META_SIZE, valW)])
+  if (!rows.length) return null
+  const inkH = 26 + rows.reduce((n, [, lines]) => n + lines.length, 0) * META_LINE
+  return {
+    h: inkH + 20,
+    inkH,
+    dbg: 'meta',
+    draw(ctx, W, H, y, rnd) {
+      ctx.strokeStyle = 'rgba(51,41,29,0.26)'
+      ctx.lineWidth = 2
+      const b = ctx._contentBox
+      handLine(ctx, BODY_X, y + 8, b ? b.x + b.w : box.x + box.w, y + 6, rnd, 1.5)
+      let dy = 26
+      for (const [label, lines] of rows) {
+        text(ctx, label, BODY_X, y + dy + META_SIZE, { size: META_SIZE, color: FAINT, spacing: 3 })
+        for (const ln of lines) {
+          text(ctx, ln, META_VAL_X, y + dy + META_SIZE, { size: META_SIZE, color: '#5c5340' })
+          dy += META_LINE
+        }
+      }
+    },
+  }
+}
 
 /** Small header repeated when a drawing spills onto a continuation page. */
 const cont = (title) => ({
@@ -383,6 +425,7 @@ const sheets = projects.map((p, i) => ({
     FIGURES[p.id],
     ...p.specs.map((s) => bullet([s.lead.toUpperCase(), s.sub])),
     ...detailWithPhotos(p),
+    metaBlock(p.tools, p.status),
   ].filter(Boolean),
 }))
 

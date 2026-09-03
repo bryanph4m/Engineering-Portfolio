@@ -14,11 +14,17 @@
  * author. If a claim isn't backed by one of those, it doesn't belong here.
  *
  * Per-project prose lives in each entry's `detail` array — a list of
- * `{ heading, body: [paragraphs] }` sections. Both faces render it: the
- * desk flipbook flows it across as many flip-pages as it needs
+ * `{ heading, body: [paragraphs], photos: [] }` sections. Both faces render it:
+ * the desk flipbook flows it across as many flip-pages as it needs
  * (src/documents/content/projects.js), and the simple mode renders it as
  * article prose. `specs` stays the at-a-glance highlight list; `detail` is
  * the narrative. Keep the two complementary, not duplicative.
+ *
+ * Since 2026-09-03 every project's `detail` is the same three sections in the
+ * same order — Objective, Approach, Result — plus two small secondary fields,
+ * `tools` and `status`, that both faces render as metadata rather than prose.
+ * The full convention is documented on `projects` below; it is the standard for
+ * new entries, not just a description of the current ones.
  *
  * Casing convention: text is stored in its natural, human-readable case
  * (correct acronyms and all). The desk's drafting sheets happen to render a
@@ -57,9 +63,12 @@
  * rather than guess a URL.
  *
  * Which lists reach the desk:
- *   - `projects[].photos` and `research.sheets[].photos` → polaroids that ride
- *     the same pagination as the text (each photo reserves space and flows onto
- *     the next page if the current one is full).
+ *   - `projects[].photos`, `projects[].detail[].photos` and
+ *     `research.sheets[].photos` → polaroids that ride the same pagination as
+ *     the text (each photo reserves space and flows onto the next page if the
+ *     current one is full). A section's own photos land with that section, so
+ *     an Approach image follows the Approach prose onto whichever flip-page it
+ *     ended up on.
  *   - `profile.photos` → the FIRST entry is a polaroid on the index card,
  *     pinned to a reserved column the card's copy is measured around
  *     (src/documents/content/about.js). Any further entries are simple-mode
@@ -141,6 +150,29 @@ export const profile = {
   ],
 }
 
+/**
+ * Every project follows the same five-field shape. This is the standard for new
+ * entries too — a project that doesn't fill all five isn't finished.
+ *
+ *   detail: three sections, in this order and with these exact headings —
+ *     Objective  what it set out to do, and why. The problem or the goal.
+ *     Approach   how it was built: architecture, technique, the decisions.
+ *     Result     what it actually reached: awards, demo state, metrics, and
+ *                honestly, where it stopped.
+ *   tools:  short list of languages / frameworks / services / hardware. Both
+ *           faces render it as small secondary metadata, never as prose.
+ *   status: one short label — 'Actively developed', 'Completed',
+ *           'In development (bench prototype)', 'On hold'. `'TODO'` where the
+ *           real status genuinely isn't knowable from the résumé or the repo;
+ *           a guess is worse than a marker.
+ *
+ * Each `detail` section also takes its own `photos: []`, in exactly the shape
+ * documented at the top of this file. Approach and Result carry empty ones
+ * ready to fill: drop a photo in there and it lands with that section in both
+ * faces — a floated figure in the simple mode, a polaroid pinned to whichever
+ * flip-page the section flowed onto in the desk. The project-level `photos`
+ * below stays what it was: the entry's lead image.
+ */
 export const projects = [
   {
     id: 'asideai',
@@ -170,31 +202,37 @@ export const projects = [
       // this read "1–2 s" before, which the résumé does not support
       { lead: 'End-to-end narration in 1.8–2.2 s', sub: 'Deepgram speech + Redis' },
     ],
+    tools: [
+      'C++', 'QNX 8.0', 'Raspberry Pi', 'TensorFlow Lite', 'Python',
+      'Claude Haiku 4.5', 'Deepgram STT/TTS', 'Redis', 'Sentry',
+      'React Native', 'Expo',
+    ],
+    status: 'Completed (hackathon build)',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
-          'Aside AI is a real-time narration and companion system that runs across on-device capture and cloud AI. It has three parts: firmware on the device, a laptop backend, and a mobile app.',
+          'Aside AI is a real-time narration and companion system that runs across on-device capture and cloud AI: a clip-on camera and microphone that narrates your surroundings live in the voice of whichever AI personality you have picked.',
+          'It has three parts — firmware on the device, a laptop backend, and a mobile app — and the number the whole thing is built around is end-to-end latency, because a narrator that describes what happened five seconds ago has stopped being a narrator.',
         ],
       },
       {
-        heading: 'On the device',
+        heading: 'Approach',
         body: [
           'The firmware runs on a Raspberry Pi under QNX, written in C++. It captures camera frames over QSF plus microphone audio, runs TensorFlow Lite on-device for fast event detection (entrance, wave, fall), and ships frames, audio, and event signals to the laptop over the LAN.',
-        ],
-      },
-      {
-        heading: 'The orchestrator',
-        body: [
           'A Python backend on a laptop on the same LAN handles coordination. It sends each camera frame straight to Claude Haiku 4.5 vision, so one call both reads the scene and returns the in-character line.',
           'It pulls speech from Deepgram STT and the active personality from Redis, builds the prompt, and sends the reply to Deepgram TTS for voice. Redis holds memory and state, and Sentry watches the run. Keeping the orchestrator on the laptop keeps the cloud SDKs off QNX.',
-        ],
-      },
-      {
-        heading: 'The app',
-        body: [
           'A React Native and Expo app switches personalities and modes and includes a custom personality builder. An audio manager ducks or cuts music under narration so the voice always has priority, and manual cue buttons fire an entrance theme or a laugh track.',
         ],
+        photos: [],
+      },
+      {
+        heading: 'Result',
+        body: [
+          'Aside AI took 1st place in the Deepgram track at the Berkeley AI Hackathon.',
+          'Narration lands 1.8–2.2 s after the frame it is describing, on 24 KB frames sampled every 0.5 s — fast enough that the line still fits the moment it is about.',
+        ],
+        photos: [],
       },
     ],
     photos: [
@@ -246,25 +284,31 @@ export const projects = [
       { lead: '11 schema-validated events', sub: 'one contract every layer speaks, over an 8-node FalkorDB graph' },
       { lead: 'Firecrawl research, cited per claim', sub: 'no draft reaches a student without an educator approving it' },
     ],
+    tools: ['RocketRide', 'FalkorDB', 'Cypher', 'Firecrawl'],
+    status: 'Completed (hackathon build)',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           'Atrium turns one search into a taught lesson. It researches a topic on the web, binds every claim to a citation, and chunks the material into sequenced lessons — then runs those lessons against a simulated class to find out who each one fails and why, and rewrites the next day around the answer.',
           'The premise is that a score is not a diagnosis. Two students who both get 40% on integer operations can be failing for opposite reasons — one drops the sign on negatives, the other applies the operations out of order — and a gradebook puts them in the same remediation bucket. Atrium makes the misconception its own node in a graph, so a room is whoever shares that node.',
         ],
       },
       {
-        heading: 'My part',
+        heading: 'Approach',
         body: [
           'I built the four-stage RocketRide pipeline: extracting concepts from an uploaded assignment, generating room-level assignment variants that preserve the objective and the rigour, diagnosing what a wrong answer actually shows, and synthesising the next day’s lesson plan. The stages are coordinated by 11 schema-validated events over an 8-node FalkorDB graph, and each stage is fed by the decision before it rather than restarting from the event topic.',
-        ],
-      },
-      {
-        heading: 'Why a graph',
-        body: [
           'Grouping students is a two-hop traversal — student to misconception to concept — and the room is formed by the middle node, not the endpoint. A flat table cannot express that, and a vector search actively hides it, because in embedding space two students who failed the same concept for opposite reasons look nearly identical. So the grouping is a Cypher query rather than a prompt, and every room traces back to a path the interface can show you.',
         ],
+        photos: [],
+      },
+      {
+        heading: 'Result',
+        body: [
+          'Atrium took 1st place overall at the Devnovate Memory Meets Motion hackathon.',
+          'End to end, one search researches the web, builds a cited curriculum, and rewrites it around the misconception a simulated classroom actually produced — with an educator approving every draft before it reaches a student.',
+        ],
+        photos: [],
       },
     ],
     photos: [],
@@ -281,7 +325,8 @@ export const projects = [
     // follows the newer résumé.
     // TODO: no photos yet. A bench shot of the tracking prototype or a CAD render
     // would carry this entry, which is currently the only project with neither a
-    // figure nor a photo.
+    // figure nor a photo. The Approach and Result sections both have an empty
+    // `photos` slot ready for one.
     id: 'camera-tracking-drone',
     name: 'Camera Tracking Drone',
     category: 'Hardware · Software',
@@ -292,13 +337,31 @@ export const projects = [
       { lead: 'Click-to-select targeting', sub: 'emits a normalized frame-center error signal' },
       { lead: 'Validated Raspberry Pi prototype', sub: 'tracking pipeline and CAD design ahead of the airframe' },
     ],
+    tools: ['Python', 'YOLO11n', 'CUDA', 'ByteTrack', 'Raspberry Pi', 'CAD'],
+    status: 'In development (bench prototype)',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           'The goal is a 7-inch autonomous drone that tracks a person and follows only users who have knowingly registered to be followed — consent is the design constraint, not an afterthought bolted onto a tracker that works on anyone.',
-          'It is being built prototype-first. The real-time Python pipeline runs CUDA-accelerated YOLO11n detection with ByteTrack for persistent identities across frames, and click-to-select targeting that emits a normalized frame-center error signal — the one number a flight controller needs to keep a subject centred. That pipeline and the CAD design are validated on a Raspberry Pi bench setup before anything flies.',
         ],
+      },
+      {
+        heading: 'Approach',
+        body: [
+          'It is being built prototype-first. The real-time Python pipeline runs CUDA-accelerated YOLO11n detection with ByteTrack for persistent identities across frames, and click-to-select targeting that emits a normalized frame-center error signal — the one number a flight controller needs to keep a subject centred.',
+        ],
+        photos: [],
+      },
+      {
+        // NOTE: thin by necessity. The résumé records progress, not an outcome,
+        // and there is no repo to check it against, so nothing beyond the bench
+        // validation can be claimed here yet.
+        heading: 'Result',
+        body: [
+          'The tracking pipeline and the CAD design are validated on a Raspberry Pi bench setup. The airframe itself has not been built or flown, so the working prototype is the result so far.',
+        ],
+        photos: [],
       },
     ],
     photos: [],
@@ -324,18 +387,33 @@ export const projects = [
       { lead: 'Team project, 3-person split', sub: 'Forge/control API/policy and the Daytona · Snyk · RocketRide adapters owned by teammates' },
       { lead: 'Strict TypeScript', sub: 'React/Vite reconciliation interface' },
     ],
+    tools: ['TypeScript', 'React', 'Vite', 'Forge', 'Daytona', 'Snyk', 'RocketRide'],
+    // TODO: the repo was created and last pushed on the same day (2026-08-14),
+    // and neither it nor the résumé says whether this is finished, parked, or
+    // still moving. Set a real label here rather than inferring one from dates.
+    status: 'TODO',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           'IntentGuard checks whether an AI-rewritten service is safe to ship by running every rewrite candidate against test inputs built from the business rules recovered from the legacy source, then comparing candidate behavior to what the legacy system actually does — a human approves or blocks based on that evidence, never on a model’s opinion of the diff.',
         ],
       },
       {
-        heading: 'My part',
+        heading: 'Approach',
         body: [
           'A three-person team split the system into parallel workstreams. My ownership covered everything the user sees and everything being tested: the legacy fixture and candidate services, the corpus generator, the replay harness, and the strict-TypeScript React/Vite reconciliation frontend. A teammate owned Forge, the control API, and the comparison/policy pipeline; another owned every integration with a third party (Daytona sandboxes, Snyk scans, RocketRide).',
         ],
+        photos: [],
+      },
+      {
+        // NOTE: genuinely thin — nothing in the repo README or the résumé
+        // records an award, a demo state, or a metric for IntentGuard.
+        heading: 'Result',
+        body: [
+          'TODO: no outcome is recorded for IntentGuard — no award, no demo state, no metric in either the repo or the résumé. What exists is the three-way split above, built in strict TypeScript. Say here how far it actually got.',
+        ],
+        photos: [],
       },
     ],
     photos: [],
@@ -352,6 +430,38 @@ export const projects = [
       { lead: 'EasyMini + EasyMega computers', sub: 'staged separation sequencing' },
       { lead: 'Onshape · 3D printing', sub: 'microcontrollers + microcomputers' },
       { lead: 'Minimum-diameter airframe, L2-class motor', sub: 'simulated top speed Mach 2.6' },
+    ],
+    tools: [
+      'Onshape', '3D printing', 'EasyMini', 'EasyMega',
+      'microcontrollers', 'microcomputers',
+    ],
+    status: 'Completed (term ended Aug 2026)',
+    // NOTE: this project had no `detail` prose at all before this pass. The
+    // three sections below are assembled from the résumé bullets already in
+    // `specs` and from profile.extended — nothing new is asserted, so the
+    // narrative is plainer than the projects that already had one.
+    detail: [
+      {
+        heading: 'Objective',
+        body: [
+          'Mission Launch Rocketry was founded to give Mission College a project-based engineering club — the only one on campus at the time — and to carry a high-power rocket the whole way from concept to flight rather than stopping at a paper design.',
+        ],
+      },
+      {
+        heading: 'Approach',
+        body: [
+          'The vehicle is a two-stage high-power rocket on a minimum-diameter airframe with an L2-class motor, simulated to a top speed of Mach 2.6. An EasyMini and an EasyMega flight computer sequence the staged separation, and recovery is dual-deployment: a drogue at apogee and the main lower down.',
+          'Parts were designed in Onshape and 3D printed, with microcontrollers and microcomputers carrying the electronics. As co-founder and president from August 2025 to August 2026 I ran the club budget alongside the design-build-launch cycle.',
+        ],
+        photos: [],
+      },
+      {
+        heading: 'Result',
+        body: [
+          'The club grew to 52 members and took the two-stage vehicle through the full design-build-launch cycle, concept to flight, across the 2025–2026 year.',
+        ],
+        photos: [],
+      },
     ],
     photos: [
       {
@@ -400,12 +510,37 @@ export const projects = [
       { lead: 'Google Meet coordination', sub: 'MeetStream bots, live transcription, Claude Sonnet 5 diagnosis, Groq extraction' },
       { lead: 'Built for ScaleKit x MeetStream hackathon', sub: '"Agents in Production"' },
     ],
+    tools: [
+      'ScaleKit', 'GitHub OAuth', 'MeetStream', 'Google Meet',
+      'Claude Sonnet 5', 'Groq', 'Slack',
+    ],
+    // TODO: no placement or outcome is recorded for the ScaleKit x MeetStream
+    // hackathon, and the repo was created and last pushed within six hours on
+    // 2026-07-25. Set a real label rather than guessing from those dates.
+    status: 'TODO',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
-          'When CI fails at 2am, Night Shift pages two AI agents instead of two humans. Each agent executes GitHub actions under its own engineer’s real OAuth credentials via ScaleKit, so when an agent lacks write access to fix a bug it hands off to the agent that has it — and when neither does, it escalates to a human on Slack. The permission boundary is enforced by GitHub’s real 403s, not a hardcoded rule.',
+          'When CI fails at 2am, Night Shift pages two AI agents instead of two humans. The point it argues is about permissions: an agent should be able to do exactly what the engineer behind it can do and nothing else, with that boundary enforced by the system being called rather than by a rule someone wrote down.',
         ],
+      },
+      {
+        heading: 'Approach',
+        body: [
+          'Each agent executes GitHub actions under its own engineer’s real OAuth credentials via ScaleKit, so when an agent lacks write access to fix a bug it hands off to the agent that has it — and when neither does, it escalates to a human on Slack. The permission boundary is enforced by GitHub’s real 403s, not a hardcoded rule.',
+          'The agents coordinate in a Google Meet through MeetStream bots, with live transcription feeding Claude Sonnet 5 for diagnosis and Groq for extraction.',
+        ],
+        photos: [],
+      },
+      {
+        // NOTE: thin — the repo records what was built for the "Agents in
+        // Production" hackathon, but no placement, demo state or metric.
+        heading: 'Result',
+        body: [
+          'Night Shift was built for the ScaleKit x MeetStream "Agents in Production" hackathon. TODO: no placement or demo outcome is recorded in the repo or the résumé — say here how far the hand-off-and-escalate loop actually ran.',
+        ],
+        photos: [],
       },
     ],
     photos: [],
@@ -433,32 +568,38 @@ export const projects = [
       { lead: 'SwiftUI + AVFoundation pipeline', sub: 'Apple Vision tracking · target-lock reticle · AR overlay' },
       { lead: 'Voice or text commands', sub: 'resolves the person nearest screen center' },
     ],
+    tools: [
+      'SwiftUI', 'AVFoundation', 'Apple Vision', 'Convex', 'FastAPI',
+      'InsightFace', 'OpenAI Vision', 'Fiber', 'Deepgram',
+    ],
+    status: 'Completed (hackathon build)',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           "Recco is built for the moment at a busy event when you're holding your phone and want to know who someone is and whether they're worth talking to. Everything happens in the AR camera lens rather than in a separate dashboard.",
         ],
       },
       {
-        heading: 'The flow',
+        heading: 'Approach',
         body: [
-          "You set a mission on first launch: “looking for investors,” “hiring a Swift engineer,” “trying to get hired.” A fullscreen camera opens with an AR intelligence layer: a target reticle, face brackets, and a minimal scan / mic / keyboard dock.",
+          'You set a mission on first launch: “looking for investors,” “hiring a Swift engineer,” “trying to get hired.” A fullscreen camera opens with an AR intelligence layer: a target reticle, face brackets, and a minimal scan / mic / keyboard dock.',
           'Recco locks the person closest to center; you ask by voice or type, and the backend resolves their identity and hands back the answer over the same lens.',
-        ],
-      },
-      {
-        heading: 'Under the hood',
-        body: [
           'Identity comes from reading the badge and context with OpenAI Vision, searching profile data with Fiber, and verifying faces through a computer-vision service. Every resolved scan becomes a memory node in “Brain”: name, role, company, LinkedIn, confidence, lead score, and follow-up state.',
-          "Recco then drafts a cold email or DM tailored to the mission and the person, and Lazy GTM mode turns “find me 8 Swift engineers” into a prospect graph and an outreach queue.",
+          'Recco then drafts a cold email or DM tailored to the mission and the person, and Lazy GTM mode turns “find me 8 Swift engineers” into a prospect graph and an outreach queue.',
+          'On the stack: a SwiftUI iOS app carries the fullscreen camera, AR overlay, Brain graph, mission setup, Lazy GTM, and a Deepgram voice client. A Convex backend handles identity, voice tokens, memories, mission scoring, GTM runs, and outreach drafts over HTTP Actions, and a FastAPI + InsightFace service returns 512-dimension face embeddings. Secrets live in Convex environment variables, never in the app.',
         ],
+        photos: [],
       },
       {
-        heading: 'Stack',
+        // NOTE: thin on outcome by design — no placement is claimed for this
+        // hackathon and none should be invented. The demo state below is what
+        // the app screenshot in `photos` actually shows.
+        heading: 'Result',
         body: [
-          'A SwiftUI iOS app carries the fullscreen camera, AR overlay, Brain graph, mission setup, Lazy GTM, and a Deepgram voice client. A Convex backend handles identity, voice tokens, memories, mission scoring, GTM runs, and outreach drafts over HTTP Actions, and a FastAPI + InsightFace service returns 512-dimension face embeddings. Secrets live in Convex environment variables, never in the app.',
+          'Recco was built at the YC AI Growth Hackathon and runs end to end on the phone: lock the face nearest screen center, ask by voice or text, and the identity card comes back over the same lens — marked verified, with the person’s role and event, a LinkedIn link, and the raw badge text it read to get there.',
         ],
+        photos: [],
       },
     ],
     photos: [
@@ -498,32 +639,36 @@ export const projects = [
       { lead: 'React + TypeScript', sub: 'DigitalOcean serverless backend · permit checklist' },
       { lead: 'Zustand-driven UI', sub: 'auto-filled forms from user-ingested data' },
     ],
+    tools: [
+      'React 19', 'TypeScript', 'Vite 8', 'Tailwind v4', 'Zustand', 'Mapbox GL',
+      'DigitalOcean Functions', 'DigitalOcean Gradient', 'Google Places',
+      'Street View', 'Ticketmaster', 'SF open data',
+    ],
+    status: 'Completed (hackathon build)',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           "RollAway is a map-first location-intelligence and permit-planning PWA for mobile food vendors in San Francisco. It ranks legal, low-competition places to set up for a chosen time window, explains the reasoning behind each pick, and collapses the city's four-agency permit maze into a single guided checklist.",
         ],
       },
       {
-        heading: 'How it decides',
+        heading: 'Approach',
         body: [
           'Scoring, hard constraints like setbacks and closures, travel time, and legality are all computed deterministically in DigitalOcean Functions, never inside a language model. The LLMs only phrase explanations and read menus or forms, always grounded in the precomputed signals and cited sources.',
           'The map renders a wide candidate pool as pins but promotes only the top three to tray tiles. Each spot opens a detail sheet with a good / check / avoid verdict, a one-line why, a Navigate action, Street View, and the grounded facts behind the score: foot traffic, competition, closures, and legality.',
-        ],
-      },
-      {
-        heading: 'Permit Copilot',
-        body: [
           'A Permit Copilot turns permitting into a cited, ordered checklist across all four SF agencies, complete with fillable agency PDFs. Vendors sign up and ingest their menu through Gradient-backed extraction from text, links, images, or PDFs.',
+          'On the stack: React 19 and TypeScript on Vite 8, Tailwind v4, Zustand for path-based routing with no router library, and Mapbox GL code-split off the landing page. Seven DigitalOcean Functions handle serverless data and deterministic scoring, and a dependency-free agents runtime on DigitalOcean Gradient powers the spot scout, permit copilot, menu RAG, and grounded form-fill. External data comes from SF open data, a Bay Wheels foot-traffic proxy, Google Places and Street View, Ticketmaster events, and Mapbox tiles and travel times.',
         ],
+        photos: [],
       },
       {
-        heading: 'Stack',
+        heading: 'Result',
         body: [
-          'RollAway is an installable PWA with an offline shell and a schematic-map fallback: React 19 and TypeScript on Vite 8, Tailwind v4, Zustand for path-based routing with no router library, and Mapbox GL code-split off the landing page.',
-          'Seven DigitalOcean Functions handle serverless data and deterministic scoring, and a dependency-free agents runtime on DigitalOcean Gradient powers the spot scout, permit copilot, menu RAG, and grounded form-fill. External data comes from SF open data, a Bay Wheels foot-traffic proxy, Google Places and Street View, Ticketmaster events, and Mapbox tiles and travel times.',
+          'RollAway took 1st place in the Beginner track at the MLH × DigitalOcean AI for Social Good hackathon.',
+          'It ships as an installable PWA with an offline shell and a schematic-map fallback for when the tiles do not load, so a vendor can set a vending window, get ranked spots back with a good-fit or avoid verdict and the reasoning behind each one, and walk the four-agency permit checklist from the same app.',
         ],
+        photos: [],
       },
     ],
     photos: [
@@ -545,7 +690,8 @@ export const projects = [
     // below is the résumé's own. (drafted by /sync-content)
     // TODO: the résumé links a "Document" for this project; if that is a public
     // drawing set or a sheet excerpt that can be shown, add it as a photo or a
-    // link so the entry has something to look at.
+    // link so the entry has something to look at — the Approach and Result
+    // sections each carry an empty `photos` slot for exactly that.
     // TODO: `category` is a guess — 'Mechanical · Electrical' matches the three
     // sheets drafted, but this is the only non-software, non-rocketry project on
     // the site and the desk prints the category as the drawing kicker. Confirm it
@@ -560,13 +706,33 @@ export const projects = [
       { lead: '6 process streams, 42 valves', sub: '14 check valves · 4 pumps · 1–8 in. piping · Ø48 in. tank' },
       { lead: 'AutoCAD', sub: 'mechanical, instrumentation, civil, tank and electrical scope' },
     ],
+    tools: ['AutoCAD'],
+    // REVIEW: "Completed" here means the three sheets were drafted and handed
+    // over. The résumé does not say whether the replacement was ever built, so
+    // that is deliberately not claimed.
+    status: 'Completed (drafting deliverable)',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           'A replacement in kind of a dissolved air flotation (DAF) saturation tank at the San José–Santa Clara Regional Wastewater Facility. "In kind" is the whole constraint: the replacement has to drop into a plant that keeps running, so the design spans mechanical, instrumentation, civil, tank and electrical scope rather than redesigning any one of them in isolation.',
-          'I drafted 3 of the 12 engineering sheets in AutoCAD — the process mechanical, the P&ID, and the electrical single-line — covering 6 process streams, 1–8 in. piping, 42 valves, 14 check valves, 4 pumps, and the 48-inch-diameter saturation tank itself.',
         ],
+      },
+      {
+        heading: 'Approach',
+        body: [
+          'I drafted 3 of the 12 engineering sheets in AutoCAD — the process mechanical, the P&ID, and the electrical single-line — which meant working across three disciplines on one tank rather than staying inside one of them.',
+        ],
+        photos: [],
+      },
+      {
+        // NOTE: thin — the résumé records the scope delivered, not what happened
+        // to the design after handover.
+        heading: 'Result',
+        body: [
+          'The three sheets cover 6 process streams, 1–8 in. piping, 42 valves, 14 check valves, 4 pumps, and the 48-inch-diameter saturation tank itself.',
+        ],
+        photos: [],
       },
     ],
     photos: [],
@@ -592,12 +758,34 @@ export const projects = [
       { lead: 'Suggests resell, donate, repair, or recycle', sub: 'matches approved local items with buyer requests' },
       { lead: 'Node/pnpm + Postgres + private object storage', sub: 'photos re-encoded to WebP with metadata stripped before storage' },
     ],
+    tools: ['TypeScript', 'Node', 'pnpm', 'Postgres', 'private object storage', 'WebP'],
+    // TODO: the repo spans a single overnight (2026-08-15 to 2026-08-16) and
+    // neither it nor the résumé says whether this is finished or parked. Set a
+    // real label rather than inferring one from those dates.
+    status: 'TODO',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
-          'SecondCurrent helps people decide what to do with old electronics: send photos of an item by text, and the app checks the visible evidence, requests anything missing, runs a short human review when needed, and returns a shareable item record with a suggested next step — resell, donate, repair, or recycle — plus matching against approved local buyer requests.',
+          'SecondCurrent helps people decide what to do with old electronics. The hard part is not the recommendation, it is trusting it — a suggested next step is only worth anything if it rests on what the item visibly is and what condition it is visibly in.',
         ],
+      },
+      {
+        heading: 'Approach',
+        body: [
+          'Send photos of an item by text, and the app checks the visible evidence, requests anything missing, runs a short human review when needed, and returns a shareable item record with a suggested next step — resell, donate, repair, or recycle — plus matching against approved local buyer requests.',
+          'It runs on Node and pnpm with Postgres and private object storage. Photos are re-encoded to WebP and stripped of their metadata before anything is stored, so an item record never carries the place the photo was taken.',
+        ],
+        photos: [],
+      },
+      {
+        // NOTE: genuinely thin — the README describes the intended flow and
+        // nothing anywhere records how much of it runs.
+        heading: 'Result',
+        body: [
+          'TODO: nothing in the repo or the résumé records how far SecondCurrent got — no demo state, no metric, no outcome. Say here what actually runs end to end.',
+        ],
+        photos: [],
       },
     ],
     photos: [],
@@ -623,25 +811,35 @@ export const projects = [
       { lead: 'Wikipedia-style simple mode', sub: 'same content, a few KB of DOM' },
       { lead: 'Open source', sub: 'github.com/bryanph4m/Engineering-Portfolio' },
     ],
+    tools: [
+      'React', 'React Three Fiber', 'Three.js', 'drei', '@react-spring/three',
+      'Zustand', 'Vite', 'Tailwind',
+    ],
+    status: 'Actively developed',
     detail: [
       {
-        heading: 'Overview',
+        heading: 'Objective',
         body: [
           "This site is a personal portfolio rendered as an old mechanical engineer's drafting desk, viewed from a fixed isometric-ish angle. Each page of the site is a physical document you pick up, read, flip through, and set back down.",
+          'The constraint it is built around is that the desk cannot be the only way in. A recruiter with two minutes gets a Wikipedia-style article instead, and both faces read from one content file so a fact edited once can never drift between them.',
         ],
       },
       {
-        heading: 'How it works',
+        heading: 'Approach',
         body: [
           'It is one Canvas with no routing; the whole scene lives in a single component, with focus held in Zustand state so Three.js never remounts. Idle is a fixed wide view with a few degrees of pointer parallax; hover lifts a document, a click floats it to a readable pose while the desk dims behind a vignette, and click-away or Esc sets it down.',
           'Multi-page stacks rotate a physical sheet about its left edge on each turn, with an in-world handwritten tally, flippable by on-screen arrows, arrow keys, or a swipe. Document text is real DOM locked over the sheet, so it stays crisp at any zoom and is lazy-loaded on open.',
-        ],
-      },
-      {
-        heading: 'Stack',
-        body: [
           'Built with React and React Three Fiber, drei, @react-spring/three, Zustand, and Vite, with Tailwind dressing only the flat UI.',
         ],
+        photos: [],
+      },
+      {
+        heading: 'Result',
+        body: [
+          'The site is live and open source at github.com/bryanph4m/Engineering-Portfolio, and it opens in the simple view by default with the desk one click away.',
+          'Both faces render from the single shared content file, and the desk holds a measured performance budget — texture memory, draw calls and per-flip paint cost — that every new visual feature is checked against before it lands.',
+        ],
+        photos: [],
       },
     ],
     photos: [

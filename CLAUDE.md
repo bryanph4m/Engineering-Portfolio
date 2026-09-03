@@ -114,6 +114,48 @@ the same change rather than treat the ceiling as advisory — and the original 2
 in the table above is no longer reachable without finding the 13 calls that went
 missing between it and HEAD.
 
+#### Re-measured 2026-09-03 — draw calls no longer scale with content
+
+The note above was right that the next content change would spend the last of
+the draw-call headroom, and it did: restructuring every project into
+Objective/Approach/Result grew the projects stack 37 → 45 flip-pages and took
+desktop idle draw calls to **276**, six past the ceiling.
+
+The reason turned out to be structural rather than a per-project cost. A
+multi-page document rendered one `<mesh>` per *unread page* — the blank leaves
+that give a stack its physical thickness (`desk/props.jsx`, `MultiPageSheets`).
+The projects stack alone was 44 of them, and the count grew with every page
+added to any document, which is why "each project costs ~2.7 calls" held so
+consistently. Those leaves are all the same plane with the same material,
+differing only in a fixed fan offset, a z step and one of two paper tints, so
+they are now a single `InstancedMesh` (`BlankLeaves`). Same silhouette, same
+thickness, one call instead of N.
+
+Paired runs, same machine and session, before → after the restructuring, with
+the instancing in the "after":
+
+| idle | 2026-09-02 HEAD | restructured, per-page meshes | restructured + instanced | ceiling |
+|---|---|---|---|---|
+| desktop draw calls | 268 | 276 (over) | **230** | 270 |
+| desktop texture memory | 91.7 MB | 91.7 MB | **91.7 MB** | 95 MB |
+| desktop peak, everything opened | 122.8 MB | 122.8 MB | **122.8 MB** | 125 MB |
+| mobile draw calls | 157 | — | **119** | 160 |
+| mobile texture memory | 24.1 MB | — | **24.1 MB** | 26 MB |
+| mobile peak, everything opened | 33.7 MB | — | **33.7 MB** | 36 MB |
+
+The ceilings are left where they are rather than tightened to the new figures:
+they are the budget, not a high-water mark, and headroom is the point. What has
+changed is what spends it. **Pages are now free in draw calls** — a twelfth
+project, or ten more flip-pages on an existing one, adds meshes only for its
+photos, so the per-project figure above no longer applies. Draw calls are again
+spent by *props and materials*, which is what the number was always meant to
+track.
+
+`npm run check:projects` asserts the pagination properties this restructuring
+depends on (no orphaned section headers, no block taller than the content box)
+along with the five-field project shape. It is a structural check, not a
+performance one — the numbers above still come from the harness.
+
 ### Per-frame and per-interaction
 
 Frame figures are from an AMD Radeon 860M laptop iGPU at 1440×900, DPR 1.

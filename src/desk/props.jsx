@@ -71,6 +71,64 @@ const FAN = [
   { dx: 0.044, dy: -0.046, rot: 0.013 },
 ]
 
+/**
+ * The unread leaves under the top sheet, as ONE draw call.
+ *
+ * A stack's physical thickness is real: `blanksBelow` is every page not yet
+ * turned, each one a plane a sheet lower than the last, and that is what makes
+ * a fat document look fat. So the count can't be capped — but it was also one
+ * `<mesh>` per page, which meant the desk's idle draw calls grew with every
+ * page added to any document. The projects stack alone reached 44 of them, and
+ * that is what pushed the scene past its documented draw-call ceiling (see
+ * CLAUDE.md § "Performance budget").
+ *
+ * Every leaf is the same plane with the same material, differing only in a
+ * fixed fan offset, a z step, and one of two paper tints — which is exactly
+ * what InstancedMesh is for. Same geometry, same silhouette, one call.
+ */
+const Z_AXIS = new THREE.Vector3(0, 0, 1)
+
+function BlankLeaves({ w, h, topZ, n, blank }) {
+  const ref = useRef()
+  const tints = blank.join('|')
+  useLayoutEffect(() => {
+    const im = ref.current
+    if (!im || !n) return
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    const p = new THREE.Vector3()
+    const s = new THREE.Vector3(1, 1, 1)
+    const c = new THREE.Color()
+    for (let i = 0; i < n; i++) {
+      const f = FAN[i % FAN.length]
+      p.set(f.dx, f.dy, topZ - (i + 1) * SHEET_T)
+      q.setFromAxisAngle(Z_AXIS, f.rot)
+      im.setMatrixAt(i, m.compose(p, q, s))
+      im.setColorAt(i, c.set(blank[i % blank.length]))
+    }
+    im.instanceMatrix.needsUpdate = true
+    if (im.instanceColor) im.instanceColor.needsUpdate = true
+    // The instances sit below the top sheet, so the auto-computed bounds are
+    // only used for frustum culling — recompute them rather than leave the
+    // sphere at the single unplaced plane's extent.
+    im.computeBoundingSphere()
+  }, [w, h, topZ, n, tints])
+  if (!n) return null
+  return (
+    // `args` carries the instance count, so a page turn (n changes) remounts
+    // the mesh — the same thing the old per-page list did, minus 43 meshes.
+    <instancedMesh ref={ref} args={[undefined, undefined, n]} receiveShadow>
+      <planeGeometry args={[w, h]} />
+      <meshStandardMaterial
+        roughness={0.9}
+        polygonOffset
+        polygonOffsetFactor={-1}
+        polygonOffsetUnits={-1}
+      />
+    </instancedMesh>
+  )
+}
+
 // Where flipped pages come to rest: a shallow pile hinged just past the top
 // (bound) edge, legal-pad style, each leaf stopping a few degrees short of
 // dead flat so up to `visible` sheet backs stay readable as the pile grows.
@@ -398,26 +456,8 @@ function MultiPageSheets({ doc, blank = ['#e8dfca', '#ece3ce'], back = '#e7dec7'
           back={back}
         />
       ))}
-      {Array.from({ length: blanksBelow }).map((_, i) => {
-        const f = FAN[i % FAN.length]
-        return (
-          <mesh
-            key={i}
-            receiveShadow
-            position={[f.dx, f.dy, topZ - (i + 1) * SHEET_T]}
-            rotation={[0, 0, f.rot]}
-          >
-            <planeGeometry args={[w, h]} />
-            <meshStandardMaterial
-              color={blank[i % blank.length]}
-              roughness={0.9}
-              polygonOffset
-              polygonOffsetFactor={-1}
-              polygonOffsetUnits={-1}
-            />
-          </mesh>
-        )
-      })}
+      <BlankLeaves w={w} h={h} topZ={topZ} n={blanksBelow} blank={blank} />
+
 
       {/* top sheet with the painted content */}
       <mesh name="page-face" receiveShadow position={[0, 0, topZ]}>

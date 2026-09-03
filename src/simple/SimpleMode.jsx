@@ -101,6 +101,32 @@ function Figures({ photos }) {
 }
 
 /**
+ * A project's two secondary fields — tools used and project status — as a small
+ * fact list under the prose. Deliberately quieter than the Objective/Approach/
+ * Result sections above it: this is the infobox half of the entry, short
+ * labelled facts rather than article body.
+ */
+function ProjectFacts({ project }) {
+  if (!project.tools?.length && !project.status) return null
+  return (
+    <dl className="wiki__facts">
+      {project.tools?.length ? (
+        <>
+          <dt>Tools used</dt>
+          <dd>{project.tools.join(' · ')}</dd>
+        </>
+      ) : null}
+      {project.status ? (
+        <>
+          <dt>Project status</dt>
+          <dd>{project.status}</dd>
+        </>
+      ) : null}
+    </dl>
+  )
+}
+
+/**
  * The resume, embedded inline — simple mode's whole Resume article.
  *
  * This view deliberately shows the real PDF rather than a re-typed transcript:
@@ -244,9 +270,11 @@ function buildArticles(go) {
             {p.detail?.map((sec, i) => (
               <div key={i}>
                 {sec.heading ? <h3 className="wiki__h3">{sec.heading}</h3> : null}
+                <Figures photos={sec.photos} />
                 {sec.body.map((para, j) => <p key={j}>{para}</p>)}
               </div>
             ))}
+            <ProjectFacts project={p} />
           </>
         ),
       })),
@@ -370,7 +398,7 @@ const SEARCH_INDEX = [
   },
   ...projects.map((p) => ({
     section: 'projects', anchor: p.id, label: p.name,
-    text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')} ${(p.detail ?? []).map((d) => `${d.heading ?? ''} ${d.body.join(' ')}`).join(' ')} ${(p.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
+    text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')} ${(p.detail ?? []).map((d) => `${d.heading ?? ''} ${d.body.join(' ')} ${(d.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`).join(' ')} ${(p.tools ?? []).join(' ')} ${p.status ?? ''} ${(p.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
   })),
   {
     section: 'research', anchor: research.sheets[0].id, label: 'Research',
