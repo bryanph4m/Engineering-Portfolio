@@ -514,10 +514,7 @@ export const projects = [
       'ScaleKit', 'GitHub OAuth', 'MeetStream', 'Google Meet',
       'Claude Sonnet 5', 'Groq', 'Slack',
     ],
-    // TODO: no placement or outcome is recorded for the ScaleKit x MeetStream
-    // hackathon, and the repo was created and last pushed within six hours on
-    // 2026-07-25. Set a real label rather than guessing from those dates.
-    status: 'TODO',
+    status: 'Completed (demo ready)',
     detail: [
       {
         heading: 'Objective',
@@ -534,11 +531,9 @@ export const projects = [
         photos: [],
       },
       {
-        // NOTE: thin — the repo records what was built for the "Agents in
-        // Production" hackathon, but no placement, demo state or metric.
         heading: 'Result',
         body: [
-          'Night Shift was built for the ScaleKit x MeetStream "Agents in Production" hackathon. TODO: no placement or demo outcome is recorded in the repo or the résumé — say here how far the hand-off-and-escalate loop actually ran.',
+          'Night Shift took 2nd Overall and 1st in the MeetStream track at the ScaleKit x MeetStream "Agents in Production" hackathon. The build is demo ready: the hand-off-and-escalate loop runs end to end, and the audit log is what it argues from — every action an agent took, whose credentials it took it under, and which ones GitHub refused.',
         ],
         photos: [],
       },
@@ -804,7 +799,7 @@ export const projects = [
       stars: 0,
       description: null,
       createdAt: '2026-07-02T03:25:29Z',
-      pushedAt: '2026-09-02T07:46:39Z',
+      pushedAt: '2026-09-03T12:03:24Z',
     },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
@@ -1074,6 +1069,27 @@ export const research = {
   ],
 }
 
+// REVIEW: the résumé gained an Achievements section in the working-tree PDF
+// (re-read 2026-09-10) that has NO counterpart in `sections` below:
+//   "6x Hackathon Winner: 2nd Overall & 1st Meetstream @ Scalekit x Meetstream,
+//    1st Beginner @ MLH, 2nd Runloop @ Codex"
+// The six count reconciles: those four plus Aside AI (1st Deepgram track) and
+// Atrium (1st overall), both already on the site. Of the four new ones:
+//   · Scalekit x Meetstream → Night Shift (see its entry above)
+//   · 1st Beginner @ MLH    → RollAway, whose summary already claims it — now
+//                             résumé-backed, where before it rested on the repo
+//   · 2nd Runloop @ Codex   → Antibody (confirmed by the author 2026-09-10):
+//                             2nd place, Runloop track, Codex Community
+//                             Hackathon. Antibody has NO entry in `projects`
+//                             and no repo under github.com/bryanph4m — a GitHub
+//                             search finds nothing matching either, so it is
+//                             presumably a teammate's repo or private. Needs
+//                             /draft-project plus a source for the write-up.
+//                             Note the résumé compresses this to "2nd Runloop @
+//                             Codex", which names neither the project nor the
+//                             full hackathon name.
+// Adding an Achievements section here is editorial, so it was not written.
+// (flagged by /sync-content)
 export const resume = {
   name: 'Bryan Pham',
   subtitle: 'RESUME · MECHANICAL ENGINEERING',
