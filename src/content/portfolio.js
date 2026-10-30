@@ -799,7 +799,7 @@ export const projects = [
       stars: 0,
       description: null,
       createdAt: '2026-07-02T03:25:29Z',
-      pushedAt: '2026-09-03T12:03:24Z',
+      pushedAt: '2026-09-11T04:12:57Z',
     },
     specs: [
       { lead: 'React + Three.js desk scene', sub: 'every section is a physical document' },
@@ -1081,10 +1081,9 @@ export const research = {
 //   · 2nd Runloop @ Codex   → Antibody (confirmed by the author 2026-09-10):
 //                             2nd place, Runloop track, Codex Community
 //                             Hackathon. Antibody has NO entry in `projects`
-//                             and no repo under github.com/bryanph4m — a GitHub
-//                             search finds nothing matching either, so it is
-//                             presumably a teammate's repo or private. Needs
-//                             /draft-project plus a source for the write-up.
+//                             yet, but is backed by a real repo:
+//                             github.com/bryanph4m/Antibody (a fork, created
+//                             2026-09-15, no description). Needs /draft-project.
 //                             Note the résumé compresses this to "2nd Runloop @
 //                             Codex", which names neither the project nor the
 //                             full hackathon name.
@@ -1102,11 +1101,12 @@ export const resume = {
         // says plainly "GPA: 4.0" under the UCLA heading. Nothing on the résumé
         // supports calling it a transfer GPA, and the two read very differently to
         // a recruiter. If it IS the transfer GPA, say so on the résumé first and
-        // then restore the word here. Dates and location match.
+        // then restore the word here. Dates (June 2026 – June 2028, per the résumé
+        // re-read 2026-10-29) and location match.
         // (flagged by /sync-content)
         {
           title: 'UCLA, B.S. Mechanical Engineering',
-          sub: 'GPA 4.0 · June 2026 – May 2028 · Los Angeles, CA',
+          sub: 'GPA 4.0 · June 2026 – June 2028 · Los Angeles, CA',
         },
       ],
     },
@@ -1128,7 +1128,7 @@ export const resume = {
       entries: [
         {
           title: 'Mission College, Design & Manufacturing Engineering Intern',
-          sub: 'June 2026 – present · Santa Clara, CA · high-powered rocket airframe · SolidWorks · SimScale CFD',
+          sub: 'June 2026 – Sept 2026 · Santa Clara, CA · high-powered rocket airframe · SolidWorks · SimScale CFD',
         },
 
         {
