@@ -293,34 +293,6 @@ const rocketryFigure = figure(464, 410, (ctx, W, H, y, rnd) => {
   text(ctx, 'staged separation', 470, cy + 156, { font: HAND, size: 34, color: '#7a5a2f' })
 })
 
-/* ---- Recco: viewfinder + target-lock reticle ---- */
-const reccoFigure = figure(474, 420, (ctx, W, H, y, rnd) => {
-  const vx = 170
-  const vy = y + 20
-  const vw = 430
-  const vh = 320
-  ctx.strokeStyle = 'rgba(51,41,29,0.85)'
-  ctx.lineWidth = 4
-  ctx.strokeRect(vx, vy, vw, vh) // viewfinder frame
-  // subject: head + shoulders near screen center
-  const fx = vx + vw / 2
-  const fy = vy + 138
-  handEllipse(ctx, fx, fy, 44, 54, rnd)
-  handLine(ctx, fx - 105, vy + vh, fx - 55, fy + 62, rnd, 2)
-  handLine(ctx, fx + 105, vy + vh, fx + 55, fy + 62, rnd, 2)
-  // target-lock reticle with crosshair ticks
-  handEllipse(ctx, fx, fy, 84, 90, rnd)
-  handLine(ctx, fx - 116, fy, fx - 88, fy, rnd, 1)
-  handLine(ctx, fx + 88, fy, fx + 116, fy, rnd, 1)
-  handLine(ctx, fx, fy - 122, fx, fy - 94, rnd, 1)
-  handLine(ctx, fx, fy + 94, fx, fy + 122, rnd, 1)
-  // resolve the lock to an identity
-  handArrow(ctx, vx + vw + 12, fy, vx + vw + 88, fy, rnd)
-  ctx.strokeRect(vx + vw + 98, fy - 52, 165, 104)
-  text(ctx, 'WHO?', vx + vw + 180, fy + 10, { font: TYPE, size: 34, align: 'center' })
-  text(ctx, 'lock the face nearest center', vx + 20, vy + vh + 60, { font: HAND, size: 34, color: '#7a5a2f' })
-})
-
 /* ---- RollAway: street grid + ranked vendor spot ---- */
 const rollawayFigure = figure(454, 400, (ctx, W, H, y, rnd) => {
   const mx = 150
@@ -369,7 +341,6 @@ const portfolioFigure = figure(494, 440, (ctx, W, H, y, rnd) => {
 const FIGURES = {
   'asideai': asideFigure,
   'mission-launch-rocketry': rocketryFigure,
-  'recco': reccoFigure,
   'rollaway': rollawayFigure,
   'engineering-portfolio': portfolioFigure,
 }

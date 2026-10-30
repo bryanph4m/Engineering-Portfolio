@@ -541,75 +541,6 @@ export const projects = [
     photos: [],
   },
   {
-    id: 'recco',
-    name: 'Recco',
-    category: 'Software',
-    summary: 'YC AI Growth Hackathon · camera-first iOS networking assistant',
-    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
-    // hand-edit; manual editorial fields live outside this sub-object.
-    // NOTE: bryanph4m/Recco is a FORK of the team repo (Cheemasukh962/Recco, the
-    // URL the photo below links). `createdAt` is the fork date, not the project's.
-    github: {
-      repo: 'Recco',
-      url: 'https://github.com/bryanph4m/Recco',
-      language: null,
-      stars: 0,
-      description: 'YC AI Growth Hackathon',
-      createdAt: '2026-07-30T20:17:41Z',
-      pushedAt: '2026-06-30T17:07:28Z',
-    },
-    specs: [
-      { lead: 'Identifies people at events, live', sub: 'face tracking + cloud vision + identity lookup' },
-      { lead: 'SwiftUI + AVFoundation pipeline', sub: 'Apple Vision tracking · target-lock reticle · AR overlay' },
-      { lead: 'Voice or text commands', sub: 'resolves the person nearest screen center' },
-    ],
-    tools: [
-      'SwiftUI', 'AVFoundation', 'Apple Vision', 'Convex', 'FastAPI',
-      'InsightFace', 'OpenAI Vision', 'Fiber', 'Deepgram',
-    ],
-    status: 'Completed (hackathon build)',
-    detail: [
-      {
-        heading: 'Objective',
-        body: [
-          "Recco is built for the moment at a busy event when you're holding your phone and want to know who someone is and whether they're worth talking to. Everything happens in the AR camera lens rather than in a separate dashboard.",
-        ],
-      },
-      {
-        heading: 'Approach',
-        body: [
-          'You set a mission on first launch: “looking for investors,” “hiring a Swift engineer,” “trying to get hired.” A fullscreen camera opens with an AR intelligence layer: a target reticle, face brackets, and a minimal scan / mic / keyboard dock.',
-          'Recco locks the person closest to center; you ask by voice or type, and the backend resolves their identity and hands back the answer over the same lens.',
-          'Identity comes from reading the badge and context with OpenAI Vision, searching profile data with Fiber, and verifying faces through a computer-vision service. Every resolved scan becomes a memory node in “Brain”: name, role, company, LinkedIn, confidence, lead score, and follow-up state.',
-          'Recco then drafts a cold email or DM tailored to the mission and the person, and Lazy GTM mode turns “find me 8 Swift engineers” into a prospect graph and an outreach queue.',
-          'On the stack: a SwiftUI iOS app carries the fullscreen camera, AR overlay, Brain graph, mission setup, Lazy GTM, and a Deepgram voice client. A Convex backend handles identity, voice tokens, memories, mission scoring, GTM runs, and outreach drafts over HTTP Actions, and a FastAPI + InsightFace service returns 512-dimension face embeddings. Secrets live in Convex environment variables, never in the app.',
-        ],
-        photos: [],
-      },
-      {
-        // NOTE: thin on outcome by design — no placement is claimed for this
-        // hackathon and none should be invented. The demo state below is what
-        // the app screenshot in `photos` actually shows.
-        heading: 'Result',
-        body: [
-          'Recco was built at the YC AI Growth Hackathon and runs end to end on the phone: lock the face nearest screen center, ask by voice or text, and the identity card comes back over the same lens — marked verified, with the person’s role and event, a LinkedIn link, and the raw badge text it read to get there.',
-        ],
-        photos: [],
-      },
-    ],
-    photos: [
-      {
-        src: '/assets/photos/recco-app.jpg',
-        title: 'A resolved scan',
-        caption: 'Recco right after it locks onto someone at a hackathon: the card marks them verified, gives their role and the event, links their LinkedIn, and shows the badge text it read to get there.',
-        date: '2026',
-        credit: '',
-        alt: "The Recco iOS app over a live camera view, showing a verified identity card with an attendee's name, role and event, a LinkedIn button, and a detail sheet listing their headline and the raw text read from their badge.",
-        link: 'https://github.com/Cheemasukh962/Recco.git',
-      },
-    ],
-  },
-  {
     id: 'rollaway',
     name: 'RollAway',
     category: 'Software',
@@ -861,6 +792,66 @@ export const projects = [
   // the content rules — but if the résumé is the front door, they are invisible
   // from it. Worth deciding whether they belong on the PDF too.
   // (flagged by /sync-content)
+  // REVIEW: drafted by /draft-project from Antibody on 2026-10-29 — edit or delete.
+  // Award is the résumé's "2nd Runloop @ Codex", expanded with the author's
+  // confirmation (2026-09-10, see the Achievements note below `research`);
+  // everything else is the README's. The team worked across the whole system;
+  // "my own focus" in Approach was picked by the author's call (2026-10-29).
+  {
+    id: 'antibody',
+    name: 'Antibody',
+    category: 'Software',
+    summary: '2nd place, Runloop track · Codex Community Hackathon',
+    // substring of `summary` the desk sheet circles in red; must appear verbatim
+    highlight: '2nd place',
+    // Auto-managed by /sync-content — refreshed from the GitHub API. Do not
+    // hand-edit; manual editorial fields live outside this sub-object.
+    // NOTE: bryanph4m/Antibody is a FORK of the team repo (perhapspranav/Antibody).
+    // `createdAt` is the fork date, after the last push, not the project's start.
+    github: {
+      repo: 'Antibody',
+      url: 'https://github.com/bryanph4m/Antibody',
+      language: null,
+      stars: 0,
+      description: null,
+      createdAt: '2026-09-15T03:08:42Z',
+      pushedAt: '2026-09-14T16:10:13Z',
+    },
+    specs: [
+      { lead: 'Mines fixes that shipped no test', sub: 'ranks production-only commits in Git history' },
+      { lead: 'Codex writes the missing test', sub: 'as a Reflex Persona, given the exact historical diff' },
+      { lead: 'Causal proof in Runloop Devboxes', sub: 'must fail before the fix and pass after it and on HEAD' },
+      { lead: 'Human-approved draft PRs only', sub: 'gated on an exact receipt digest; it never merges' },
+    ],
+    tools: ['TypeScript', 'Node.js', 'Codex', 'Runloop', 'Reflex', 'Vitest', 'pnpm'],
+    status: 'Completed (hackathon build)',
+    detail: [
+      {
+        heading: 'Objective',
+        body: [
+          'A merged bug fix with no regression test is a known-bad behavior, the exact change that corrected it, and a repository state where the bug still exists — and without a test, all of that disappears into history. Test generators ask what tests the current code should have. Antibody asks what failure a historical fix proved should never be forgotten.',
+        ],
+      },
+      {
+        heading: 'Approach',
+        body: [
+          'Antibody mines Git history for production-only fixes that landed without a test, then hands Codex the immutable fix, its diff and bounded repository context through a Reflex Persona. Codex returns a patch containing only the missing test, and a policy gate rejects anything that touches production source.',
+          'Codex is the author, not the judge. Each test is verified separately in isolated Runloop Devboxes against the exact parent, fix and current HEAD commits: it has to fail for the intended reason before the fix, pass after it, and pass on HEAD with the suite still green. A nonzero exit code alone proves nothing, so setup errors, flaky repeats and unrelated failures come back inconclusive rather than verified. Every run is sealed in a hashed receipt, and a draft PR only opens once a human approves that exact digest.',
+          'We built Antibody as a team, with everyone working across the whole system; my own focus was the Runloop verification lane that runs each test against the parent, fix and HEAD commits.',
+        ],
+        photos: [],
+      },
+      {
+        heading: 'Result',
+        body: [
+          'Antibody took 2nd place in the Runloop track at the Codex Community Hackathon.',
+          'The checked-in demo runs the full loop offline on a four-commit fixture repository, recovering the forgotten test and verifying its receipt. As the README states plainly, a credentialed live Runloop and Reflex run and a real draft PR are not yet claimed.',
+        ],
+        photos: [],
+      },
+    ],
+    photos: [],
+  },
 ]
 
 /**
@@ -1080,10 +1071,9 @@ export const research = {
 //                             résumé-backed, where before it rested on the repo
 //   · 2nd Runloop @ Codex   → Antibody (confirmed by the author 2026-09-10):
 //                             2nd place, Runloop track, Codex Community
-//                             Hackathon. Antibody has NO entry in `projects`
-//                             yet, but is backed by a real repo:
-//                             github.com/bryanph4m/Antibody (a fork, created
-//                             2026-09-15, no description). Needs /draft-project.
+//                             Hackathon. Backed by github.com/bryanph4m/Antibody
+//                             (a fork); drafted into `projects` by
+//                             /draft-project on 2026-10-29, pending review.
 //                             Note the résumé compresses this to "2nd Runloop @
 //                             Codex", which names neither the project nor the
 //                             full hackathon name.
@@ -1142,13 +1132,15 @@ export const resume = {
     // Mission Launch Rocketry came out: the résumé dropped RollAway from Projects
     // and moved the club to Experience, where it now appears above. The two
     // 1st-place finishes counted below are Aside AI (Deepgram track, Berkeley) and
-    // Atrium (overall, Memory Meets Motion) — Recco carries no award.
+    // Atrium (overall, Memory Meets Motion). Recco is on the résumé but left off
+    // here: by the author's call (2026-10-29), the site carries only hackathon
+    // projects that placed, and Recco didn't.
     // (reconciled by /sync-content)
     {
       label: 'Projects',
       entries: [
         {
-          title: 'Aside AI · Atrium · Recco · Camera Tracking Drone · RWF DAF Tank',
+          title: 'Aside AI · Atrium · Camera Tracking Drone · RWF DAF Tank',
           sub: 'two 1st-place hackathon finishes · consent-gated drone tracking · municipal process design',
         },
       ],
