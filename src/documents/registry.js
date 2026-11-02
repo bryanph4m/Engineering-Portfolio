@@ -50,7 +50,7 @@ export const DOCUMENTS = [
   },
   {
     id: 'research',
-    title: 'Rocketry',
+    title: 'Research',
     kind: 'blueprint',
     pages: researchPages,
     photos: researchPhotos,

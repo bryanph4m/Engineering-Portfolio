@@ -28,21 +28,22 @@ const TITLE_BLOCK_LEFT = TEX_W - 660
 const NOTE_X = 124
 const NOTE_MAXW = TITLE_BLOCK_LEFT - 48 - NOTE_X
 
-function titleBlock(ctx, W, H, rnd, sheet, count) {
+function titleBlock(ctx, W, H, rnd, sheet, count, s) {
   const bx = TITLE_BLOCK_LEFT
   const by = H - 290
   ctx.strokeStyle = WHITE
   ctx.lineWidth = 3
   ctx.strokeRect(bx, by, 520, 190)
   ctx.beginPath(); ctx.moveTo(bx, by + 66); ctx.lineTo(bx + 520, by + 66); ctx.stroke()
-  text(ctx, research.program.toUpperCase(), bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
-  text(ctx, `DWG MC-001 · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
-  text(ctx, `SCALE: NTS · ${research.org.toUpperCase()}`, bx + 24, by + 160, { size: 28, color: DIM })
+  text(ctx, (s.program ?? research.program).toUpperCase(), bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
+  text(ctx, `DWG ${s.dwg ?? 'MC-001'} · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
+  text(ctx, `SCALE: NTS · ${(s.org ?? research.org).toUpperCase()}`, bx + 24, by + 160, { size: 28, color: DIM })
 }
 
-const decor = (ctx, W, H, rnd, page, count) => {
+// Per sheet, so an entry from another program letters its own title block.
+const decorFor = (s) => (ctx, W, H, rnd, page, count) => {
   blueprintBase(ctx, W, H, rnd)
-  titleBlock(ctx, W, H, rnd, page + 1, count)
+  titleBlock(ctx, W, H, rnd, page + 1, count, s)
 }
 
 /** Sheet header: big typewriter title, hand underline, subtitle. */
@@ -244,14 +245,14 @@ const sheets = research.sheets.map((s) => {
   if (s.lead) {
     blocks.push(note(s.lead, { font: HAND, size: 40, color: '#cfe0f4' }))
   }
-  blocks.push(FIGURES[s.id])
+  if (FIGURES[s.id]) blocks.push(FIGURES[s.id])
   // Notes flow below the figure, into the vertical band the title block sits
   // in — cap their run so a long line auto-fits instead of running under it.
   for (const n of s.notes ?? []) blocks.push(note(`· ${n.toUpperCase()}`, { maxW: NOTE_MAXW }))
   // Photos flow last so they paginate onto a fresh sheet rather than colliding
   // with the drawing or the title block (see lib/photos.js).
   blocks.push(...photoBlocks(s.photos, RESEARCH_PAPER, box))
-  return { decor, cont: cont(s.title.toUpperCase()), blocks }
+  return { decor: decorFor(s), cont: cont(s.title.toUpperCase()), blocks }
 })
 
 // Each sheet flowed independently so its first page's index can be read off

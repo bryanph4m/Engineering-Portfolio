@@ -1057,6 +1057,33 @@ export const research = {
       ],
       photos: [],
     },
+    // A second research entry, separate from the rocket program above. Optional
+    // per-sheet `program`/`org`/`dwg` override the rocket's drafting title block
+    // on the desk; a sheet with no matching figure in research.js renders as
+    // title + notes only.
+    // REVIEW: supplied by the author (2026-11-02), not yet on the résumé, which
+    // the content rules treat as authoritative for experience. Add it there too.
+    // Lab context in `extended` is from annewarlaumont.org/research; the lab page
+    // does not describe the wearable itself, so nothing here does either.
+    {
+      id: 'warlaumont-ble-remote',
+      title: 'BLE Wearable Remote',
+      sub: 'UCLA Warlaumont Emergence of Communication Lab · in progress',
+      program: 'UCLA',
+      org: 'Los Angeles, CA',
+      dwg: 'WL-001',
+      lead: "objective: a cheap, easy-to-reproduce remote for the lab's wearable.",
+      notes: [
+        "Remote control for the lab's wearable device",
+        'Connects to the wearable over Bluetooth Low Energy (BLE)',
+        'Built to be as cheap and easy to reproduce as possible',
+        'In-progress lab project',
+      ],
+      extended: [
+        "I work in UCLA's Warlaumont Emergence of Communication Lab, which studies how human infants develop vocal communication, through computational models and through day-long audio recordings of children in their everyday settings. I am developing a remote control for the lab's wearable device that connects to it over Bluetooth Low Energy. It follows the lab's goal of keeping its hardware as cheap and easy to reproduce as possible. The project is in progress.",
+      ],
+      photos: [],
+    },
   ],
 }
 
@@ -1190,7 +1217,7 @@ export const contact = {
 }
 
 // Nav order shared by the simple mode's sidebar. The desk registry keeps its
-// own titles (e.g. it labels research "Rocketry") since those are 3D-scene
+// own titles (they could differ from these) since those are 3D-scene
 // presentation, not content.
 export const sections = [
   { id: 'about', title: 'About' },
