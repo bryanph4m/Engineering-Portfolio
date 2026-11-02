@@ -20,7 +20,7 @@ Run these checks and report each as a ✅/❌ checklist item with specifics:
   that error or 404. Skip LinkedIn fetching per the Content Rules — check its URL
   shape only.
 - Simple-mode cross-links: every `section` value on `profile.roles` / `profile.now`
-  must match an id in the `sections` export; every `research.sheets[].id` and project
+  must match an id in the `sections` export; every `research.entries[].id` and project
   `id` must be unique (they're DOM anchors).
 
 ## 2. Resume ↔ site consistency

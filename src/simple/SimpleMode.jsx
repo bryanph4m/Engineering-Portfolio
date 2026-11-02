@@ -101,6 +101,30 @@ function Figures({ photos }) {
 }
 
 /**
+ * The body shared by a research entry and each of its blueprint sheets: meta
+ * line, lead (plus the entry's credit), bullet notes, then the long-form prose
+ * the desk never reads. Every field is optional.
+ */
+function ResearchBody({ s }) {
+  return (
+    <>
+      {s.sub ? <p className="wiki__meta">{s.sub}</p> : null}
+      {s.lead ? <p>{s.lead}{s.credit ? ` ${s.credit}` : null}</p> : null}
+      {s.notes?.length ? (
+        <ul className="wiki__list">
+          {s.notes.map((n, i) => <li key={i}>{n}</li>)}
+        </ul>
+      ) : null}
+      {s.extended?.length ? (
+        <div className="wiki__extended">
+          {s.extended.map((para, i) => <p key={i}>{para}</p>)}
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+/**
  * A project's two secondary fields — tools used and project status — as a small
  * fact list under the prose. Deliberately quieter than the Objective/Approach/
  * Result sections above it: this is the infobox half of the entry, short
@@ -284,33 +308,27 @@ function buildArticles(go) {
       title: 'Research',
       lead: (
         <p>
-          {research.lead} {research.credit}
+          Research and lab work. Jump to{' '}
+          <InlineList items={research.entries.map((e) => link(e.title, 'research', e.id))} />.
         </p>
       ),
-      // Longer-form body prose the simple mode shows after the lead. Desk mode
-      // never reads this; see research.extended in portfolio.js.
-      extended: research.extended,
-      // Article-level figures (simple mode only). Per-sheet figures live on the
-      // subsections below; the desk polaroids come from those, not from here.
-      photos: research.photos,
-      subsections: research.sheets.map((s) => ({
-        id: s.id,
-        heading: s.title,
-        photos: s.photos,
+      // One subsection per research entry. An entry and its blueprint sheets
+      // share a shape, so the same body renders both; the sheets nest under the
+      // entry as h3s. Entry figures ride the subsection, sheet figures their h3.
+      subsections: research.entries.map((e) => ({
+        id: e.id,
+        heading: e.title,
+        photos: e.photos,
         render: () => (
           <>
-            <p className="wiki__meta">{s.sub}</p>
-            {s.lead ? <p>{s.lead}</p> : null}
-            {s.notes?.length ? (
-              <ul className="wiki__list">
-                {s.notes.map((n, i) => <li key={i}>{n}</li>)}
-              </ul>
-            ) : null}
-            {s.extended?.length ? (
-              <div className="wiki__extended">
-                {s.extended.map((para, i) => <p key={i}>{para}</p>)}
+            <ResearchBody s={e} />
+            {e.sheets?.map((s) => (
+              <div key={s.id}>
+                <h3 className="wiki__h3">{s.title}</h3>
+                <Figures photos={s.photos} />
+                <ResearchBody s={s} />
               </div>
-            ) : null}
+            ))}
           </>
         ),
       })),
@@ -400,13 +418,11 @@ const SEARCH_INDEX = [
     section: 'projects', anchor: p.id, label: p.name,
     text: `${p.name} ${p.category} ${p.summary} ${p.specs.map((s) => `${s.lead} ${s.sub ?? ''}`).join(' ')} ${(p.detail ?? []).map((d) => `${d.heading ?? ''} ${d.body.join(' ')} ${(d.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`).join(' ')} ${(p.tools ?? []).join(' ')} ${p.status ?? ''} ${(p.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
   })),
-  {
-    section: 'research', anchor: research.sheets[0].id, label: 'Research',
-    text: `${research.title} ${research.lead} ${research.program} ${research.org}`,
-  },
-  ...research.sheets.map((s) => ({
-    section: 'research', anchor: s.id, label: s.title,
-    text: `${s.title} ${s.sub} ${s.lead ?? ''} ${(s.notes ?? []).join(' ')} ${(s.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`,
+  ...research.entries.map((e) => ({
+    section: 'research', anchor: e.id, label: e.title,
+    text: [e, ...(e.sheets ?? [])]
+      .map((s) => `${s.title} ${s.sub ?? ''} ${s.lead ?? ''} ${s.credit ?? ''} ${s.program ?? ''} ${s.org ?? ''} ${(s.notes ?? []).join(' ')} ${(s.photos ?? []).map((ph) => `${ph.title ?? ''} ${ph.caption ?? ''}`).join(' ')}`)
+      .join(' '),
   })),
   // The Resume article is the embedded PDF, so it has no subsections to index.
   // Its one entry still searches the resume's own words (the section labels and

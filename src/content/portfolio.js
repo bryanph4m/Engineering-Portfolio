@@ -64,7 +64,7 @@
  *
  * Which lists reach the desk:
  *   - `projects[].photos`, `projects[].detail[].photos` and
- *     `research.sheets[].photos` → polaroids that ride the same pagination as
+ *     `research.entries[].sheets[].photos` → polaroids that ride the same pagination as
  *     the text (each photo reserves space and flows onto the next page if the
  *     current one is full). A section's own photos land with that section, so
  *     an Approach image follows the Approach prose onto whichever flip-page it
@@ -73,9 +73,9 @@
  *     pinned to a reserved column the card's copy is measured around
  *     (src/documents/content/about.js). Any further entries are simple-mode
  *     figures only — the card has room for one.
- *   - `research.photos` → simple-mode figures only (like the `extended` prose;
+ *   - `research.entries[].photos` → simple-mode figures only (like the `extended` prose;
  *     the blueprint's intro has no room for one). Per-sheet photos go on
- *     `research.sheets[].photos` instead.
+ *     `research.entries[].sheets[].photos` instead.
  *
  * Drop image files in /public/assets/photos/ (see that folder's README and the
  * repo README's "Photos" section). Until a listed file exists, both modes show
@@ -130,7 +130,7 @@ export const profile = {
     'I am excited to see where the future takes me and how UCLA can help me grow as an engineer. I am currently looking for internship opportunities.',
   ],
   // Figures for the About section, in the shape documented at the top of this
-  // file. Unlike `research.photos` (still simple-mode-only), these DO reach the
+  // file. Unlike `research.entries[].photos` (still simple-mode-only), these DO reach the
   // desk: the simple mode renders each as a Wikipedia figure beside the About
   // article, and the desk's index card pins the first one as a bare polaroid in
   // the reserved photo column (src/documents/content/about.js).
@@ -873,28 +873,6 @@ export const gallery = {
 }
 
 export const research = {
-  title: 'Tilt/Roll-Control Rocket',
-  program: 'Mission College',
-  org: 'Santa Clara, CA',
-  // the article lead; the vehicle → flight pipeline in one line
-  lead: 'SolidWorks airframe → SimScale CFD → an active tilt/roll control system for a high-powered model rocket.',
-  // full-sentence attribution the simple mode appends to the lead
-  credit: 'Built at Mission College as a Design & Manufacturing Engineering intern.',
-  // Extended Research prose for the simple/recruiter mode ONLY. The simple mode
-  // renders this as the article body after the lead; the desk blueprint never
-  // reads it and keeps to `lead`/`credit` plus the per-sheet notes below.
-  // Structure: an array of paragraph strings, one string per paragraph. Leave
-  // empty to render just the lead. Sourced from the Avionics-Bay project README
-  // (github.com/Thrust-Stack/Avionics-Bay).
-  extended: [
-    'This is the avionics and control side of the tilt/roll-control rocket, an active system that keeps the airframe from spinning up in flight. Most rockets pick up roll from tiny fin misalignments, and left alone that roll builds through boost. The vehicle carries movable canards that deflect to generate a roll moment, and the job of the avionics bay is to read how fast the airframe is rolling and drive those canards to hold it near zero roll rate through boost and coast. It is built to fly on an AeroTech H219.',
-    'The bay runs on an ESP32 that handles both the sensors and the actuators. There is an IMU for angular rate and acceleration, a barometric altimeter for altitude, and a GPS, plus the two mirrored canard servos and an optional LoRa radio for telemetry. A Raspberry Pi 5 takes care of onboard camera capture. Instead of closing the whole loop on the ESP32, I run it hardware-in-the-loop: the board streams sensor data out at a fixed rate, a Python controller on a laptop works out the canard deflection, and the command comes back to the ESP32 to move the servos. That kept the flight code quick to iterate on and easy to log.',
-    'The flight controller estimates roll rate with a Kalman filter and fuses GPS, accelerometer, and barometer readings to track vertical velocity. It schedules its gain against that velocity so control authority scales with dynamic pressure rather than overreacting at low speed, and it only commands the canards when altitude, tilt, and telemetry freshness all check out, falling back to neutral otherwise. A second, more aggressive controller exists for restrained bench testing and deliberately skips the flight safety gates. At the moment roll control is the part that is actually implemented and tested on the bench. Tilt is estimated from the accelerometer but not yet actively controlled, and the rocket has not flown under power, so validating the loop in flight is the next step. The airframe and bay are modeled in SolidWorks.',
-  ],
-  // Simple-mode-only figures for the Research article intro (rendered after the
-  // lead, like `extended`). Per-page desk polaroids live on `sheets[].photos`
-  // below, not here. Same entry shape documented at the top of this file.
-  photos: [],
   /**
    * The airframe broken into its named sections — the content behind the desk's
    * interactive rocket model (src/desk/RocketModel.jsx), which replicates the
@@ -991,76 +969,104 @@ export const research = {
       },
     ],
   },
-  // Per-sheet `sub`/`lead`/`notes` are the desk blueprint's copy (desk mode reads
-  // only those; see src/documents/content/research.js). Each sheet's `extended`
-  // is longer-form prose for the simple/recruiter mode ONLY — the simple mode
-  // renders it under that subsection's bullets, the desk never reads it. Same
-  // shape as research.extended above: an array of paragraph strings, one per
-  // paragraph. Sourced from the Avionics-Bay README
-  // (github.com/Thrust-Stack/Avionics-Bay); leave empty to render just the bullets.
-  sheets: [
+  // One entry per research program. Each is its own subsection in the simple
+  // mode, and their sheets flow onto the desk's blueprint roll in order (an
+  // entry with no `sheets` is itself one sheet). `program`/`org`/`dwg` letter
+  // the drafting title block on that entry's sheets.
+  entries: [
     {
-      id: 'vehicle',
+      id: 'rocket',
       title: 'Tilt/Roll-Control Rocket',
-      sub: 'High-powered model rocket · tilt & roll control · SolidWorks',
-      // rendered verbatim (hand-lettered) on the desk, so stored verbatim
-      lead: 'objective: structural integrity with active tilt/roll control on board.',
-      notes: [],
+      program: 'Mission College',
+      org: 'Santa Clara, CA',
+      dwg: 'MC-001',
+      // the subsection lead; the vehicle → flight pipeline in one line
+      lead: 'SolidWorks airframe → SimScale CFD → an active tilt/roll control system for a high-powered model rocket.',
+      // full-sentence attribution the simple mode appends to the lead
+      credit: 'Built at Mission College as a Design & Manufacturing Engineering intern.',
+      // Extended Research prose for the simple/recruiter mode ONLY. The simple mode
+      // renders this as the subsection body after the lead; the desk blueprint never
+      // reads it and keeps to `lead`/`credit` plus the per-sheet notes below.
+      // Structure: an array of paragraph strings, one string per paragraph. Leave
+      // empty to render just the lead. Sourced from the Avionics-Bay project README
+      // (github.com/Thrust-Stack/Avionics-Bay).
       extended: [
-        'This is the vehicle the whole program is built around, a high-powered model rocket from Thrust-Stack meant to fly on an AeroTech H219 and stay pointed straight instead of spinning up under thrust. The airframe pairs fixed airfoil fins at the tail with two movable canards up near the nose, and those canards are the only surfaces the system actually drives. I modeled the full rocket in SolidWorks: the body tubes, nose cone, and couplers, the top and bottom avionics bay plates, and the mechanical bits around them like the servo mounts, bearings, the static fin and lower bearing mount, and a fin jig for repeatable alignment. The bay also carries a Raspberry Pi 5 and a Pi Camera Module 3 on their own mount for onboard video. The real motor is left out of the model and stands in as an inert fake-motor part used only for mass and fit, since the project keeps no thrust curve on hand. Despite the tilt-and-roll name, the built vehicle only actively controls roll for now, with tilt read off the accelerometer but not yet driven.',
+        'This is the avionics and control side of the tilt/roll-control rocket, an active system that keeps the airframe from spinning up in flight. Most rockets pick up roll from tiny fin misalignments, and left alone that roll builds through boost. The vehicle carries movable canards that deflect to generate a roll moment, and the job of the avionics bay is to read how fast the airframe is rolling and drive those canards to hold it near zero roll rate through boost and coast. It is built to fly on an AeroTech H219.',
+        'The bay runs on an ESP32 that handles both the sensors and the actuators. There is an IMU for angular rate and acceleration, a barometric altimeter for altitude, and a GPS, plus the two mirrored canard servos and an optional LoRa radio for telemetry. A Raspberry Pi 5 takes care of onboard camera capture. Instead of closing the whole loop on the ESP32, I run it hardware-in-the-loop: the board streams sensor data out at a fixed rate, a Python controller on a laptop works out the canard deflection, and the command comes back to the ESP32 to move the servos. That kept the flight code quick to iterate on and easy to log.',
+        'The flight controller estimates roll rate with a Kalman filter and fuses GPS, accelerometer, and barometer readings to track vertical velocity. It schedules its gain against that velocity so control authority scales with dynamic pressure rather than overreacting at low speed, and it only commands the canards when altitude, tilt, and telemetry freshness all check out, falling back to neutral otherwise. A second, more aggressive controller exists for restrained bench testing and deliberately skips the flight safety gates. At the moment roll control is the part that is actually implemented and tested on the bench. Tilt is estimated from the accelerometer but not yet actively controlled, and the rocket has not flown under power, so validating the loop in flight is the next step. The airframe and bay are modeled in SolidWorks.',
       ],
-      photos: [
+      // Simple-mode-only figures for this entry's intro (rendered after the
+      // lead, like `extended`). Per-page desk polaroids live on `sheets[].photos`
+      // below, not here. Same entry shape documented at the top of this file.
+      photos: [],
+      // Per-sheet `sub`/`lead`/`notes` are the desk blueprint's copy (desk mode reads
+      // only those; see src/documents/content/research.js). Each sheet's `extended`
+      // is longer-form prose for the simple/recruiter mode ONLY — the simple mode
+      // renders it under that sheet's bullets, the desk never reads it. Same
+      // shape as the entry's `extended` above: an array of paragraph strings, one per
+      // paragraph. Sourced from the Avionics-Bay README
+      // (github.com/Thrust-Stack/Avionics-Bay); leave empty to render just the bullets.
+      sheets: [
         {
-          src: '/assets/photos/rocket-airframe.jpg',
-          title: 'The airframe',
-          caption: 'The assembled airframe laid out beside its avionics, with the Raspberry Pi, radio boards, and servo being bench tested against live telemetry and the SolidWorks model.',
-          date: '2026',
-          credit: '',
-          alt: 'A model rocket airframe with its nose cone laid diagonally across a round table, surrounded by a Raspberry Pi, breadboarded electronics and a servo, with a monitor and laptops showing flight code, telemetry, and a SolidWorks model of the rocket.',
-          link: 'https://abgsccc-website.vercel.app/',
+          id: 'vehicle',
+          title: 'Vehicle Overview',
+          sub: 'High-powered model rocket · tilt & roll control · SolidWorks',
+          // rendered verbatim (hand-lettered) on the desk, so stored verbatim
+          lead: 'objective: structural integrity with active tilt/roll control on board.',
+          notes: [],
+          extended: [
+            'This is the vehicle the whole program is built around, a high-powered model rocket from Thrust-Stack meant to fly on an AeroTech H219 and stay pointed straight instead of spinning up under thrust. The airframe pairs fixed airfoil fins at the tail with two movable canards up near the nose, and those canards are the only surfaces the system actually drives. I modeled the full rocket in SolidWorks: the body tubes, nose cone, and couplers, the top and bottom avionics bay plates, and the mechanical bits around them like the servo mounts, bearings, the static fin and lower bearing mount, and a fin jig for repeatable alignment. The bay also carries a Raspberry Pi 5 and a Pi Camera Module 3 on their own mount for onboard video. The real motor is left out of the model and stands in as an inert fake-motor part used only for mass and fit, since the project keeps no thrust curve on hand. Despite the tilt-and-roll name, the built vehicle only actively controls roll for now, with tilt read off the accelerometer but not yet driven.',
+          ],
+          photos: [
+            {
+              src: '/assets/photos/rocket-airframe.jpg',
+              title: 'The airframe',
+              caption: 'The assembled airframe laid out beside its avionics, with the Raspberry Pi, radio boards, and servo being bench tested against live telemetry and the SolidWorks model.',
+              date: '2026',
+              credit: '',
+              alt: 'A model rocket airframe with its nose cone laid diagonally across a round table, surrounded by a Raspberry Pi, breadboarded electronics and a servo, with a monitor and laptops showing flight code, telemetry, and a SolidWorks model of the rocket.',
+              link: 'https://abgsccc-website.vercel.app/',
+            },
+          ],
+        },
+        {
+          id: 'cfd',
+          title: 'CFD Validation',
+          sub: 'SimScale · aerodynamic performance before fabrication',
+          notes: [
+            'Validates drag, pressure distribution, and stability',
+            'Airframe design informed by 3000+ hours of CFD',
+            'Simulated prior to fabrication',
+          ],
+          // REVIEW: RESOLVED — the bullets above are now résumé-backed. The résumé
+          // (re-read 2026-09-02) states "Conducted 3000+ simulation hours of
+          // computational fluid dynamics (CFD) simulations in SimScale, validating
+          // aerodynamic performance, drag, pressure distribution, and stability prior
+          // to fabrication", which is the primary source the earlier TODO asked for.
+          // The Avionics-Bay README still records no CFD results, so the paragraph
+          // below stays as written. This comment can be deleted.
+          // (re-checked by /sync-content)
+          extended: [
+            'Before anything got fabricated, the airframe went through CFD to check that the aerodynamics held up. The repo keeps a dedicated CFD variant of the SolidWorks assembly, cleaned up and exported to STEP so it drops into the solver without the mechanical detail that would choke a mesh, and the motor is stubbed out with an inert fake-motor part so it still contributes mass and fit without standing in as a real thrust source. I ran the aerodynamic work in SimScale. The point was to understand how the airframe and canards sit in the flow before committing to cut parts, so the fin and canard geometry could be settled on the model rather than discovered on the pad.',
+          ],
+          photos: [],
+        },
+        {
+          id: 'control',
+          title: 'Tilt/Roll Control System',
+          sub: 'Micro-servos · IMU + altimeter avionics',
+          notes: [
+            'Micro-servos actuate the tilt/roll control system',
+            'IMU and altimeter feed live data from the avionics bay',
+            'Components integrated in the vehicle without compromising structure',
+          ],
+          extended: [
+            'The control system is what makes the rocket active, and it runs hardware-in-the-loop rather than closing everything on the board. The ESP32 streams sensor frames over USB serial at 115200, tagging IMU data at 20 Hz and ground-zeroed altitude at 10 Hz while passing the GPS NMEA through untouched. On the laptop, a logger called GPSReader records all of it to SQLite and rebroadcasts the packets on a local UDP port; the controller listens there, computes a canard angle, and sends back a short ROLL command on a second UDP port, which GPSReader relays to the board over the serial link it already owns. The ESP32 takes that single signed angle and drives both mirrored canards around a 90 degree neutral with direct PWM, clamped to plus or minus 15 degrees of travel. The flight controller keeps its own command tighter, near 7.5 degrees, and scales that authority with speed so it is not overreacting at low dynamic pressure. There is no hardware arm switch or pyro interlock anywhere in the firmware, so arming is entirely software gating in the host code, and the canards jump to neutral the instant the board boots.',
+          ],
+          photos: [],
         },
       ],
     },
-    {
-      id: 'cfd',
-      title: 'CFD Validation',
-      sub: 'SimScale · aerodynamic performance before fabrication',
-      notes: [
-        'Validates drag, pressure distribution, and stability',
-        'Airframe design informed by 3000+ hours of CFD',
-        'Simulated prior to fabrication',
-      ],
-      // REVIEW: RESOLVED — the bullets above are now résumé-backed. The résumé
-      // (re-read 2026-09-02) states "Conducted 3000+ simulation hours of
-      // computational fluid dynamics (CFD) simulations in SimScale, validating
-      // aerodynamic performance, drag, pressure distribution, and stability prior
-      // to fabrication", which is the primary source the earlier TODO asked for.
-      // The Avionics-Bay README still records no CFD results, so the paragraph
-      // below stays as written. This comment can be deleted.
-      // (re-checked by /sync-content)
-      extended: [
-        'Before anything got fabricated, the airframe went through CFD to check that the aerodynamics held up. The repo keeps a dedicated CFD variant of the SolidWorks assembly, cleaned up and exported to STEP so it drops into the solver without the mechanical detail that would choke a mesh, and the motor is stubbed out with an inert fake-motor part so it still contributes mass and fit without standing in as a real thrust source. I ran the aerodynamic work in SimScale. The point was to understand how the airframe and canards sit in the flow before committing to cut parts, so the fin and canard geometry could be settled on the model rather than discovered on the pad.',
-      ],
-      photos: [],
-    },
-    {
-      id: 'control',
-      title: 'Tilt/Roll Control System',
-      sub: 'Micro-servos · IMU + altimeter avionics',
-      notes: [
-        'Micro-servos actuate the tilt/roll control system',
-        'IMU and altimeter feed live data from the avionics bay',
-        'Components integrated in the vehicle without compromising structure',
-      ],
-      extended: [
-        'The control system is what makes the rocket active, and it runs hardware-in-the-loop rather than closing everything on the board. The ESP32 streams sensor frames over USB serial at 115200, tagging IMU data at 20 Hz and ground-zeroed altitude at 10 Hz while passing the GPS NMEA through untouched. On the laptop, a logger called GPSReader records all of it to SQLite and rebroadcasts the packets on a local UDP port; the controller listens there, computes a canard angle, and sends back a short ROLL command on a second UDP port, which GPSReader relays to the board over the serial link it already owns. The ESP32 takes that single signed angle and drives both mirrored canards around a 90 degree neutral with direct PWM, clamped to plus or minus 15 degrees of travel. The flight controller keeps its own command tighter, near 7.5 degrees, and scales that authority with speed so it is not overreacting at low dynamic pressure. There is no hardware arm switch or pyro interlock anywhere in the firmware, so arming is entirely software gating in the host code, and the canards jump to neutral the instant the board boots.',
-      ],
-      photos: [],
-    },
-    // A second research entry, separate from the rocket program above. Optional
-    // per-sheet `program`/`org`/`dwg` override the rocket's drafting title block
-    // on the desk; a sheet with no matching figure in research.js renders as
-    // title + notes only.
     // REVIEW: supplied by the author (2026-11-02), not yet on the résumé, which
     // the content rules treat as authoritative for experience. Add it there too.
     // Lab context in `extended` is from annewarlaumont.org/research; the lab page

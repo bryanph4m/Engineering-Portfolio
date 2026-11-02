@@ -386,17 +386,17 @@ entries — and each mode presents them its own way.
    ```
 
    The arrays live on `profile.photos` (About), each `projects[i].photos`,
-   `research.photos` (article intro), and each `research.sheets[i].photos`.
+   each `research.entries[i].photos` (entry intro), and each `research.entries[i].sheets[j].photos`.
 3. **Simple / Wikipedia mode** renders each photo as a proper floated figure:
    a bordered thumbnail with a **bold title**, a muted caption, a muted
    `date · credit` line, and real `alt` text on the image.
 4. **Desk mode** pins the **bare photo only** to the page as a polaroid — white
    frame, a little tilt, a drop shadow — with *no* title, caption or other text
-   anywhere near it. `projects[].photos` and `research.sheets[].photos` become
+   anywhere near it. `projects[].photos` and `research.entries[].sheets[].photos` become
    polaroids on a paginated document's pages, and the **first** entry of
    `profile.photos` becomes one on the About index card (reserved at 0.78× — a
    full-size polaroid would swallow a card that small). Any further
-   `profile.photos`, and all of `research.photos`, are simple-mode figures only:
+   `profile.photos`, and all of `research.entries[].photos`, are simple-mode figures only:
    the card has room for one and the blueprint's intro has room for none.
 
 Desk polaroids **ride the same pagination as the text** (`src/lib/photos.js` +

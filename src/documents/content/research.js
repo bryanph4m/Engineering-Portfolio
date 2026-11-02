@@ -35,10 +35,16 @@ function titleBlock(ctx, W, H, rnd, sheet, count, s) {
   ctx.lineWidth = 3
   ctx.strokeRect(bx, by, 520, 190)
   ctx.beginPath(); ctx.moveTo(bx, by + 66); ctx.lineTo(bx + 520, by + 66); ctx.stroke()
-  text(ctx, (s.program ?? research.program).toUpperCase(), bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
-  text(ctx, `DWG ${s.dwg ?? 'MC-001'} · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
-  text(ctx, `SCALE: NTS · ${(s.org ?? research.org).toUpperCase()}`, bx + 24, by + 160, { size: 28, color: DIM })
+  text(ctx, s.program.toUpperCase(), bx + 24, by + 46, { font: TYPE, size: 32, color: WHITE })
+  text(ctx, `DWG ${s.dwg} · SHT ${sheet} OF ${count}`, bx + 24, by + 112, { size: 28, color: DIM })
+  text(ctx, `SCALE: NTS · ${s.org.toUpperCase()}`, bx + 24, by + 160, { size: 28, color: DIM })
 }
+
+// Every entry's sheets in order (an entry without `sheets` is one sheet), each
+// carrying its entry's program/org/dwg for the title block.
+const SHEETS = research.entries.flatMap((e) =>
+  (e.sheets ?? [e]).map((s) => ({ program: e.program, org: e.org, dwg: e.dwg, ...s })),
+)
 
 // Per sheet, so an entry from another program letters its own title block.
 const decorFor = (s) => (ctx, W, H, rnd, page, count) => {
@@ -240,7 +246,7 @@ const loopFigure = figure(670, 572, (ctx, W, H, y, rnd) => {
 // objective line is stored verbatim and rendered as-is.
 const FIGURES = { vehicle: rocketFigure, cfd: cfdFigure, control: loopFigure }
 
-const sheets = research.sheets.map((s) => {
+const sheets = SHEETS.map((s) => {
   const blocks = [head(s.title.toUpperCase(), s.sub.toUpperCase())]
   if (s.lead) {
     blocks.push(note(s.lead, { font: HAND, size: 40, color: '#cfe0f4' }))
@@ -282,8 +288,8 @@ function coverDraw(ctx, W, H, rnd, link) {
   text(ctx, 'PICK A SHEET TO OPEN IT DIRECTLY', 124, 268, { size: 30, color: DIM, spacing: 3 })
 
   const top = 360
-  const rowH = (box.y + box.h - top) / research.sheets.length
-  research.sheets.forEach((s, i) => {
+  const rowH = (box.y + box.h - top) / SHEETS.length
+  SHEETS.forEach((s, i) => {
     const y = top + i * rowH
     text(ctx, `SHT ${i + 1}`, 124, y + 50, { font: TYPE, size: 34, color: DIM })
     text(ctx, s.title.toUpperCase(), 300, y + 58, { font: TYPE, size: 52, color: WHITE })
